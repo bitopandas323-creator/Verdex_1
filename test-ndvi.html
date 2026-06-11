@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NDVI Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <div class="max-w-lg mx-auto mt-16 p-8">
+
+    <h1 class="text-2xl font-bold text-green-700 mb-2">NDVI Test</h1>
+    <p class="text-gray-500 mb-8">Testing satellite data connection for Banjara Hills</p>
+
+    <button
+      onclick="testNDVI()"
+      class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium">
+      Fetch NDVI from Satellite
+    </button>
+
+    <div id="status" class="mt-4 text-sm text-gray-400"></div>
+
+    <div id="result-card" class="hidden mt-6 bg-white border border-gray-100 rounded-2xl p-6">
+      <div class="text-sm text-gray-400 mb-1">Banjara Hills, Hyderabad</div>
+      <div class="text-sm text-gray-400 mb-4">Raw satellite NDVI value</div>
+      <div class="text-5xl font-bold text-green-600 mb-2" id="ndvi-value"></div>
+      <div class="text-sm text-gray-500" id="ndvi-meaning"></div>
+      <div class="mt-4 text-xs text-gray-400" id="ndvi-score-line"></div>
+    </div>
+
+    <div id="error-card" class="hidden mt-6 bg-red-50 border border-red-100 rounded-2xl p-6">
+      <div class="text-sm font-medium text-red-700 mb-2">Something went wrong</div>
+      <div class="text-xs text-red-500 font-mono" id="error-message"></div>
+    </div>
+
+  </div>
+
+  <script>
+
+    const CLIENT_ID     = "sh-cfd5e1fc-cacc-4f70-ae91-5a889abba5c5";
+    const CLIENT_SECRET = "LflYKrcw8SVrderEt7wgUhgF9iSGopna";
+
+    function getNDVIMeaning(ndvi) {
+      if (ndvi >= 0.6) return "Dense vegetation — lots of trees and greenery";
+      if (ndvi >= 0.4) return "Moderate vegetation — residential with trees";
+      if (ndvi >= 0.2) return "Sparse vegetation — some grass and scattered trees";
+      if (ndvi >= 0.0) return "Minimal vegetation — mostly concrete and roads";
+      return "No vegetation — buildings, water or bare ground";
+    }
+
+    function getNDVIScore(ndvi) {
+      if (ndvi >= 0.6) return 10;
+      if (ndvi >= 0.4) return 8;
+      if (ndvi >= 0.2) return 6;
+      if (ndvi >= 0.0) return 4;
+      return 2;
+    }
+
+    async function getAccessToken() {
+      let response = await fetch(
+        "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: "grant_type=client_credentials"
+              + "&client_id="     + CLIENT_ID
+              + "&client_secret=" + CLIENT_SECRET
+        }
+      );
+      let data = await response.json();
+      if (!data.access_token) throw new Error("Auth failed: " + JSON.stringify(data));
+      return data.access_token;
+    }
+
+    async function fetchNDVI(token, lat, lon) {
+
+      let today     = new Date();
+      let monthAgo  = new Date();
+      monthAgo.setDate(today.getDate() - 30);
+
+      let toDate   = today.toISOString().split("T")[0];
+      let fromDate = monthAgo.toISOString().split("T")[0];
+
+      let delta = 0.01;
+
+      let requestBody = {
+        input: {
+          bounds: {
+            bbox: [lon - delta, lat - delta, lon + delta, lat + delta],
+            properties: { crs: "http://www.opengis.net/def/crs/EPSG/0/4326" }
+          },
+          data: [{
+            type: "sentinel-2-l2a",
+            dataFilter: {
+              timeRange: { from: fromDate + "T00:00:00Z", to: toDate + "T23:59:59Z" },
+              maxCloudCoverage: 30
+            }
+          }]
+        },
+        evalscript: `//VERSION=3
+function setup() {
+  return { input: ["B04", "B08"], output: { bands: 1 } };
+}
+function evaluatePixel(sample) {
+  let ndvi = (sample.B08 - sample.B04) / (sample.B08 + sample.B04);
+  return [ndvi];
+}`,
+        aggregation: {
+          timeRange: { from: fromDate + "T00:00:00Z", to: toDate + "T23:59:59Z" },
+          aggregationInterval: { of: "P30D" },
+          resx: 0.0001,
+          resy: 0.0001
+        },
+        calculations: { default: { histograms: { default: { nBins: 5, lowEdge: -1.0, highEdge: 1.0 } } } }
+      };
+
+      let response = await fetch(
+        "https://sh.dataspace.copernicus.eu/api/v1/statistics",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify(requestBody)
+        }
+      );
+
+      let data = await response.json();
+      return data;
+    }
+
+    async function testNDVI() {
+
+      document.getElementById("status").innerText = "Step 1: Authenticating with Copernicus...";
+      document.getElementById("result-card").classList.add("hidden");
+      document.getElementById("error-card").classList.add("hidden");
+
+      try {
+
+        let token = await getAccessToken();
+        document.getElementById("status").innerText = "Step 2: Requesting satellite data for Banjara Hills...";
+
+        let lat = 17.4156;
+        let lon = 78.4347;
+
+        let ndviData = await fetchNDVI(token, lat, lon);
+
+        document.getElementById("status").innerText = "Step 3: Processing satellite response...";
+
+        let mean = ndviData.data[0].outputs.default.bands.B0.stats.mean;
+        let ndvi = parseFloat(mean.toFixed(3));
+
+        let score   = getNDVIScore(ndvi);
+        let meaning = getNDVIMeaning(ndvi);
+
+        document.getElementById("status").innerText = "Satellite data loaded ✓";
+        document.getElementById("result-card").classList.remove("hidden");
+        document.getElementById("ndvi-value").innerText = ndvi;
+        document.getElementById("ndvi-meaning").innerText = meaning;
+        document.getElementById("ndvi-score-line").innerText = "Green cover score: " + score + " / 10";
+
+      } catch (error) {
+        document.getElementById("status").innerText = "Failed — see error below";
+        document.getElementById("error-card").classList.remove("hidden");
+        document.getElementById("error-message").innerText = error.message;
+        console.error(error);
+      }
+    }
+
+  </script>
+
+</body>
+</html>
