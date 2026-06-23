@@ -31,65 +31,63 @@ export default async function handler(req, res) {
 
     const token = tokenData.access_token;
 
-    // Step 2 — Fetch NDVI
+    // Step 2 — Build date range (90 days to maximise chance of clear image)
     const today    = new Date();
-    const monthAgo = new Date();
-    monthAgo.setDate(today.getDate() - 30);
+    const pastDate = new Date();
+    pastDate.setDate(today.getDate() - 90);
 
     const toDate   = today.toISOString().split("T")[0];
-    const fromDate = monthAgo.toISOString().split("T")[0];
-    const delta    = 0.01;
+    const fromDate = pastDate.toISOString().split("T")[0];
+
+    // Step 3 — Use Process API to get NDVI value directly
+    const latF  = parseFloat(lat);
+    const lonF  = parseFloat(lon);
+    const delta = 0.005;
+
+    const evalscript = `//VERSION=3
+function setup() {
+  return {
+    input: [{ bands: ["B04", "B08", "SCL"] }],
+    output: { bands: 1, sampleType: "FLOAT32" }
+  };
+}
+function evaluatePixel(sample) {
+  if ([3, 8, 9, 10, 11].includes(sample.SCL)) return [-999];
+  let ndvi = (sample.B08 - sample.B04) / (sample.B08 + sample.B04);
+  return [ndvi];
+}`;
 
     const requestBody = {
       input: {
         bounds: {
-          bbox: [
-            parseFloat(lon) - delta,
-            parseFloat(lat) - delta,
-            parseFloat(lon) + delta,
-            parseFloat(lat) + delta
-          ],
+          bbox: [lonF - delta, latF - delta, lonF + delta, latF + delta],
           properties: { crs: "http://www.opengis.net/def/crs/EPSG/0/4326" }
         },
         data: [{
-          type: "sentinel-2-l2a",
           dataFilter: {
             timeRange: {
               from: fromDate + "T00:00:00Z",
               to:   toDate   + "T23:59:59Z"
             },
-            maxCloudCoverage: 30
-          }
+            mosaickingOrder: "leastCC"
+          },
+          processing: { harmonizeValues: true },
+          type: "sentinel-2-l2a"
         }]
       },
-      evalscript: `//VERSION=3
-function setup() {
-  return { input: ["B04", "B08"], output: { bands: 1 } };
-}
-function evaluatePixel(sample) {
-  let ndvi = (sample.B08 - sample.B04) / (sample.B08 + sample.B04);
-  return [ndvi];
-}`,
-      aggregation: {
-        timeRange: {
-          from: fromDate + "T00:00:00Z",
-          to:   toDate   + "T23:59:59Z"
-        },
-        aggregationInterval: { of: "P30D" },
-        resx: 0.0001,
-        resy: 0.0001
+      output: {
+        width:  64,
+        height: 64,
+        responses: [{
+          identifier: "default",
+          format: { type: "image/tiff" }
+        }]
       },
-      calculations: {
-        default: {
-          histograms: {
-            default: { nBins: 5, lowEdge: -1.0, highEdge: 1.0 }
-          }
-        }
-      }
+      evalscript
     };
 
-    const ndviResponse = await fetch(
-      "https://sh.dataspace.copernicus.eu/api/v1/statistics",
+    const processResponse = await fetch(
+      "https://sh.dataspace.copernicus.eu/api/v1/process",
       {
         method: "POST",
         headers: {
@@ -100,14 +98,100 @@ function evaluatePixel(sample) {
       }
     );
 
-    const ndviData = await ndviResponse.json();
-
-    if (!ndviData.data || !ndviData.data[0]) {
-      return res.status(200).json({ ndvi: null, reason: "No satellite data available" });
+    if (!processResponse.ok) {
+      const errText = await processResponse.text();
+      return res.status(200).json({
+        ndvi: null,
+        reason: "Process API error: " + processResponse.status,
+        detail: errText.substring(0, 200)
+      });
     }
 
-    const mean = ndviData.data[0].outputs.default.bands.B0.stats.mean;
-    return res.status(200).json({ ndvi: parseFloat(mean.toFixed(3)) });
+    // Step 4 — Parse the TIFF response to get pixel values
+    // Since we can't parse TIFF directly, use evalscript stats approach
+    const statsBody = {
+      input: {
+        bounds: {
+          bbox: [lonF - delta, latF - delta, lonF + delta, latF + delta],
+          properties: { crs: "http://www.opengis.net/def/crs/EPSG/0/4326" }
+        },
+        data: [{
+          dataFilter: {
+            timeRange: {
+              from: fromDate + "T00:00:00Z",
+              to:   toDate   + "T23:59:59Z"
+            },
+            maxCloudCoverage: 80,
+            mosaickingOrder: "leastCC"
+          },
+          type: "sentinel-2-l2a"
+        }]
+      },
+      evalscript: `//VERSION=3
+function setup() {
+  return {
+    input: [{ bands: ["B04", "B08"] }],
+    output: [{ id: "ndvi", bands: 1, sampleType: SampleType.FLOAT32 }]
+  };
+}
+function evaluatePixel(sample) {
+  let ndvi = (sample.B08 - sample.B04) / (sample.B08 + sample.B04);
+  return { ndvi: [ndvi] };
+}`,
+      aggregation: {
+        timeRange: {
+          from: fromDate + "T00:00:00Z",
+          to:   toDate   + "T23:59:59Z"
+        },
+        aggregationInterval: { of: "P90D" },
+        width:  64,
+        height: 64
+      },
+      calculations: {
+        ndvi: {
+          histograms: {
+            default: {
+              nBins:    10,
+              lowEdge:  -1.0,
+              highEdge:  1.0
+            }
+          },
+          statistics: { default: { percentiles: { k: [25, 50, 75] } } }
+        }
+      }
+    };
+
+    const statsResponse = await fetch(
+      "https://sh.dataspace.copernicus.eu/api/v1/statistics",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify(statsBody)
+      }
+    );
+
+    const statsData = await statsResponse.json();
+
+    // Try to extract mean NDVI from response
+    if (statsData.data && statsData.data.length > 0) {
+      const outputs = statsData.data[0].outputs;
+      if (outputs && outputs.ndvi && outputs.ndvi.bands && outputs.ndvi.bands.B0) {
+        const mean = outputs.ndvi.bands.B0.stats.mean;
+        if (mean !== null && mean !== undefined && mean > -1) {
+          return res.status(200).json({ ndvi: parseFloat(mean.toFixed(3)) });
+        }
+      }
+    }
+
+    // Return full response for debugging
+    return res.status(200).json({
+      ndvi: null,
+      reason: "No valid NDVI data found",
+      debug: JSON.stringify(statsData).substring(0, 500)
+    });
 
   } catch (error) {
     return res.status(500).json({ error: error.message });
