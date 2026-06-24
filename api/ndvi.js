@@ -1,129 +1,712 @@
-export default async function handler(req, res) {
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Verdex - Green Score for Indian Cities</title>
+  <meta name="description" content="Check the Green Score for any neighbourhood in India — air quality, heat and green cover in one number.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
 
-  const { lat, lon } = req.query;
-  if (!lat || !lon) return res.status(400).json({ error: "lat and lon required" });
+  <div class="max-w-2xl mx-auto mt-12 p-8">
 
-  const CLIENT_ID     = process.env.SENTINEL_CLIENT_ID;
-  const CLIENT_SECRET = process.env.SENTINEL_CLIENT_SECRET;
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold text-green-700 mb-2">Verdex</h1>
+      <p class="text-gray-500">Green scores for every neighbourhood in India — live data.</p>
+    </div>
 
-  try {
+    <!-- Smart Search -->
+    <div class="mb-6 relative">
+      <label class="block text-sm text-gray-500 mb-2">Search any area, landmark or city</label>
+      <input
+        id="search-input"
+        type="text"
+        placeholder="e.g. Koramangala, Banjara Hills, Powai..."
+        oninput="handleSearch()"
+        onkeydown="handleKeydown(event)"
+        class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
+      />
+      <div id="search-spinner" class="hidden absolute right-3 top-10">
+        <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+      </div>
+      <div id="suggestions-box"
+        class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
+      </div>
+    </div>
 
-    // Step 1 — Auth
-    const tokenRes = await fetch(
-      "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
-      {
-        method:  "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body:    new URLSearchParams({
-          grant_type:    "client_credentials",
-          client_id:     CLIENT_ID,
-          client_secret: CLIENT_SECRET
-        })
-      }
-    );
+    <!-- Mode Toggle -->
+    <div class="flex gap-2 mb-6">
+      <button id="btn-single" onclick="setMode('single')"
+        class="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white">
+        Single area
+      </button>
+      <button id="btn-compare" onclick="setMode('compare')"
+        class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
+        Compare two areas
+      </button>
+    </div>
 
-    const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) {
-      return res.status(401).json({ error: "Auth failed", detail: tokenData });
+    <!-- Single Mode -->
+    <div id="single-mode">
+      <div class="mb-4">
+        <label class="block text-sm text-gray-500 mb-2">Select a city</label>
+        <select id="city-select" onchange="updateNeighbourhoods('neighbourhood-select', 'city-select')"
+          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
+          <option value="hyderabad">Hyderabad</option>
+          <option value="mumbai">Mumbai</option>
+          <option value="delhi">Delhi</option>
+          <option value="bangalore">Bangalore</option>
+          <option value="chennai">Chennai</option>
+          <option value="pune">Pune</option>
+          <option value="kolkata">Kolkata</option>
+          <option value="ahmedabad">Ahmedabad</option>
+        </select>
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm text-gray-500 mb-2">Select a neighbourhood</label>
+        <select id="neighbourhood-select"
+          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
+        </select>
+      </div>
+      <button onclick="checkSingle()"
+        class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium">
+        Check Green Score
+      </button>
+      <div id="single-status" class="mt-4 text-sm text-gray-400 text-center"></div>
+      <div id="single-result" class="hidden mt-6"></div>
+    </div>
+
+    <!-- Compare Mode -->
+    <div id="compare-mode" class="hidden">
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <div class="text-sm font-medium text-gray-600 mb-3">Area 1</div>
+          <select id="city-a" onchange="updateNeighbourhoods('neighbourhood-a', 'city-a')"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white mb-2">
+            <option value="hyderabad">Hyderabad</option>
+            <option value="mumbai">Mumbai</option>
+            <option value="delhi">Delhi</option>
+            <option value="bangalore">Bangalore</option>
+            <option value="chennai">Chennai</option>
+            <option value="pune">Pune</option>
+            <option value="kolkata">Kolkata</option>
+            <option value="ahmedabad">Ahmedabad</option>
+          </select>
+          <select id="neighbourhood-a"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white">
+          </select>
+        </div>
+        <div>
+          <div class="text-sm font-medium text-gray-600 mb-3">Area 2</div>
+          <select id="city-b" onchange="updateNeighbourhoods('neighbourhood-b', 'city-b')"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white mb-2">
+            <option value="hyderabad">Hyderabad</option>
+            <option value="mumbai">Mumbai</option>
+            <option value="delhi">Delhi</option>
+            <option value="bangalore">Bangalore</option>
+            <option value="chennai">Chennai</option>
+            <option value="pune">Pune</option>
+            <option value="kolkata">Kolkata</option>
+            <option value="ahmedabad">Ahmedabad</option>
+          </select>
+          <select id="neighbourhood-b"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white">
+          </select>
+        </div>
+      </div>
+      <button onclick="checkCompare()"
+        class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium">
+        Compare Areas
+      </button>
+      <div id="compare-status" class="mt-4 text-sm text-gray-400 text-center"></div>
+      <div id="compare-result" class="hidden mt-6"></div>
+    </div>
+
+  </div>
+
+  <!-- Info Modal -->
+  <div id="info-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="font-semibold text-gray-800" id="modal-title"></h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+      </div>
+      <div id="modal-body" class="text-sm text-gray-600 leading-relaxed"></div>
+    </div>
+  </div>
+
+  <script>
+
+    // --- CACHE ---
+    const cache = {};
+    const CACHE_DURATION = 10 * 60 * 1000;
+
+    function getCached(key) {
+      if (!cache[key]) return null;
+      if (Date.now() - cache[key].timestamp > CACHE_DURATION) { delete cache[key]; return null; }
+      return cache[key].data;
     }
-    const token = tokenData.access_token;
 
-    const latF  = parseFloat(lat);
-    const lonF  = parseFloat(lon);
-    const delta = 0.005;
+    function setCached(key, data) {
+      cache[key] = { data, timestamp: Date.now() };
+    }
 
-    const today    = new Date();
-    const pastDate = new Date();
-    pastDate.setDate(today.getDate() - 90);
-    const toDate   = today.toISOString().split("T")[0];
-    const fromDate = pastDate.toISOString().split("T")[0];
+    // --- SEARCH ---
+    let searchTimeout = null;
+    let selectedIndex = -1;
+    let currentSuggestions = [];
 
-    // evalscript MUST include dataMask output for Statistics API
-    // evalscript MUST be inside aggregation object
-    const evalscript = "//VERSION=3\nfunction setup() {\n  return {\n    input: [{ bands: [\"B04\", \"B08\", \"dataMask\"] }],\n    output: [\n      { id: \"ndvi\", bands: 1, sampleType: \"FLOAT32\" },\n      { id: \"dataMask\", bands: 1 }\n    ]\n  };\n}\nfunction evaluatePixel(s) {\n  let ndvi = (s.B08 - s.B04) / (s.B08 + s.B04);\n  return {\n    ndvi: [ndvi],\n    dataMask: [s.dataMask]\n  };\n}";
+    async function handleSearch() {
+      const query = document.getElementById('search-input').value.trim();
+      const box   = document.getElementById('suggestions-box');
+      const spin  = document.getElementById('search-spinner');
+      if (query.length < 2) { box.classList.add('hidden'); return; }
 
-    // Build request — evalscript goes INSIDE aggregation
-    const statsRequest = {
-      input: {
-        bounds: {
-          bbox: [lonF - delta, latF - delta, lonF + delta, latF + delta],
-          properties: { crs: "http://www.opengis.net/def/crs/EPSG/0/4326" }
-        },
-        data: [{
-          type: "sentinel-2-l2a",
-          dataFilter: {
-            timeRange: {
-              from: fromDate + "T00:00:00Z",
-              to:   toDate   + "T23:59:59Z"
-            },
-            maxCloudCoverage: 80
+      const localResults = searchLocalData(query);
+      if (localResults.length > 0) { showSuggestions(localResults); return; }
+
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(async () => {
+        spin.classList.remove('hidden');
+        try {
+          let url = "https://geocoding-api.open-meteo.com/v1/search?name="
+            + encodeURIComponent(query)
+            + "&count=5&language=en&format=json&countryCode=IN";
+          let response = await fetch(url);
+          let data     = await response.json();
+          if (data.results && data.results.length > 0) {
+            let suggestions = data.results.map(r => ({
+              name: r.name,
+              detail: (r.admin2 || r.admin1 || '') + ', India',
+              lat: r.latitude, lon: r.longitude,
+              city: detectCity(r.admin1 || ''),
+              ndvi: 0.25, fromAPI: true
+            }));
+            showSuggestions(suggestions);
+          } else {
+            box.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">No results found</div>';
+            box.classList.remove('hidden');
           }
-        }]
-      },
-      aggregation: {
-        timeRange: {
-          from: fromDate + "T00:00:00Z",
-          to:   toDate   + "T23:59:59Z"
-        },
-        aggregationInterval: { of: "P90D" },
-        evalscript: evalscript,
-        resx: 10,
-        resy: 10
-      },
-      calculations: {
-        ndvi: {
-          statistics: {
-            default: {
-              percentiles: { k: [50] }
-            }
+        } catch (e) { box.classList.add('hidden'); }
+        spin.classList.add('hidden');
+      }, 400);
+    }
+
+    function searchLocalData(query) {
+      const q = query.toLowerCase();
+      const results = [];
+      Object.keys(cities).forEach(city => {
+        cities[city].forEach(n => {
+          if (n.name.toLowerCase().includes(q) || city.includes(q)) {
+            results.push({
+              name: n.name,
+              detail: city.charAt(0).toUpperCase() + city.slice(1),
+              lat: n.lat, lon: n.lon, city: city, ndvi: n.ndvi, fromAPI: false
+            });
           }
-        }
+        });
+      });
+      return results.slice(0, 6);
+    }
+
+    function detectCity(admin1) {
+      const map = {
+        'telangana': 'hyderabad', 'maharashtra': 'mumbai',
+        'delhi': 'delhi', 'karnataka': 'bangalore',
+        'tamil nadu': 'chennai', 'gujarat': 'ahmedabad',
+        'west bengal': 'kolkata'
+      };
+      const key = admin1.toLowerCase();
+      for (const k in map) { if (key.includes(k)) return map[k]; }
+      return 'hyderabad';
+    }
+
+    function showSuggestions(suggestions) {
+      currentSuggestions = suggestions;
+      selectedIndex = -1;
+      const box = document.getElementById('suggestions-box');
+      box.innerHTML = suggestions.map((s, i) => `
+        <div class="suggestion-item px-4 py-3 cursor-pointer border-b border-gray-100 last:border-0 hover:bg-gray-50"
+          onclick="selectSuggestion(${i})">
+          <div class="text-sm font-medium text-gray-800">${s.name}</div>
+          <div class="text-xs text-gray-400 mt-0.5">${s.detail}</div>
+        </div>
+      `).join('');
+      box.classList.remove('hidden');
+    }
+
+    function handleKeydown(e) {
+      const box = document.getElementById('suggestions-box');
+      if (box.classList.contains('hidden')) return;
+      const items = box.querySelectorAll('.suggestion-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+        items.forEach((el, i) => el.style.background = i === selectedIndex ? '#f9fafb' : '');
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = Math.max(selectedIndex - 1, 0);
+        items.forEach((el, i) => el.style.background = i === selectedIndex ? '#f9fafb' : '');
+      } else if (e.key === 'Enter' && selectedIndex >= 0) {
+        selectSuggestion(selectedIndex);
+      } else if (e.key === 'Escape') {
+        box.classList.add('hidden');
+      }
+    }
+
+    function selectSuggestion(index) {
+      const s   = currentSuggestions[index];
+      const box = document.getElementById('suggestions-box');
+      document.getElementById('search-input').value = s.name + ', ' + s.detail;
+      box.classList.add('hidden');
+      const citySelect = document.getElementById('city-select');
+      if (s.city && citySelect.querySelector(`option[value="${s.city}"]`)) {
+        citySelect.value = s.city;
+        updateNeighbourhoods('neighbourhood-select', 'city-select');
+        const nSelect = document.getElementById('neighbourhood-select');
+        const options  = Array.from(nSelect.options);
+        const match    = options.find(o => o.text.toLowerCase().includes(s.name.toLowerCase()));
+        if (match) nSelect.value = match.value;
+      }
+      setMode('single');
+      checkScoreFromSearch(s);
+    }
+
+    async function checkScoreFromSearch(s) {
+      const statusEl = document.getElementById('single-status');
+      const resultEl = document.getElementById('single-result');
+      statusEl.innerHTML = getSpinner();
+      resultEl.classList.add('hidden');
+      try {
+        const neighbourhoodValue = s.lat + '|' + s.lon + '|' + s.name + '|' + s.ndvi;
+        const d = await fetchAreaData(s.city || 'hyderabad', neighbourhoodValue);
+        statusEl.innerHTML = '';
+        resultEl.innerHTML = buildScoreCard(d, false);
+        resultEl.classList.remove('hidden');
+        resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (err) {
+        statusEl.innerHTML = 'Could not load data. Check console (F12).';
+        console.error(err);
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('#search-input') && !e.target.closest('#suggestions-box')) {
+        document.getElementById('suggestions-box').classList.add('hidden');
+      }
+    });
+
+    // --- INFO MODAL ---
+    const infoContent = {
+      aqi: {
+        title: "Air Quality Index (AQI)",
+        body: `AQI measures how clean or polluted the air is right now.<br><br>
+          <b>0–50</b> → Good. Air is clean, safe to breathe.<br>
+          <b>51–100</b> → Satisfactory. Minor discomfort for sensitive people.<br>
+          <b>101–150</b> → Moderate. People with asthma may feel effects.<br>
+          <b>151–200</b> → Poor. Everyone may start to feel effects.<br>
+          <b>200+</b> → Very Poor. Avoid outdoor activity.<br><br>
+          Data is sourced live from government monitoring stations.`
+      },
+      heat: {
+        title: "Heat & Humidity",
+        body: `This shows how hot it <i>actually feels</i> — not just the temperature.<br><br>
+          Humidity makes heat feel much worse. 32°C with 80% humidity feels like 40°C.<br><br>
+          <b>Below 25°C</b> → Very comfortable<br>
+          <b>25–30°C</b> → Comfortable<br>
+          <b>30–35°C</b> → Warm, manageable<br>
+          <b>35–40°C</b> → Hot, uncomfortable<br>
+          <b>40°C+</b> → Very hot, health risk<br><br>
+          Data is sourced live from weather stations.`
+      },
+      ndvi: {
+        title: "Green Cover (NDVI)",
+        body: `NDVI measures how much healthy vegetation exists in an area, captured by satellites.<br><br>
+          <b>0.4 and above</b> → Well vegetated. Lots of trees and parks.<br>
+          <b>0.2–0.4</b> → Moderate greenery. Some trees and grass.<br>
+          <b>0.0–0.2</b> → Sparse. Mostly concrete and roads.<br><br>
+          Data comes from European Space Agency satellites photographing India every 5 days. Updated automatically.`
+      },
+      score: {
+        title: "How is the Green Score calculated?",
+        body: `The Green Score combines three parameters into one number from 0 to 10:<br><br>
+          <b>Air Quality → 40% weight</b><br>
+          <b>Green Cover → 40% weight</b><br>
+          <b>Heat & Humidity → 20% weight</b><br><br>
+          <b>8–10</b> → Excellent<br>
+          <b>6–8</b> → Good<br>
+          <b>4–6</b> → Moderate<br>
+          <b>Below 4</b> → Poor`
       }
     };
 
-    const statsRes  = await fetch(
-      "https://sh.dataspace.copernicus.eu/api/v1/statistics",
-      {
-        method:  "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "Accept":        "application/json",
-          "Authorization": "Bearer " + token
-        },
-        body: JSON.stringify(statsRequest)
-      }
-    );
-
-    const rawText = await statsRes.text();
-    let data;
-    try { data = JSON.parse(rawText); }
-    catch (e) {
-      return res.status(200).json({ ndvi: null, reason: "parse error", raw: rawText.substring(0, 400) });
+    function showInfo(type) {
+      document.getElementById("modal-title").innerHTML = infoContent[type].title;
+      document.getElementById("modal-body").innerHTML  = infoContent[type].body;
+      document.getElementById("info-modal").classList.remove("hidden");
     }
 
-    // Extract NDVI mean
-    if (data.data && data.data.length > 0) {
-      for (const entry of data.data) {
-        if (entry.outputs && entry.outputs.ndvi && entry.outputs.ndvi.bands && entry.outputs.ndvi.bands.B0) {
-          const mean = entry.outputs.ndvi.bands.B0.stats.mean;
-          if (mean !== null && mean !== undefined && !isNaN(mean) && mean > -0.9) {
-            return res.status(200).json({
-              ndvi: parseFloat(mean.toFixed(3)),
-              date: entry.interval ? entry.interval.from : "unknown"
-            });
-          }
+    function closeModal() {
+      document.getElementById("info-modal").classList.add("hidden");
+    }
+
+    // --- CITY DATA ---
+    const cities = {
+      hyderabad: [
+        { name: "Banjara Hills",   lat: 17.4156, lon: 78.4347, ndvi: 0.38 },
+        { name: "Jubilee Hills",   lat: 17.4325, lon: 78.4071, ndvi: 0.40 },
+        { name: "Secunderabad",    lat: 17.4399, lon: 78.4983, ndvi: 0.28 },
+        { name: "Hitech City",     lat: 17.4474, lon: 78.3762, ndvi: 0.22 },
+        { name: "Gachibowli",      lat: 17.4401, lon: 78.3489, ndvi: 0.25 },
+        { name: "Old City",        lat: 17.3616, lon: 78.4747, ndvi: 0.18 },
+        { name: "Kukatpally",      lat: 17.4849, lon: 78.3996, ndvi: 0.20 },
+        { name: "Madhapur",        lat: 17.4504, lon: 78.3912, ndvi: 0.24 },
+        { name: "LB Nagar",        lat: 17.3483, lon: 78.5503, ndvi: 0.19 },
+        { name: "Uppal",           lat: 17.4054, lon: 78.5593, ndvi: 0.21 }
+      ],
+      mumbai: [
+        { name: "Bandra",          lat: 19.0596, lon: 72.8295, ndvi: 0.21 },
+        { name: "Andheri",         lat: 19.1136, lon: 72.8697, ndvi: 0.18 },
+        { name: "Worli",           lat: 19.0176, lon: 72.8178, ndvi: 0.15 },
+        { name: "Powai",           lat: 19.1197, lon: 72.9051, ndvi: 0.35 },
+        { name: "Dharavi",         lat: 19.0422, lon: 72.8538, ndvi: 0.10 },
+        { name: "Juhu",            lat: 19.1075, lon: 72.8263, ndvi: 0.22 },
+        { name: "Malad",           lat: 19.1874, lon: 72.8484, ndvi: 0.20 },
+        { name: "Thane",           lat: 19.2183, lon: 72.9781, ndvi: 0.32 },
+        { name: "Kurla",           lat: 19.0726, lon: 72.8793, ndvi: 0.13 },
+        { name: "Borivali",        lat: 19.2307, lon: 72.8567, ndvi: 0.38 }
+      ],
+      delhi: [
+        { name: "Connaught Place", lat: 28.6315, lon: 77.2167, ndvi: 0.15 },
+        { name: "Hauz Khas",       lat: 28.5494, lon: 77.2001, ndvi: 0.42 },
+        { name: "Dwarka",          lat: 28.5921, lon: 77.0460, ndvi: 0.20 },
+        { name: "Rohini",          lat: 28.7041, lon: 77.1025, ndvi: 0.18 },
+        { name: "Lajpat Nagar",    lat: 28.5677, lon: 77.2433, ndvi: 0.22 },
+        { name: "Vasant Kunj",     lat: 28.5200, lon: 77.1577, ndvi: 0.35 },
+        { name: "Saket",           lat: 28.5244, lon: 77.2090, ndvi: 0.28 },
+        { name: "Noida Sector 18", lat: 28.5672, lon: 77.3211, ndvi: 0.19 },
+        { name: "Janakpuri",       lat: 28.6219, lon: 77.0828, ndvi: 0.21 },
+        { name: "Greater Kailash", lat: 28.5382, lon: 77.2410, ndvi: 0.30 }
+      ],
+      bangalore: [
+        { name: "Koramangala",     lat: 12.9352, lon: 77.6245, ndvi: 0.35 },
+        { name: "Indiranagar",     lat: 12.9784, lon: 77.6408, ndvi: 0.38 },
+        { name: "Whitefield",      lat: 12.9698, lon: 77.7499, ndvi: 0.30 },
+        { name: "Jayanagar",       lat: 12.9308, lon: 77.5834, ndvi: 0.45 },
+        { name: "Hebbal",          lat: 13.0358, lon: 77.5970, ndvi: 0.32 },
+        { name: "Electronic City", lat: 12.8399, lon: 77.6770, ndvi: 0.28 },
+        { name: "Marathahalli",    lat: 12.9591, lon: 77.6974, ndvi: 0.25 },
+        { name: "Malleshwaram",    lat: 13.0033, lon: 77.5700, ndvi: 0.40 },
+        { name: "HSR Layout",      lat: 12.9116, lon: 77.6474, ndvi: 0.33 },
+        { name: "Yelahanka",       lat: 13.1007, lon: 77.5963, ndvi: 0.36 }
+      ],
+      chennai: [
+        { name: "Anna Nagar",      lat: 13.0850, lon: 80.2101, ndvi: 0.25 },
+        { name: "Adyar",           lat: 13.0012, lon: 80.2565, ndvi: 0.30 },
+        { name: "T Nagar",         lat: 13.0418, lon: 80.2341, ndvi: 0.18 },
+        { name: "Velachery",       lat: 12.9815, lon: 80.2180, ndvi: 0.22 },
+        { name: "Porur",           lat: 13.0389, lon: 80.1567, ndvi: 0.28 },
+        { name: "OMR",             lat: 12.9010, lon: 80.2279, ndvi: 0.24 },
+        { name: "Perambur",        lat: 13.1177, lon: 80.2339, ndvi: 0.19 },
+        { name: "Mylapore",        lat: 13.0335, lon: 80.2685, ndvi: 0.20 },
+        { name: "Tambaram",        lat: 12.9249, lon: 80.1000, ndvi: 0.26 },
+        { name: "Nungambakkam",    lat: 13.0569, lon: 80.2425, ndvi: 0.22 }
+      ],
+      pune: [
+        { name: "Koregaon Park",   lat: 18.5362, lon: 73.8938, ndvi: 0.38 },
+        { name: "Hinjewadi",       lat: 18.5912, lon: 73.7389, ndvi: 0.28 },
+        { name: "Kothrud",         lat: 18.5074, lon: 73.8077, ndvi: 0.32 },
+        { name: "Viman Nagar",     lat: 18.5679, lon: 73.9143, ndvi: 0.25 },
+        { name: "Hadapsar",        lat: 18.5089, lon: 73.9260, ndvi: 0.22 },
+        { name: "Aundh",           lat: 18.5590, lon: 73.8080, ndvi: 0.35 },
+        { name: "Baner",           lat: 18.5590, lon: 73.7868, ndvi: 0.30 },
+        { name: "Wakad",           lat: 18.5985, lon: 73.7611, ndvi: 0.26 },
+        { name: "Magarpatta",      lat: 18.5089, lon: 73.9260, ndvi: 0.29 },
+        { name: "Kharadi",         lat: 18.5512, lon: 73.9442, ndvi: 0.23 }
+      ],
+      kolkata: [
+        { name: "Salt Lake",       lat: 22.5958, lon: 88.4147, ndvi: 0.32 },
+        { name: "Park Street",     lat: 22.5520, lon: 88.3529, ndvi: 0.18 },
+        { name: "Howrah",          lat: 22.5958, lon: 88.2636, ndvi: 0.15 },
+        { name: "New Town",        lat: 22.6275, lon: 88.4625, ndvi: 0.35 },
+        { name: "Ballygunge",      lat: 22.5263, lon: 88.3676, ndvi: 0.28 },
+        { name: "Alipore",         lat: 22.5355, lon: 88.3353, ndvi: 0.30 },
+        { name: "Dumdum",          lat: 22.6500, lon: 88.3900, ndvi: 0.22 },
+        { name: "Rajarhat",        lat: 22.6300, lon: 88.4600, ndvi: 0.33 },
+        { name: "Behala",          lat: 22.4996, lon: 88.3130, ndvi: 0.20 },
+        { name: "Tollygunge",      lat: 22.4996, lon: 88.3476, ndvi: 0.24 }
+      ],
+      ahmedabad: [
+        { name: "Navrangpura",     lat: 23.0395, lon: 72.5603, ndvi: 0.18 },
+        { name: "Satellite",       lat: 23.0245, lon: 72.5155, ndvi: 0.22 },
+        { name: "Bopal",           lat: 23.0311, lon: 72.4673, ndvi: 0.30 },
+        { name: "Maninagar",       lat: 22.9942, lon: 72.6054, ndvi: 0.15 },
+        { name: "Prahlad Nagar",   lat: 23.0168, lon: 72.5054, ndvi: 0.20 },
+        { name: "Vastrapur",       lat: 23.0300, lon: 72.5300, ndvi: 0.24 },
+        { name: "Chandkheda",      lat: 23.1100, lon: 72.5800, ndvi: 0.19 },
+        { name: "Gota",            lat: 23.0900, lon: 72.5400, ndvi: 0.21 },
+        { name: "SG Highway",      lat: 23.0200, lon: 72.5050, ndvi: 0.17 },
+        { name: "Thaltej",         lat: 23.0450, lon: 72.5100, ndvi: 0.23 }
+      ]
+    };
+
+    function updateNeighbourhoods(selectId, citySelectId) {
+      let city   = document.getElementById(citySelectId).value;
+      let select = document.getElementById(selectId);
+      select.innerHTML = "";
+      cities[city].forEach(function(n) {
+        let option   = document.createElement("option");
+        option.value = n.lat + "|" + n.lon + "|" + n.name + "|" + n.ndvi;
+        option.text  = n.name;
+        select.appendChild(option);
+      });
+    }
+
+    function setMode(mode) {
+      if (mode === "single") {
+        document.getElementById("single-mode").classList.remove("hidden");
+        document.getElementById("compare-mode").classList.add("hidden");
+        document.getElementById("btn-single").className  = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white";
+        document.getElementById("btn-compare").className = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600";
+      } else {
+        document.getElementById("single-mode").classList.add("hidden");
+        document.getElementById("compare-mode").classList.remove("hidden");
+        document.getElementById("btn-compare").className = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white";
+        document.getElementById("btn-single").className  = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600";
+      }
+    }
+
+    function calculateAQIScore(aqi) {
+      return parseFloat(Math.max(0, Math.min(10, 10 - (aqi / 50))).toFixed(1));
+    }
+
+    function calculateHeatScore(feelsLike) {
+      return parseFloat(Math.max(0, Math.min(10, 10 - Math.max(0, feelsLike - 20) * 0.4)).toFixed(1));
+    }
+
+    function calculateNDVIScore(ndvi) {
+      return parseFloat(Math.max(0, Math.min(10, ndvi * 10)).toFixed(1));
+    }
+
+    function getScoreColor(score) {
+      if (score >= 7) return "text-green-500";
+      if (score >= 5) return "text-orange-400";
+      return "text-red-500";
+    }
+
+    function getScoreLabel(score) {
+      if (score >= 8) return "Excellent";
+      if (score >= 6) return "Good";
+      if (score >= 4) return "Moderate";
+      return "Poor";
+    }
+
+    function getAQILabel(aqi) {
+      if (aqi <= 50)  return "Good";
+      if (aqi <= 100) return "Satisfactory";
+      if (aqi <= 150) return "Moderate";
+      if (aqi <= 200) return "Poor";
+      return "Very Poor";
+    }
+
+    function getNDVILabel(ndvi) {
+      if (ndvi >= 0.4) return "Well vegetated";
+      if (ndvi >= 0.2) return "Moderate greenery";
+      return "Sparse greenery";
+    }
+
+    function getSpinner() {
+      return `<div class="flex items-center justify-center gap-2 mt-4">
+        <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+        <span>Fetching live data — takes 5–10 seconds...</span>
+      </div>`;
+    }
+
+    function infoBtn(type) {
+      return `<button onclick="showInfo('${type}')"
+        class="ml-1 w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-300 inline-flex items-center justify-center"
+        style="font-size:10px;line-height:1">i</button>`;
+    }
+
+    async function fetchAreaData(city, neighbourhoodValue) {
+      let parts = neighbourhoodValue.split("|");
+      let lat   = parts[0];
+      let lon   = parts[1];
+      let name  = parts[2];
+      let ndvi  = parseFloat(parts[3]); // baseline fallback
+
+      let cacheKey = city + "|" + lat + "|" + lon;
+      let cached   = getCached(cacheKey);
+      if (cached) return cached;
+
+      // Fetch weather
+      let temp = 30, windSpeed = 10, feelsLike = 32, humidity = 60;
+      try {
+        let weatherURL = "https://api.open-meteo.com/v1/forecast"
+          + "?latitude="  + lat
+          + "&longitude=" + lon
+          + "&current_weather=true"
+          + "&hourly=relativehumidity_2m,apparent_temperature"
+          + "&timezone=Asia/Kolkata"
+          + "&forecast_days=1";
+        let weatherResponse = await fetch(weatherURL);
+        let weatherData     = await weatherResponse.json();
+        let currentHour     = new Date().getHours();
+        temp      = weatherData.current_weather.temperature;
+        windSpeed = weatherData.current_weather.windspeed;
+        feelsLike = weatherData.hourly.apparent_temperature[currentHour];
+        humidity  = weatherData.hourly.relativehumidity_2m[currentHour];
+      } catch (e) {
+        console.warn("Weather fetch failed — using fallback");
+      }
+
+      // Fetch AQI
+      let aqi = null;
+      try {
+        let aqiURL      = "https://api.waqi.info/feed/" + city + "/?token=fe48b82cbd71759d019345d307193ccee04f1110";
+        let aqiResponse = await fetch(aqiURL);
+        let aqiData     = await aqiResponse.json();
+        if (aqiData.status === "ok" && aqiData.data && aqiData.data.aqi) {
+          aqi = aqiData.data.aqi;
         }
+      } catch (e) {
+        console.warn("AQI fetch failed — using fallback");
+      }
+
+      let aqiFallbacks = {
+        hyderabad: 85, mumbai: 95, delhi: 150,
+        bangalore: 65, chennai: 90, pune: 75,
+        kolkata: 110, ahmedabad: 120
+      };
+      if (aqi === null) aqi = aqiFallbacks[city] || 100;
+
+      // Fetch live NDVI from satellite — falls back to baseline if unavailable
+      try {
+        const ndviRes  = await fetch("/api/ndvi?lat=" + lat + "&lon=" + lon);
+        const ndviData = await ndviRes.json();
+        if (ndviData.ndvi !== null && ndviData.ndvi !== undefined) {
+          ndvi = ndviData.ndvi;
+        }
+      } catch (e) {
+        console.warn("Live NDVI fetch failed — using baseline value");
+      }
+
+      let aqiScore   = calculateAQIScore(aqi);
+      let heatScore  = calculateHeatScore(feelsLike);
+      let ndviScore  = calculateNDVIScore(ndvi);
+      let finalScore = parseFloat(((aqiScore * 0.4) + (heatScore * 0.2) + (ndviScore * 0.4)).toFixed(1));
+
+      let result = { name, city, aqi, aqiScore, temp, feelsLike, humidity, windSpeed, heatScore, ndvi, ndviScore, finalScore };
+      setCached(cacheKey, result);
+      return result;
+    }
+
+    function buildScoreCard(d, highlight) {
+      let borderClass = highlight ? "border-2 border-green-400" : "border border-gray-100";
+      let badge       = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Better area</span>' : "";
+      return `
+        <div class="bg-white ${borderClass} rounded-2xl p-5">
+          <div class="text-sm text-gray-400 mb-1">${d.name}, ${d.city.charAt(0).toUpperCase() + d.city.slice(1)}</div>
+          <div class="flex items-baseline gap-2 mb-1">
+            <span class="text-4xl font-bold ${getScoreColor(d.finalScore)}">${d.finalScore}</span>
+            <span class="text-sm text-gray-400">/ 10</span>
+            ${badge}
+            ${infoBtn('score')}
+          </div>
+          <div class="text-sm font-medium mb-4 ${getScoreColor(d.finalScore)}">${getScoreLabel(d.finalScore)}</div>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between items-center border-t pt-3">
+              <div>
+                <div class="font-medium text-gray-700">Air Quality ${infoBtn('aqi')}</div>
+                <div class="text-xs text-gray-400">AQI ${d.aqi} — ${getAQILabel(d.aqi)}</div>
+              </div>
+              <div class="font-semibold ${getScoreColor(d.aqiScore)}">${d.aqiScore} / 10</div>
+            </div>
+            <div class="flex justify-between items-center border-t pt-3">
+              <div>
+                <div class="font-medium text-gray-700">Heat & Humidity ${infoBtn('heat')}</div>
+                <div class="text-xs text-gray-400">Feels like ${d.feelsLike}°C · Humidity ${d.humidity}%</div>
+              </div>
+              <div class="font-semibold ${getScoreColor(d.heatScore)}">${d.heatScore} / 10</div>
+            </div>
+            <div class="flex justify-between items-center border-t pt-3">
+              <div>
+                <div class="font-medium text-gray-700">Green Cover ${infoBtn('ndvi')}</div>
+                <div class="text-xs text-gray-400">NDVI ${d.ndvi} · ${getNDVILabel(d.ndvi)}</div>
+              </div>
+              <div class="font-semibold ${getScoreColor(d.ndviScore)}">${d.ndviScore} / 10</div>
+            </div>
+            <div class="flex justify-between border-t pt-3 text-xs text-gray-400">
+              <span>Wind ${d.windSpeed} km/h · ${d.windSpeed > 15 ? "Good dispersion" : "Low dispersion"}</span>
+            </div>
+            <div class="pt-2 border-t text-xs text-gray-400">
+              AQI, weather and green cover are live data from satellites and monitoring stations.
+            </div>
+          </div>
+        </div>`;
+    }
+
+    async function checkSingle() {
+      let city     = document.getElementById("city-select").value;
+      let nVal     = document.getElementById("neighbourhood-select").value;
+      let statusEl = document.getElementById("single-status");
+      let resultEl = document.getElementById("single-result");
+      statusEl.innerHTML = getSpinner();
+      resultEl.classList.add("hidden");
+      try {
+        let d = await fetchAreaData(city, nVal);
+        statusEl.innerHTML = "";
+        resultEl.innerHTML = buildScoreCard(d, false);
+        resultEl.classList.remove("hidden");
+      } catch (err) {
+        statusEl.innerHTML = "Could not load data. Check console (F12).";
+        console.error(err);
       }
     }
 
-    return res.status(200).json({
-      ndvi:   null,
-      reason: "No valid NDVI extracted",
-      status: statsRes.status,
-      debug:  JSON.stringify(data).substring(0, 600)
-    });
+    async function checkCompare() {
+      let cityA    = document.getElementById("city-a").value;
+      let cityB    = document.getElementById("city-b").value;
+      let nValA    = document.getElementById("neighbourhood-a").value;
+      let nValB    = document.getElementById("neighbourhood-b").value;
+      let statusEl = document.getElementById("compare-status");
+      let resultEl = document.getElementById("compare-result");
+      statusEl.innerHTML = getSpinner();
+      resultEl.classList.add("hidden");
+      try {
+        let [dA, dB] = await Promise.all([
+          fetchAreaData(cityA, nValA),
+          fetchAreaData(cityB, nValB)
+        ]);
+        let aWins = dA.finalScore > dB.finalScore;
+        let tie   = dA.finalScore === dB.finalScore;
+        let summary = tie
+          ? '<div class="text-center text-sm text-gray-500 mb-4">Both areas scored equally</div>'
+          : `<div class="text-center text-sm text-gray-500 mb-4">
+               <span class="font-medium text-green-600">${aWins ? dA.name : dB.name}</span>
+               scores ${Math.abs(dA.finalScore - dB.finalScore).toFixed(1)} points higher
+             </div>`;
+        statusEl.innerHTML = "";
+        resultEl.innerHTML = summary +
+          '<div class="grid grid-cols-2 gap-4">' +
+          buildScoreCard(dA, aWins && !tie) +
+          buildScoreCard(dB, !aWins && !tie) +
+          '</div>';
+        resultEl.classList.remove("hidden");
+      } catch (err) {
+        statusEl.innerHTML = "Could not load data. Check console (F12).";
+        console.error(err);
+      }
+    }
 
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-}
+    updateNeighbourhoods("neighbourhood-select", "city-select");
+    updateNeighbourhoods("neighbourhood-a", "city-a");
+    updateNeighbourhoods("neighbourhood-b", "city-b");
+
+  </script>
+
+</body>
+</html>
