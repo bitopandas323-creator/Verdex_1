@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
     const latF  = parseFloat(lat);
     const lonF  = parseFloat(lon);
-    const delta = 0.01;
+    const delta = 0.005;
 
     const today    = new Date();
     const pastDate = new Date();
