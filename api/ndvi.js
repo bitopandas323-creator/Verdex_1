@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
     const latF  = parseFloat(lat);
     const lonF  = parseFloat(lon);
-    const delta = 0.05;
+    const delta = 0.01;
 
     const today    = new Date();
     const pastDate = new Date();
@@ -38,53 +38,91 @@ export default async function handler(req, res) {
     const toDate   = today.toISOString().split("T")[0];
     const fromDate = pastDate.toISOString().split("T")[0];
 
-    // Step 2 — Use OGC WCS endpoint which returns NDVI directly
-    // This endpoint does not require evalscript
-    const wcsUrl = "https://sh.dataspace.copernicus.eu/ogc/wcs/" + CLIENT_ID
-      + "?SERVICE=WCS"
-      + "&REQUEST=GetCoverage"
-      + "&COVERAGE=NDVI"
-      + "&CRS=EPSG:4326"
-      + "&BBOX=" + (lonF - delta) + "," + (latF - delta) + "," + (lonF + delta) + "," + (latF + delta)
-      + "&WIDTH=10&HEIGHT=10"
-      + "&FORMAT=application/json"
-      + "&TIME=" + fromDate + "/" + toDate
-      + "&MAXCC=80"
-      + "&VERSION=1.1.2";
+    // Step 2 — Build raw JSON string manually
+    // This avoids any serialization issues with evalscript
+    const rawBody = `{
+  "input": {
+    "bounds": {
+      "bbox": [${lonF - delta}, ${latF - delta}, ${lonF + delta}, ${latF + delta}],
+      "properties": { "crs": "http://www.opengis.net/def/crs/EPSG/0/4326" }
+    },
+    "data": [{
+      "type": "sentinel-2-l2a",
+      "dataFilter": {
+        "timeRange": {
+          "from": "${fromDate}T00:00:00Z",
+          "to": "${toDate}T23:59:59Z"
+        },
+        "maxCloudCoverage": 80
+      }
+    }]
+  },
+  "evalscript": "//VERSION=3\\nfunction setup() { return { input: [{ bands: [\\"B04\\", \\"B08\\"] }], output: [{ id: \\"default\\", bands: 1, sampleType: SampleType.FLOAT32 }] }; }\\nfunction evaluatePixel(s) { return { default: [(s.B08 - s.B04) / (s.B08 + s.B04)] }; }",
+  "aggregation": {
+    "timeRange": {
+      "from": "${fromDate}T00:00:00Z",
+      "to": "${toDate}T23:59:59Z"
+    },
+    "aggregationInterval": { "of": "P90D" },
+    "width": 256,
+    "height": 256
+  },
+  "calculations": {
+    "default": {
+      "statistics": {
+        "default": {
+          "percentiles": { "k": [50] }
+        }
+      }
+    }
+  }
+}`;
 
-    const wcsRes  = await fetch(wcsUrl, {
-      headers: { "Authorization": "Bearer " + token }
-    });
+    const statsRes = await fetch(
+      "https://sh.dataspace.copernicus.eu/api/v1/statistics",
+      {
+        method:  "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: rawBody
+      }
+    );
 
-    const wcsText = await wcsRes.text();
+    const rawText = await statsRes.text();
 
-    let wcsData;
-    try { wcsData = JSON.parse(wcsText); }
+    let data;
+    try { data = JSON.parse(rawText); }
     catch (e) {
-      // WCS returned non-JSON — try to extract value differently
       return res.status(200).json({
-        ndvi:        null,
-        reason:      "WCS non-JSON response",
-        contentType: wcsRes.headers.get("content-type"),
-        status:      wcsRes.status,
-        raw:         wcsText.substring(0, 400)
+        ndvi:   null,
+        reason: "Parse error",
+        status: statsRes.status,
+        raw:    rawText.substring(0, 500)
       });
     }
 
-    // Try to get NDVI value from WCS JSON response
-    if (wcsData && wcsData.data) {
-      const pixels = wcsData.data.flat();
-      const valid  = pixels.filter(v => v > -0.5 && v < 1.1);
-      if (valid.length > 0) {
-        const mean = valid.reduce((a, b) => a + b, 0) / valid.length;
-        return res.status(200).json({ ndvi: parseFloat(mean.toFixed(3)) });
+    // Extract NDVI
+    if (data.data && data.data.length > 0) {
+      for (const entry of data.data) {
+        if (entry.outputs && entry.outputs.default && entry.outputs.default.bands && entry.outputs.default.bands.B0) {
+          const mean = entry.outputs.default.bands.B0.stats.mean;
+          if (mean !== null && mean !== undefined && !isNaN(mean) && mean > -0.9) {
+            return res.status(200).json({
+              ndvi: parseFloat(mean.toFixed(3)),
+              date: entry.interval ? entry.interval.from : "unknown"
+            });
+          }
+        }
       }
     }
 
     return res.status(200).json({
-      ndvi:  null,
-      reason: "WCS: no valid pixels",
-      debug:  JSON.stringify(wcsData).substring(0, 400)
+      ndvi:   null,
+      reason: "No valid NDVI in response",
+      status: statsRes.status,
+      debug:  JSON.stringify(data).substring(0, 600)
     });
 
   } catch (err) {
