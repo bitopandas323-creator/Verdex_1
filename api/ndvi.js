@@ -38,76 +38,74 @@ export default async function handler(req, res) {
     const toDate   = today.toISOString().split("T")[0];
     const fromDate = pastDate.toISOString().split("T")[0];
 
-    // Step 2 — Build raw JSON string manually
-    // This avoids any serialization issues with evalscript
-    const rawBody = `{
-  "input": {
-    "bounds": {
-      "bbox": [${lonF - delta}, ${latF - delta}, ${lonF + delta}, ${latF + delta}],
-      "properties": { "crs": "http://www.opengis.net/def/crs/EPSG/0/4326" }
-    },
-    "data": [{
-      "type": "sentinel-2-l2a",
-      "dataFilter": {
-        "timeRange": {
-          "from": "${fromDate}T00:00:00Z",
-          "to": "${toDate}T23:59:59Z"
+    // evalscript MUST include dataMask output for Statistics API
+    // evalscript MUST be inside aggregation object
+    const evalscript = "//VERSION=3\nfunction setup() {\n  return {\n    input: [{ bands: [\"B04\", \"B08\", \"dataMask\"] }],\n    output: [\n      { id: \"ndvi\", bands: 1, sampleType: \"FLOAT32\" },\n      { id: \"dataMask\", bands: 1 }\n    ]\n  };\n}\nfunction evaluatePixel(s) {\n  let ndvi = (s.B08 - s.B04) / (s.B08 + s.B04);\n  return {\n    ndvi: [ndvi],\n    dataMask: [s.dataMask]\n  };\n}";
+
+    // Build request — evalscript goes INSIDE aggregation
+    const statsRequest = {
+      input: {
+        bounds: {
+          bbox: [lonF - delta, latF - delta, lonF + delta, latF + delta],
+          properties: { crs: "http://www.opengis.net/def/crs/EPSG/0/4326" }
         },
-        "maxCloudCoverage": 80
-      }
-    }]
-  },
-  "evalscript": "//VERSION=3\\nfunction setup() { return { input: [{ bands: [\\"B04\\", \\"B08\\"] }], output: [{ id: \\"default\\", bands: 1, sampleType: SampleType.FLOAT32 }] }; }\\nfunction evaluatePixel(s) { return { default: [(s.B08 - s.B04) / (s.B08 + s.B04)] }; }",
-  "aggregation": {
-    "timeRange": {
-      "from": "${fromDate}T00:00:00Z",
-      "to": "${toDate}T23:59:59Z"
-    },
-    "aggregationInterval": { "of": "P90D" },
-    "width": 256,
-    "height": 256
-  },
-  "calculations": {
-    "default": {
-      "statistics": {
-        "default": {
-          "percentiles": { "k": [50] }
+        data: [{
+          type: "sentinel-2-l2a",
+          dataFilter: {
+            timeRange: {
+              from: fromDate + "T00:00:00Z",
+              to:   toDate   + "T23:59:59Z"
+            },
+            maxCloudCoverage: 80
+          }
+        }]
+      },
+      aggregation: {
+        timeRange: {
+          from: fromDate + "T00:00:00Z",
+          to:   toDate   + "T23:59:59Z"
+        },
+        aggregationInterval: { of: "P90D" },
+        evalscript: evalscript,
+        resx: 10,
+        resy: 10
+      },
+      calculations: {
+        ndvi: {
+          statistics: {
+            default: {
+              percentiles: { k: [50] }
+            }
+          }
         }
       }
-    }
-  }
-}`;
+    };
 
-    const statsRes = await fetch(
+    const statsRes  = await fetch(
       "https://sh.dataspace.copernicus.eu/api/v1/statistics",
       {
         method:  "POST",
         headers: {
           "Content-Type":  "application/json",
+          "Accept":        "application/json",
           "Authorization": "Bearer " + token
         },
-        body: rawBody
+        body: JSON.stringify(statsRequest)
       }
     );
 
     const rawText = await statsRes.text();
-
     let data;
     try { data = JSON.parse(rawText); }
     catch (e) {
-      return res.status(200).json({
-        ndvi:   null,
-        reason: "Parse error",
-        status: statsRes.status,
-        raw:    rawText.substring(0, 500)
-      });
+      return res.status(200).json({ ndvi: null, reason: "parse error", raw: rawText.substring(0, 400) });
     }
 
-    // Extract NDVI
+    // Extract NDVI mean
     if (data.data && data.data.length > 0) {
       for (const entry of data.data) {
-        if (entry.outputs && entry.outputs.default && entry.outputs.default.bands && entry.outputs.default.bands.B0) {
-          const mean = entry.outputs.default.bands.B0.stats.mean;
+        if (entry.outputs && entry.outputs.ndvi && entry.outputs.ndvi.bands && entry.outputs.ndvi.bands.B0) {
+          const mean = entry.outputs.ndvi.bands.B0.stats.mean;
           if (mean !== null && mean !== undefined && !isNaN(mean) && mean > -0.9) {
             return res.status(200).json({
               ndvi: parseFloat(mean.toFixed(3)),
@@ -120,7 +118,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ndvi:   null,
-      reason: "No valid NDVI in response",
+      reason: "No valid NDVI extracted",
       status: statsRes.status,
       debug:  JSON.stringify(data).substring(0, 600)
     });
