@@ -72,7 +72,7 @@ export default async function handler(req, res) {
       output: {
         width:  1,
         height: 1,
-        responses: [{ identifier: "default", format: { type: "application/json" } }]
+        responses: [{ identifier: "default", format: { type: "image/tiff" } }]
       }
     };
 
