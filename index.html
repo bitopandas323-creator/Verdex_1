@@ -568,6 +568,16 @@
       let lon   = parts[1];
       let name  = parts[2];
       let ndvi  = parseFloat(parts[3]);
+      // Fetch live NDVI from satellite
+      try {
+        const ndviRes  = await fetch("/api/ndvi?lat=" + lat + "&lon=" + lon);
+        const ndviData = await ndviRes.json();
+        if (ndviData.ndvi !== null && ndviData.ndvi !== undefined) {
+          ndvi = ndviData.ndvi;
+        }
+      } catch (e) {
+        console.warn("Live NDVI fetch failed — using baseline value");
+      }
 
       let cacheKey = city + "|" + lat + "|" + lon;
       let cached   = getCached(cacheKey);
