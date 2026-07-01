@@ -614,11 +614,10 @@ let noise = parseFloat(parts[4]) || 5.0;
 
       let aqi = null;
       try {
-        let aqiURL      = "https://api.waqi.info/feed/" + city + "/?token=fe48b82cbd71759d019345d307193ccee04f1110";
-        let aqiResponse = await fetch(aqiURL);
+        let aqiResponse = await fetch("/api/aqi?lat=" + lat + "&lon=" + lon + "&city=" + city);
         let aqiData     = await aqiResponse.json();
-        if (aqiData.status === "ok" && aqiData.data && aqiData.data.aqi) {
-          aqi = aqiData.data.aqi;
+        if (typeof aqiData.aqi === "number") {
+          aqi = aqiData.aqi;
         }
       } catch (e) {
         console.warn("AQI fetch failed — using fallback");
