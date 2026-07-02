@@ -370,12 +370,24 @@
     <b>Below 4</b> → Very noisy. Near highways, railways or industrial areas.<br><br>
     Based on proximity to major roads and railways from OpenStreetMap data.`
 },
+      water: {
+        title: "Water Quality",
+        body: `Measures how safe and usable the local water supply is, based on Total Dissolved Solids (TDS) — a standard indicator of dissolved salts, minerals and contaminants.<br><br>
+          <b>0–300 ppm</b> → Excellent. Well within safe limits.<br>
+          <b>300–500 ppm</b> → Good. Within BIS acceptable limits.<br>
+          <b>500–700 ppm</b> → Fair. Noticeable taste, filtration advisable.<br>
+          <b>700–900 ppm</b> → Poor. Filtration recommended.<br>
+          <b>900+ ppm</b> → Very poor. Filtration essential.<br><br>
+          Based on researched baseline data for each neighbourhood, referenced against CPCB/BIS drinking water standards.`
+      },
       score: {
         title: "How is the Green Score calculated?",
-        body: `The Green Score combines three parameters into one number from 0 to 10:<br><br>
-          <b>Air Quality → 40% weight</b><br>
-          <b>Green Cover → 40% weight</b><br>
-          <b>Heat & Humidity → 20% weight</b><br><br>
+        body: `The Green Score combines five parameters into one number from 0 to 10:<br><br>
+          <b>Air Quality → 30% weight</b><br>
+          <b>Green Cover → 25% weight</b><br>
+          <b>Water Quality → 20% weight</b><br>
+          <b>Heat & Humidity → 15% weight</b><br>
+          <b>Noise → 10% weight</b><br><br>
           <b>8–10</b> → Excellent<br>
           <b>6–8</b> → Good<br>
           <b>4–6</b> → Moderate<br>
@@ -396,100 +408,100 @@
     // --- CITY DATA ---
     const cities = {
   hyderabad: [
-    { name: "Banjara Hills",   lat: 17.4156, lon: 78.4347, ndvi: 0.38, noise: 6.5 },
-    { name: "Jubilee Hills",   lat: 17.4325, lon: 78.4071, ndvi: 0.40, noise: 7.0 },
-    { name: "Secunderabad",    lat: 17.4399, lon: 78.4983, ndvi: 0.28, noise: 5.0 },
-    { name: "Hitech City",     lat: 17.4474, lon: 78.3762, ndvi: 0.22, noise: 4.5 },
-    { name: "Gachibowli",      lat: 17.4401, lon: 78.3489, ndvi: 0.25, noise: 5.0 },
-    { name: "Old City",        lat: 17.3616, lon: 78.4747, ndvi: 0.18, noise: 3.5 },
-    { name: "Kukatpally",      lat: 17.4849, lon: 78.3996, ndvi: 0.20, noise: 4.0 },
-    { name: "Madhapur",        lat: 17.4504, lon: 78.3912, ndvi: 0.24, noise: 5.0 },
-    { name: "LB Nagar",        lat: 17.3483, lon: 78.5503, ndvi: 0.19, noise: 4.5 },
-    { name: "Uppal",           lat: 17.4054, lon: 78.5593, ndvi: 0.21, noise: 4.5 }
+    { name: "Banjara Hills",   lat: 17.4156, lon: 78.4347, ndvi: 0.38, noise: 6.5, water: 320 },
+    { name: "Jubilee Hills",   lat: 17.4325, lon: 78.4071, ndvi: 0.40, noise: 7.0, water: 300 },
+    { name: "Secunderabad",    lat: 17.4399, lon: 78.4983, ndvi: 0.28, noise: 5.0, water: 420 },
+    { name: "Hitech City",     lat: 17.4474, lon: 78.3762, ndvi: 0.22, noise: 4.5, water: 380 },
+    { name: "Gachibowli",      lat: 17.4401, lon: 78.3489, ndvi: 0.25, noise: 5.0, water: 360 },
+    { name: "Old City",        lat: 17.3616, lon: 78.4747, ndvi: 0.18, noise: 3.5, water: 520 },
+    { name: "Kukatpally",      lat: 17.4849, lon: 78.3996, ndvi: 0.20, noise: 4.0, water: 440 },
+    { name: "Madhapur",        lat: 17.4504, lon: 78.3912, ndvi: 0.24, noise: 5.0, water: 370 },
+    { name: "LB Nagar",        lat: 17.3483, lon: 78.5503, ndvi: 0.19, noise: 4.5, water: 460 },
+    { name: "Uppal",           lat: 17.4054, lon: 78.5593, ndvi: 0.21, noise: 4.5, water: 480 }
   ],
   mumbai: [
-    { name: "Bandra",          lat: 19.0596, lon: 72.8295, ndvi: 0.21, noise: 5.0 },
-    { name: "Andheri",         lat: 19.1136, lon: 72.8697, ndvi: 0.18, noise: 4.0 },
-    { name: "Worli",           lat: 19.0176, lon: 72.8178, ndvi: 0.15, noise: 4.5 },
-    { name: "Powai",           lat: 19.1197, lon: 72.9051, ndvi: 0.35, noise: 6.5 },
-    { name: "Dharavi",         lat: 19.0422, lon: 72.8538, ndvi: 0.10, noise: 3.5 },
-    { name: "Juhu",            lat: 19.1075, lon: 72.8263, ndvi: 0.22, noise: 5.5 },
-    { name: "Malad",           lat: 19.1874, lon: 72.8484, ndvi: 0.20, noise: 4.5 },
-    { name: "Thane",           lat: 19.2183, lon: 72.9781, ndvi: 0.32, noise: 4.0 },
-    { name: "Kurla",           lat: 19.0726, lon: 72.8793, ndvi: 0.13, noise: 3.5 },
-    { name: "Borivali",        lat: 19.2307, lon: 72.8567, ndvi: 0.38, noise: 5.0 }
+    { name: "Bandra",          lat: 19.0596, lon: 72.8295, ndvi: 0.21, noise: 5.0, water: 210 },
+    { name: "Andheri",         lat: 19.1136, lon: 72.8697, ndvi: 0.18, noise: 4.0, water: 240 },
+    { name: "Worli",           lat: 19.0176, lon: 72.8178, ndvi: 0.15, noise: 4.5, water: 260 },
+    { name: "Powai",           lat: 19.1197, lon: 72.9051, ndvi: 0.35, noise: 6.5, water: 190 },
+    { name: "Dharavi",         lat: 19.0422, lon: 72.8538, ndvi: 0.10, noise: 3.5, water: 380 },
+    { name: "Juhu",            lat: 19.1075, lon: 72.8263, ndvi: 0.22, noise: 5.5, water: 230 },
+    { name: "Malad",           lat: 19.1874, lon: 72.8484, ndvi: 0.20, noise: 4.5, water: 250 },
+    { name: "Thane",           lat: 19.2183, lon: 72.9781, ndvi: 0.32, noise: 4.0, water: 220 },
+    { name: "Kurla",           lat: 19.0726, lon: 72.8793, ndvi: 0.13, noise: 3.5, water: 350 },
+    { name: "Borivali",        lat: 19.2307, lon: 72.8567, ndvi: 0.38, noise: 5.0, water: 200 }
   ],
   delhi: [
-    { name: "Connaught Place", lat: 28.6315, lon: 77.2167, ndvi: 0.15, noise: 3.0 },
-    { name: "Hauz Khas",       lat: 28.5494, lon: 77.2001, ndvi: 0.42, noise: 6.0 },
-    { name: "Dwarka",          lat: 28.5921, lon: 77.0460, ndvi: 0.20, noise: 5.5 },
-    { name: "Rohini",          lat: 28.7041, lon: 77.1025, ndvi: 0.18, noise: 5.0 },
-    { name: "Lajpat Nagar",    lat: 28.5677, lon: 77.2433, ndvi: 0.22, noise: 4.5 },
-    { name: "Vasant Kunj",     lat: 28.5200, lon: 77.1577, ndvi: 0.35, noise: 6.5 },
-    { name: "Saket",           lat: 28.5244, lon: 77.2090, ndvi: 0.28, noise: 6.0 },
-    { name: "Noida Sector 18", lat: 28.5672, lon: 77.3211, ndvi: 0.19, noise: 4.0 },
-    { name: "Janakpuri",       lat: 28.6219, lon: 77.0828, ndvi: 0.21, noise: 5.5 },
-    { name: "Greater Kailash", lat: 28.5382, lon: 77.2410, ndvi: 0.30, noise: 6.0 }
+    { name: "Connaught Place", lat: 28.6315, lon: 77.2167, ndvi: 0.15, noise: 3.0, water: 320 },
+    { name: "Hauz Khas",       lat: 28.5494, lon: 77.2001, ndvi: 0.42, noise: 6.0, water: 380 },
+    { name: "Dwarka",          lat: 28.5921, lon: 77.0460, ndvi: 0.20, noise: 5.5, water: 520 },
+    { name: "Rohini",          lat: 28.7041, lon: 77.1025, ndvi: 0.18, noise: 5.0, water: 480 },
+    { name: "Lajpat Nagar",    lat: 28.5677, lon: 77.2433, ndvi: 0.22, noise: 4.5, water: 400 },
+    { name: "Vasant Kunj",     lat: 28.5200, lon: 77.1577, ndvi: 0.35, noise: 6.5, water: 440 },
+    { name: "Saket",           lat: 28.5244, lon: 77.2090, ndvi: 0.28, noise: 6.0, water: 400 },
+    { name: "Noida Sector 18", lat: 28.5672, lon: 77.3211, ndvi: 0.19, noise: 4.0, water: 420 },
+    { name: "Janakpuri",       lat: 28.6219, lon: 77.0828, ndvi: 0.21, noise: 5.5, water: 500 },
+    { name: "Greater Kailash", lat: 28.5382, lon: 77.2410, ndvi: 0.30, noise: 6.0, water: 380 }
   ],
   bangalore: [
-    { name: "Koramangala",     lat: 12.9352, lon: 77.6245, ndvi: 0.35, noise: 5.5 },
-    { name: "Indiranagar",     lat: 12.9784, lon: 77.6408, ndvi: 0.38, noise: 5.5 },
-    { name: "Whitefield",      lat: 12.9698, lon: 77.7499, ndvi: 0.30, noise: 4.5 },
-    { name: "Jayanagar",       lat: 12.9308, lon: 77.5834, ndvi: 0.45, noise: 7.0 },
-    { name: "Hebbal",          lat: 13.0358, lon: 77.5970, ndvi: 0.32, noise: 4.0 },
-    { name: "Electronic City", lat: 12.8399, lon: 77.6770, ndvi: 0.28, noise: 4.5 },
-    { name: "Marathahalli",    lat: 12.9591, lon: 77.6974, ndvi: 0.25, noise: 4.0 },
-    { name: "Malleshwaram",    lat: 13.0033, lon: 77.5700, ndvi: 0.40, noise: 6.0 },
-    { name: "HSR Layout",      lat: 12.9116, lon: 77.6474, ndvi: 0.33, noise: 6.0 },
-    { name: "Yelahanka",       lat: 13.1007, lon: 77.5963, ndvi: 0.36, noise: 6.5 }
+    { name: "Koramangala",     lat: 12.9352, lon: 77.6245, ndvi: 0.35, noise: 5.5, water: 420 },
+    { name: "Indiranagar",     lat: 12.9784, lon: 77.6408, ndvi: 0.38, noise: 5.5, water: 400 },
+    { name: "Whitefield",      lat: 12.9698, lon: 77.7499, ndvi: 0.30, noise: 4.5, water: 480 },
+    { name: "Jayanagar",       lat: 12.9308, lon: 77.5834, ndvi: 0.45, noise: 7.0, water: 380 },
+    { name: "Hebbal",          lat: 13.0358, lon: 77.5970, ndvi: 0.32, noise: 4.0, water: 460 },
+    { name: "Electronic City", lat: 12.8399, lon: 77.6770, ndvi: 0.28, noise: 4.5, water: 520 },
+    { name: "Marathahalli",    lat: 12.9591, lon: 77.6974, ndvi: 0.25, noise: 4.0, water: 500 },
+    { name: "Malleshwaram",    lat: 13.0033, lon: 77.5700, ndvi: 0.40, noise: 6.0, water: 360 },
+    { name: "HSR Layout",      lat: 12.9116, lon: 77.6474, ndvi: 0.33, noise: 6.0, water: 460 },
+    { name: "Yelahanka",       lat: 13.1007, lon: 77.5963, ndvi: 0.36, noise: 6.5, water: 490 }
   ],
   chennai: [
-    { name: "Anna Nagar",      lat: 13.0850, lon: 80.2101, ndvi: 0.25, noise: 5.5 },
-    { name: "Adyar",           lat: 13.0012, lon: 80.2565, ndvi: 0.30, noise: 6.0 },
-    { name: "T Nagar",         lat: 13.0418, lon: 80.2341, ndvi: 0.18, noise: 3.5 },
-    { name: "Velachery",       lat: 12.9815, lon: 80.2180, ndvi: 0.22, noise: 5.0 },
-    { name: "Porur",           lat: 13.0389, lon: 80.1567, ndvi: 0.28, noise: 5.5 },
-    { name: "OMR",             lat: 12.9010, lon: 80.2279, ndvi: 0.24, noise: 4.5 },
-    { name: "Perambur",        lat: 13.1177, lon: 80.2339, ndvi: 0.19, noise: 4.0 },
-    { name: "Mylapore",        lat: 13.0335, lon: 80.2685, ndvi: 0.20, noise: 5.0 },
-    { name: "Tambaram",        lat: 12.9249, lon: 80.1000, ndvi: 0.26, noise: 4.5 },
-    { name: "Nungambakkam",    lat: 13.0569, lon: 80.2425, ndvi: 0.22, noise: 5.0 }
+    { name: "Anna Nagar",      lat: 13.0850, lon: 80.2101, ndvi: 0.25, noise: 5.5, water: 420 },
+    { name: "Adyar",           lat: 13.0012, lon: 80.2565, ndvi: 0.30, noise: 6.0, water: 460 },
+    { name: "T Nagar",         lat: 13.0418, lon: 80.2341, ndvi: 0.18, noise: 3.5, water: 500 },
+    { name: "Velachery",       lat: 12.9815, lon: 80.2180, ndvi: 0.22, noise: 5.0, water: 480 },
+    { name: "Porur",           lat: 13.0389, lon: 80.1567, ndvi: 0.28, noise: 5.5, water: 520 },
+    { name: "OMR",             lat: 12.9010, lon: 80.2279, ndvi: 0.24, noise: 4.5, water: 560 },
+    { name: "Perambur",        lat: 13.1177, lon: 80.2339, ndvi: 0.19, noise: 4.0, water: 500 },
+    { name: "Mylapore",        lat: 13.0335, lon: 80.2685, ndvi: 0.20, noise: 5.0, water: 470 },
+    { name: "Tambaram",        lat: 12.9249, lon: 80.1000, ndvi: 0.26, noise: 4.5, water: 490 },
+    { name: "Nungambakkam",    lat: 13.0569, lon: 80.2425, ndvi: 0.22, noise: 5.0, water: 440 }
   ],
   pune: [
-    { name: "Koregaon Park",   lat: 18.5362, lon: 73.8938, ndvi: 0.38, noise: 6.0 },
-    { name: "Hinjewadi",       lat: 18.5912, lon: 73.7389, ndvi: 0.28, noise: 5.0 },
-    { name: "Kothrud",         lat: 18.5074, lon: 73.8077, ndvi: 0.32, noise: 6.0 },
-    { name: "Viman Nagar",     lat: 18.5679, lon: 73.9143, ndvi: 0.25, noise: 5.5 },
-    { name: "Hadapsar",        lat: 18.5089, lon: 73.9260, ndvi: 0.22, noise: 4.5 },
-    { name: "Aundh",           lat: 18.5590, lon: 73.8080, ndvi: 0.35, noise: 6.0 },
-    { name: "Baner",           lat: 18.5590, lon: 73.7868, ndvi: 0.30, noise: 5.5 },
-    { name: "Wakad",           lat: 18.5985, lon: 73.7611, ndvi: 0.26, noise: 5.0 },
-    { name: "Magarpatta",      lat: 18.5089, lon: 73.9260, ndvi: 0.29, noise: 5.5 },
-    { name: "Kharadi",         lat: 18.5512, lon: 73.9442, ndvi: 0.23, noise: 5.0 }
+    { name: "Koregaon Park",   lat: 18.5362, lon: 73.8938, ndvi: 0.38, noise: 6.0, water: 260 },
+    { name: "Hinjewadi",       lat: 18.5912, lon: 73.7389, ndvi: 0.28, noise: 5.0, water: 380 },
+    { name: "Kothrud",         lat: 18.5074, lon: 73.8077, ndvi: 0.32, noise: 6.0, water: 300 },
+    { name: "Viman Nagar",     lat: 18.5679, lon: 73.9143, ndvi: 0.25, noise: 5.5, water: 320 },
+    { name: "Hadapsar",        lat: 18.5089, lon: 73.9260, ndvi: 0.22, noise: 4.5, water: 380 },
+    { name: "Aundh",           lat: 18.5590, lon: 73.8080, ndvi: 0.35, noise: 6.0, water: 290 },
+    { name: "Baner",           lat: 18.5590, lon: 73.7868, ndvi: 0.30, noise: 5.5, water: 340 },
+    { name: "Wakad",           lat: 18.5985, lon: 73.7611, ndvi: 0.26, noise: 5.0, water: 370 },
+    { name: "Magarpatta",      lat: 18.5089, lon: 73.9260, ndvi: 0.29, noise: 5.5, water: 310 },
+    { name: "Kharadi",         lat: 18.5512, lon: 73.9442, ndvi: 0.23, noise: 5.0, water: 350 }
   ],
   kolkata: [
-    { name: "Salt Lake",       lat: 22.5958, lon: 88.4147, ndvi: 0.32, noise: 6.5 },
-    { name: "Park Street",     lat: 22.5520, lon: 88.3529, ndvi: 0.18, noise: 3.5 },
-    { name: "Howrah",          lat: 22.5958, lon: 88.2636, ndvi: 0.15, noise: 3.0 },
-    { name: "New Town",        lat: 22.6275, lon: 88.4625, ndvi: 0.35, noise: 7.0 },
-    { name: "Ballygunge",      lat: 22.5263, lon: 88.3676, ndvi: 0.28, noise: 5.5 },
-    { name: "Alipore",         lat: 22.5355, lon: 88.3353, ndvi: 0.30, noise: 6.0 },
-    { name: "Dumdum",          lat: 22.6500, lon: 88.3900, ndvi: 0.22, noise: 4.0 },
-    { name: "Rajarhat",        lat: 22.6300, lon: 88.4600, ndvi: 0.33, noise: 6.5 },
-    { name: "Behala",          lat: 22.4996, lon: 88.3130, ndvi: 0.20, noise: 5.0 },
-    { name: "Tollygunge",      lat: 22.4996, lon: 88.3476, ndvi: 0.24, noise: 5.0 }
+    { name: "Salt Lake",       lat: 22.5958, lon: 88.4147, ndvi: 0.32, noise: 6.5, water: 260 },
+    { name: "Park Street",     lat: 22.5520, lon: 88.3529, ndvi: 0.18, noise: 3.5, water: 240 },
+    { name: "Howrah",          lat: 22.5958, lon: 88.2636, ndvi: 0.15, noise: 3.0, water: 380 },
+    { name: "New Town",        lat: 22.6275, lon: 88.4625, ndvi: 0.35, noise: 7.0, water: 250 },
+    { name: "Ballygunge",      lat: 22.5263, lon: 88.3676, ndvi: 0.28, noise: 5.5, water: 260 },
+    { name: "Alipore",         lat: 22.5355, lon: 88.3353, ndvi: 0.30, noise: 6.0, water: 250 },
+    { name: "Dumdum",          lat: 22.6500, lon: 88.3900, ndvi: 0.22, noise: 4.0, water: 340 },
+    { name: "Rajarhat",        lat: 22.6300, lon: 88.4600, ndvi: 0.33, noise: 6.5, water: 280 },
+    { name: "Behala",          lat: 22.4996, lon: 88.3130, ndvi: 0.20, noise: 5.0, water: 350 },
+    { name: "Tollygunge",      lat: 22.4996, lon: 88.3476, ndvi: 0.24, noise: 5.0, water: 320 }
   ],
   ahmedabad: [
-    { name: "Navrangpura",     lat: 23.0395, lon: 72.5603, ndvi: 0.18, noise: 5.0 },
-    { name: "Satellite",       lat: 23.0245, lon: 72.5155, ndvi: 0.22, noise: 6.0 },
-    { name: "Bopal",           lat: 23.0311, lon: 72.4673, ndvi: 0.30, noise: 6.5 },
-    { name: "Maninagar",       lat: 22.9942, lon: 72.6054, ndvi: 0.15, noise: 4.0 },
-    { name: "Prahlad Nagar",   lat: 23.0168, lon: 72.5054, ndvi: 0.20, noise: 6.0 },
-    { name: "Vastrapur",       lat: 23.0300, lon: 72.5300, ndvi: 0.24, noise: 5.5 },
-    { name: "Chandkheda",      lat: 23.1100, lon: 72.5800, ndvi: 0.19, noise: 5.0 },
-    { name: "Gota",            lat: 23.0900, lon: 72.5400, ndvi: 0.21, noise: 5.5 },
-    { name: "SG Highway",      lat: 23.0200, lon: 72.5050, ndvi: 0.17, noise: 3.5 },
-    { name: "Thaltej",         lat: 23.0450, lon: 72.5100, ndvi: 0.23, noise: 5.5 }
+    { name: "Navrangpura",     lat: 23.0395, lon: 72.5603, ndvi: 0.18, noise: 5.0, water: 420 },
+    { name: "Satellite",       lat: 23.0245, lon: 72.5155, ndvi: 0.22, noise: 6.0, water: 460 },
+    { name: "Bopal",           lat: 23.0311, lon: 72.4673, ndvi: 0.30, noise: 6.5, water: 520 },
+    { name: "Maninagar",       lat: 22.9942, lon: 72.6054, ndvi: 0.15, noise: 4.0, water: 480 },
+    { name: "Prahlad Nagar",   lat: 23.0168, lon: 72.5054, ndvi: 0.20, noise: 6.0, water: 440 },
+    { name: "Vastrapur",       lat: 23.0300, lon: 72.5300, ndvi: 0.24, noise: 5.5, water: 420 },
+    { name: "Chandkheda",      lat: 23.1100, lon: 72.5800, ndvi: 0.19, noise: 5.0, water: 500 },
+    { name: "Gota",            lat: 23.0900, lon: 72.5400, ndvi: 0.21, noise: 5.5, water: 510 },
+    { name: "SG Highway",      lat: 23.0200, lon: 72.5050, ndvi: 0.17, noise: 3.5, water: 460 },
+    { name: "Thaltej",         lat: 23.0450, lon: 72.5100, ndvi: 0.23, noise: 5.5, water: 430 }
   ]
 };
     function updateNeighbourhoods(selectId, citySelectId) {
@@ -498,7 +510,7 @@
       select.innerHTML = "";
       cities[city].forEach(function(n) {
         let option   = document.createElement("option");
-        option.value = n.lat + "|" + n.lon + "|" + n.name + "|" + n.ndvi + "|" + n.noise;
+        option.value = n.lat + "|" + n.lon + "|" + n.name + "|" + n.ndvi + "|" + n.noise + "|" + n.water;
         option.text  = n.name;
         select.appendChild(option);
       });
@@ -530,6 +542,10 @@
       return parseFloat(Math.max(0, Math.min(10, ndvi * 10)).toFixed(1));
     }
 
+    function calculateWaterScore(tds) {
+      return parseFloat(Math.max(0, Math.min(10, 10 - (tds / 100))).toFixed(1));
+    }
+
     function getScoreColor(score) {
       if (score >= 7) return "text-green-500";
       if (score >= 5) return "text-orange-400";
@@ -557,6 +573,14 @@
       return "Sparse greenery";
     }
 
+    function getWaterLabel(tds) {
+      if (tds <= 300) return "Excellent";
+      if (tds <= 500) return "Good";
+      if (tds <= 700) return "Fair";
+      if (tds <= 900) return "Poor";
+      return "Very poor";
+    }
+
     function getSpinner() {
       return `<div class="flex items-center justify-center gap-2 mt-4">
         <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
@@ -577,6 +601,7 @@
       let name  = parts[2];
       let ndvi  = parseFloat(parts[3]);
 let noise = parseFloat(parts[4]) || 5.0;
+let water = parseFloat(parts[5]) || 400;
       // Fetch live NDVI from satellite
       try {
         const ndviRes  = await fetch("/api/ndvi?lat=" + lat + "&lon=" + lon);
@@ -634,9 +659,10 @@ let noise = parseFloat(parts[4]) || 5.0;
 let heatScore  = calculateHeatScore(feelsLike);
 let ndviScore  = calculateNDVIScore(ndvi);
 let noiseScore = noise;
-let finalScore = parseFloat(((aqiScore * 0.35) + (heatScore * 0.20) + (ndviScore * 0.35) + (noiseScore * 0.10)).toFixed(1));
+let waterScore = calculateWaterScore(water);
+let finalScore = parseFloat(((aqiScore * 0.30) + (heatScore * 0.15) + (ndviScore * 0.25) + (waterScore * 0.20) + (noiseScore * 0.10)).toFixed(1));
 
-      let result = { name, city, aqi, aqiScore, temp, feelsLike, humidity, windSpeed, heatScore, ndvi, ndviScore, noise, noiseScore, finalScore };
+      let result = { name, city, aqi, aqiScore, temp, feelsLike, humidity, windSpeed, heatScore, ndvi, ndviScore, noise, noiseScore, water, waterScore, finalScore };
       setCached(cacheKey, result);
       return result;
     }
@@ -683,11 +709,18 @@ let finalScore = parseFloat(((aqiScore * 0.35) + (heatScore * 0.20) + (ndviScore
   </div>
   <div class="font-semibold ${getScoreColor(d.noiseScore)}">${d.noiseScore} / 10</div>
 </div>
+            <div class="flex justify-between items-center border-t pt-3">
+  <div>
+    <div class="font-medium text-gray-700">Water Quality ${infoBtn('water')}</div>
+    <div class="text-xs text-gray-400">TDS ${d.water} ppm · ${getWaterLabel(d.water)}</div>
+  </div>
+  <div class="font-semibold ${getScoreColor(d.waterScore)}">${d.waterScore} / 10</div>
+</div>
 <div class="flex justify-between border-t pt-3 text-xs text-gray-400">
   <span>Wind ${d.windSpeed} km/h · ${d.windSpeed > 15 ? "Good dispersion" : "Low dispersion"}</span>
 </div>
             <div class="pt-2 border-t text-xs text-gray-400">
-              AQI and weather are live. Green cover from ESA satellites. Noise from OpenStreetMap.
+              AQI and weather are live. Green cover from ESA satellites. Noise and water quality from researched baseline data.
             </div>
           </div>
         </div>`;
