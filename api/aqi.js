@@ -1,6 +1,7 @@
 // WAQI's geo nearest-station index is sparse for many Indian stations, so a
 // "nearest" result can silently be hundreds of km away. Reject it beyond this
-// radius and fall through to city-level lookup instead of trusting it blindly.
+// radius and fall through to search-based nearest-station lookup instead of
+// trusting it blindly.
 const MAX_STATION_DISTANCE_KM = 50;
 
 function haversineKm(lat1, lon1, lat2, lon2) {
@@ -42,21 +43,41 @@ export default async function handler(req, res) {
           method: "nearest"
         });
       }
-      // Station is implausibly far — fall through to city-level lookup below
+      // Station is implausibly far — fall through to search-based lookup below
     }
 
-    // Fallback to city-level if nearest fails
+    // WAQI's geo index is sparse for many Indian stations, and a plain
+    // city-level feed collapses every neighbourhood onto one fixed station.
+    // Search for real stations tagged with this city and pick whichever is
+    // actually closest to the requested coordinates.
     if (city) {
-      const cityURL = `https://api.waqi.info/feed/${city}/?token=${TOKEN}`;
-      const cityRes  = await fetch(cityURL);
-      const cityData = await cityRes.json();
+      const searchURL = `https://api.waqi.info/search/?keyword=${encodeURIComponent(city)}&token=${TOKEN}`;
+      const searchRes  = await fetch(searchURL);
+      const searchData = await searchRes.json();
 
-      if (cityData.status === "ok" && cityData.data && cityData.data.aqi) {
-        return res.status(200).json({
-          aqi: cityData.data.aqi,
-          station: city,
-          method: "city"
-        });
+      if (searchData.status === "ok" && Array.isArray(searchData.data) && searchData.data.length > 0) {
+        const ranked = searchData.data
+          .filter(s => s.station && s.station.geo)
+          .map(s => ({
+            uid: s.uid,
+            name: s.station.name,
+            distanceKm: haversineKm(latF, lonF, s.station.geo[0], s.station.geo[1])
+          }))
+          .sort((a, b) => a.distanceKm - b.distanceKm)
+          .slice(0, 5);
+
+        for (const candidate of ranked) {
+          const stationRes  = await fetch(`https://api.waqi.info/feed/@${candidate.uid}/?token=${TOKEN}`);
+          const stationData = await stationRes.json();
+
+          if (stationData.status === "ok" && stationData.data && typeof stationData.data.aqi === "number") {
+            return res.status(200).json({
+              aqi: stationData.data.aqi,
+              station: candidate.name,
+              method: "search-nearest"
+            });
+          }
+        }
       }
     }
 
