@@ -444,16 +444,32 @@
     // --- CITY DATA ---
     const cities = {
   hyderabad: [
-    { name: "Banjara Hills",   lat: 17.4156, lon: 78.4347, ndvi: 0.38, noise: 6.5, water: 320, traffic: 5, safety: 7.5, infra: 8, walk: 7 },
-    { name: "Jubilee Hills",   lat: 17.4325, lon: 78.4071, ndvi: 0.40, noise: 7.0, water: 300, traffic: 5.5, safety: 8, infra: 8, walk: 7 },
-    { name: "Secunderabad",    lat: 17.4399, lon: 78.4983, ndvi: 0.28, noise: 5.0, water: 420, traffic: 4.5, safety: 6.5, infra: 8.5, walk: 7.5 },
-    { name: "Hitech City",     lat: 17.4474, lon: 78.3762, ndvi: 0.22, noise: 4.5, water: 380, traffic: 3, safety: 7, infra: 9, walk: 5.5 },
-    { name: "Gachibowli",      lat: 17.4401, lon: 78.3489, ndvi: 0.25, noise: 5.0, water: 360, traffic: 3, safety: 6.5, infra: 7.5, walk: 5 },
-    { name: "Old City",        lat: 17.3616, lon: 78.4747, ndvi: 0.18, noise: 3.5, water: 520, traffic: 3.5, safety: 6, infra: 8.5, walk: 8 },
-    { name: "Kukatpally",      lat: 17.4849, lon: 78.3996, ndvi: 0.20, noise: 4.0, water: 440, traffic: 4, safety: 6.5, infra: 8, walk: 7 },
-    { name: "Madhapur",        lat: 17.4504, lon: 78.3912, ndvi: 0.24, noise: 5.0, water: 370, traffic: 3.5, safety: 7, infra: 8, walk: 6 },
-    { name: "LB Nagar",        lat: 17.3483, lon: 78.5503, ndvi: 0.19, noise: 4.5, water: 460, traffic: 4.5, safety: 6, infra: 7, walk: 6.5 },
-    { name: "Uppal",           lat: 17.4054, lon: 78.5593, ndvi: 0.21, noise: 4.5, water: 480, traffic: 5, safety: 5.5, infra: 5.5, walk: 5 }
+    { name: "Banjara Hills",   lat: 17.4156, lon: 78.4347, ndvi: 0.38, noise: 6.5, water: 320, traffic: 5, safety: 7.5, infra: 8, walk: 7,
+      nearbyProjects: [
+        { name: "Suvidha Projects", builder: "Suvidha Projects Pvt Ltd", type: "residential", status: "under construction",
+          expectedPossession: "February 2027",
+          verifyUrl: "https://rerait.telangana.gov.in/SearchList/Search",
+          verifyNote: "Search \"Suvidha Projects\" to confirm current status and registration number." }
+      ] },
+    { name: "Jubilee Hills",   lat: 17.4325, lon: 78.4071, ndvi: 0.40, noise: 7.0, water: 300, traffic: 5.5, safety: 8, infra: 8, walk: 7, nearbyProjects: [] },
+    { name: "Secunderabad",    lat: 17.4399, lon: 78.4983, ndvi: 0.28, noise: 5.0, water: 420, traffic: 4.5, safety: 6.5, infra: 8.5, walk: 7.5, nearbyProjects: [] },
+    { name: "Hitech City",     lat: 17.4474, lon: 78.3762, ndvi: 0.22, noise: 4.5, water: 380, traffic: 3, safety: 7, infra: 9, walk: 5.5, nearbyProjects: [] },
+    { name: "Gachibowli",      lat: 17.4401, lon: 78.3489, ndvi: 0.25, noise: 5.0, water: 360, traffic: 3, safety: 6.5, infra: 7.5, walk: 5,
+      nearbyProjects: [
+        { name: "Pacifica Hillcrest", builder: "Pacifica Companies", type: "residential", status: "under construction",
+          locationNote: "Multi-tower residential development in Puppalguda, near Financial District and ORR.",
+          verifyUrl: "https://rerait.telangana.gov.in/SearchList/Search",
+          verifyNote: "Search \"Pacifica Hillcrest\" to confirm current status and registration number." },
+        { name: "ASBL Broadway", builder: "ASBL", type: "residential", status: "under construction",
+          locationNote: "Nanakramguda, near Financial District and IT hubs.",
+          verifyUrl: "https://rerait.telangana.gov.in/SearchList/Search",
+          verifyNote: "Search \"ASBL Broadway\" to confirm current status and registration number." }
+      ] },
+    { name: "Old City",        lat: 17.3616, lon: 78.4747, ndvi: 0.18, noise: 3.5, water: 520, traffic: 3.5, safety: 6, infra: 8.5, walk: 8, nearbyProjects: [] },
+    { name: "Kukatpally",      lat: 17.4849, lon: 78.3996, ndvi: 0.20, noise: 4.0, water: 440, traffic: 4, safety: 6.5, infra: 8, walk: 7, nearbyProjects: [] },
+    { name: "Madhapur",        lat: 17.4504, lon: 78.3912, ndvi: 0.24, noise: 5.0, water: 370, traffic: 3.5, safety: 7, infra: 8, walk: 6, nearbyProjects: [] },
+    { name: "LB Nagar",        lat: 17.3483, lon: 78.5503, ndvi: 0.19, noise: 4.5, water: 460, traffic: 4.5, safety: 6, infra: 7, walk: 6.5, nearbyProjects: [] },
+    { name: "Uppal",           lat: 17.4054, lon: 78.5593, ndvi: 0.21, noise: 4.5, water: 480, traffic: 5, safety: 5.5, infra: 5.5, walk: 5, nearbyProjects: [] }
   ],
   mumbai: [
     { name: "Bandra",          lat: 19.0596, lon: 72.8295, ndvi: 0.21, noise: 5.0, water: 210, traffic: 3, safety: 7.5, infra: 9, walk: 8.5 },
@@ -669,6 +685,10 @@ let traffic = parseFloat(parts[6]) || 5.0;
 let safety  = parseFloat(parts[7]) || 6.5;
 let infra   = parseFloat(parts[8]) || 6.0;
 let walk    = parseFloat(parts[9]) || 6.0;
+      // Looked up directly from the cities object rather than the pipe-delimited
+      // value string, since it's an array of objects, not a scalar.
+      let neighbourhoodEntry = (cities[city] || []).find(n => n.name === name);
+      let nearbyProjects = (neighbourhoodEntry && neighbourhoodEntry.nearbyProjects) || [];
       // Fetch live NDVI from satellite
       try {
         const ndviRes  = await fetch("/api/ndvi?lat=" + lat + "&lon=" + lon);
@@ -747,7 +767,9 @@ let finalScore = parseFloat((
         name, city, aqi, aqiScore, temp, feelsLike, humidity, windSpeed, heatScore,
         ndvi, ndviScore, noise, noiseScore, water, waterScore,
         infraScore, walkScore, traffic, trafficScore, safety, safetyScore,
-        finalScore
+        finalScore,
+        // Informational only — deliberately excluded from finalScore above.
+        nearbyProjects
       };
       setCached(cacheKey, result);
       return result;
@@ -836,6 +858,38 @@ let finalScore = parseFloat((
             <div class="pt-2 border-t text-xs text-gray-400">
               AQI and weather are live. Green cover from ESA satellites. Noise, water, infrastructure, walkability, traffic and safety are from researched baseline data.
             </div>
+          </div>
+          ${buildRealEstateSection(d.nearbyProjects)}
+        </div>`;
+    }
+
+    function buildRealEstateSection(nearbyProjects) {
+      if (!nearbyProjects || nearbyProjects.length === 0) return "";
+      return `
+        <div class="mt-4 pt-4 border-t-2 border-dashed border-gray-200">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Real Estate — Nearby Projects</span>
+            <span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Informational only — not part of Green Score</span>
+          </div>
+          <div class="space-y-2">
+            ${nearbyProjects.map(p => `
+              <div class="bg-gray-50 rounded-lg p-3 text-xs">
+                <div class="flex justify-between items-start gap-2">
+                  <div>
+                    <div class="font-medium text-gray-700">${p.name}</div>
+                    <div class="text-gray-400">${p.builder} · ${p.type.charAt(0).toUpperCase() + p.type.slice(1)}</div>
+                    ${p.locationNote ? `<div class="text-gray-400 mt-0.5">${p.locationNote}</div>` : ""}
+                    ${p.expectedPossession ? `<div class="text-gray-400 mt-0.5">Expected possession: ${p.expectedPossession}</div>` : ""}
+                  </div>
+                  <span class="shrink-0 text-[10px] px-2 py-0.5 rounded-full ${p.status === "ready" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}">${p.status === "ready" ? "Ready" : "Under construction"}</span>
+                </div>
+                <a href="${p.verifyUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline mt-2 inline-block">Verify on TG-RERA →</a>
+                ${p.verifyNote ? `<div class="text-gray-400 mt-1">${p.verifyNote}</div>` : ""}
+              </div>
+            `).join("")}
+          </div>
+          <div class="text-[11px] text-gray-400 mt-3">
+            Verify current status on official TG-RERA portal before making decisions.
           </div>
         </div>`;
     }
