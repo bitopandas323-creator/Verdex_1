@@ -54,6 +54,30 @@
 
     <!-- Single Mode -->
     <div id="single-mode">
+      <div class="mb-4">
+        <label class="block text-sm text-gray-500 mb-2">Or select a city</label>
+        <select id="city-select" onchange="updateNeighbourhoods('neighbourhood-select', 'city-select')"
+          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
+          <option value="hyderabad">Hyderabad</option>
+          <option value="mumbai">Mumbai</option>
+          <option value="delhi">Delhi</option>
+          <option value="bangalore">Bangalore</option>
+          <option value="chennai">Chennai</option>
+          <option value="pune">Pune</option>
+          <option value="kolkata">Kolkata</option>
+          <option value="ahmedabad">Ahmedabad</option>
+        </select>
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm text-gray-500 mb-2">Select a neighbourhood</label>
+        <select id="neighbourhood-select"
+          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
+        </select>
+      </div>
+      <button onclick="checkSingle()"
+        class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium">
+        Check Green Score
+      </button>
       <div id="single-status" class="mt-4 text-sm text-gray-400 text-center"></div>
       <div id="single-result" class="hidden mt-6"></div>
     </div>
@@ -914,6 +938,24 @@ let finalScore = parseFloat((
         </div>`;
     }
 
+    async function checkSingle() {
+      let city     = document.getElementById("city-select").value;
+      let nVal     = document.getElementById("neighbourhood-select").value;
+      let statusEl = document.getElementById("single-status");
+      let resultEl = document.getElementById("single-result");
+      statusEl.innerHTML = getSpinner();
+      resultEl.classList.add("hidden");
+      try {
+        let d = await fetchAreaData(city, nVal);
+        statusEl.innerHTML = "";
+        resultEl.innerHTML = buildScoreCard(d, false);
+        resultEl.classList.remove("hidden");
+      } catch (err) {
+        statusEl.innerHTML = "Could not load data. Check console (F12).";
+        console.error(err);
+      }
+    }
+
     async function checkCompare() {
       let cityA    = document.getElementById("city-a").value;
       let cityB    = document.getElementById("city-b").value;
@@ -954,6 +996,7 @@ let finalScore = parseFloat((
       }
     }
 
+    updateNeighbourhoods("neighbourhood-select", "city-select");
     updateNeighbourhoods("neighbourhood-a", "city-a");
     updateNeighbourhoods("neighbourhood-b", "city-b");
 
