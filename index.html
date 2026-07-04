@@ -5,6 +5,7 @@
   <meta name="description" content="Check the Green Score for any neighbourhood in India — air quality, heat and green cover in one number.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
   <style>
     @keyframes spin { to { transform: rotate(360deg); } }
     .suggestion-item:hover { background: var(--tw-color-gray-50); }
@@ -28,7 +29,7 @@
         placeholder="e.g. Koramangala, Banjara Hills, Powai..."
         oninput="handleSearch()"
         onkeydown="handleKeydown(event)"
-        class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
+        class="w-full border border-gray-200 rounded-full px-5 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
       />
       <div id="search-spinner" class="hidden absolute right-3 top-10">
         <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
@@ -53,30 +54,6 @@
 
     <!-- Single Mode -->
     <div id="single-mode">
-      <div class="mb-4">
-        <label class="block text-sm text-gray-500 mb-2">Select a city</label>
-        <select id="city-select" onchange="updateNeighbourhoods('neighbourhood-select', 'city-select')"
-          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
-          <option value="hyderabad">Hyderabad</option>
-          <option value="mumbai">Mumbai</option>
-          <option value="delhi">Delhi</option>
-          <option value="bangalore">Bangalore</option>
-          <option value="chennai">Chennai</option>
-          <option value="pune">Pune</option>
-          <option value="kolkata">Kolkata</option>
-          <option value="ahmedabad">Ahmedabad</option>
-        </select>
-      </div>
-      <div class="mb-6">
-        <label class="block text-sm text-gray-500 mb-2">Select a neighbourhood</label>
-        <select id="neighbourhood-select"
-          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
-        </select>
-      </div>
-      <button onclick="checkSingle()"
-        class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium">
-        Check Green Score
-      </button>
       <div id="single-status" class="mt-4 text-sm text-gray-400 text-center"></div>
       <div id="single-result" class="hidden mt-6"></div>
     </div>
@@ -285,19 +262,6 @@
       document.getElementById('search-input').value = s.name + ', ' + s.detail;
       box.classList.add('hidden');
 
-      // Update dropdowns to match
-      const citySelect = document.getElementById('city-select');
-      if (s.city && citySelect.querySelector(`option[value="${s.city}"]`)) {
-        citySelect.value = s.city;
-        updateNeighbourhoods('neighbourhood-select', 'city-select');
-
-        // Try to match neighbourhood
-        const nSelect = document.getElementById('neighbourhood-select');
-        const options  = Array.from(nSelect.options);
-        const match    = options.find(o => o.text.toLowerCase().includes(s.name.toLowerCase()));
-        if (match) nSelect.value = match.value;
-      }
-
       // Switch to single mode and check score directly
       setMode('single');
       checkScoreFromSearch(s);
@@ -311,7 +275,19 @@
       resultEl.classList.add('hidden');
 
       try {
-        const neighbourhoodValue = s.lat + '|' + s.lon + '|' + s.name + '|' + s.ndvi;
+        // Local matches (fromAPI: false) have full baseline data in `cities` —
+        // look it up so noise/water/traffic/safety/infra/walk aren't silently
+        // defaulted. Geocoding-API matches (fromAPI: true) have no baseline
+        // data to draw from, so they keep the shorter, default-backed string.
+        let neighbourhoodValue;
+        let entry = (!s.fromAPI && s.city && cities[s.city]) ? cities[s.city].find(n => n.name === s.name) : null;
+        if (entry) {
+          neighbourhoodValue = entry.lat + '|' + entry.lon + '|' + entry.name + '|' + entry.ndvi + '|' +
+            entry.noise + '|' + entry.water + '|' + entry.traffic + '|' + entry.safety + '|' + entry.infra + '|' + entry.walk;
+        } else {
+          neighbourhoodValue = s.lat + '|' + s.lon + '|' + s.name + '|' + s.ndvi;
+        }
+
         const d = await fetchAreaData(s.city || 'hyderabad', neighbourhoodValue);
         statusEl.innerHTML = '';
         resultEl.innerHTML = buildScoreCard(d, false);
@@ -660,6 +636,19 @@
       return "Quieter, less foot traffic";
     }
 
+    // Immersive-cards display bands — separate from getScoreColor/getScoreLabel
+    // above (different thresholds/labels), operates on the same 0-10 scores.
+    function getBandInfo(score10) {
+      if (score10 >= 8.0) return { label: "Excellent", text: "text-emerald-600", bg: "bg-emerald-50" };
+      if (score10 >= 6.0) return { label: "Good",      text: "text-blue-600",    bg: "bg-blue-50" };
+      if (score10 >= 4.0) return { label: "Fair",       text: "text-amber-600",  bg: "bg-amber-50" };
+      return                     { label: "Poor",       text: "text-red-600",    bg: "bg-red-50" };
+    }
+
+    function avgScore(...vals) {
+      return parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1));
+    }
+
     function getSpinner() {
       return `<div class="flex items-center justify-center gap-2 mt-4">
         <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
@@ -775,141 +764,154 @@ let finalScore = parseFloat((
       return result;
     }
 
-    function buildScoreCard(d, highlight) {
-      let borderClass = highlight ? "border-2 border-green-400" : "border border-gray-100";
-      let badge       = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Better area</span>' : "";
+    // --- IMMERSIVE CARDS (score hero + 3 layer cards) ---
+
+    function buildParamRow(icon, label, valueHtml, infoType) {
       return `
-        <div class="bg-white ${borderClass} rounded-2xl p-5">
-          <div class="text-sm text-gray-400 mb-1">${d.name}, ${d.city.charAt(0).toUpperCase() + d.city.slice(1)}</div>
-          <div class="flex items-baseline gap-2 mb-1">
-            <span class="text-4xl font-bold ${getScoreColor(d.finalScore)}">${d.finalScore}</span>
-            <span class="text-sm text-gray-400">/ 10</span>
-            ${badge}
-            ${infoBtn('score')}
+        <div class="flex justify-between items-start gap-2 border-t border-black/5 py-2.5 text-sm">
+          <div class="flex items-center gap-2 text-gray-700 shrink-0">
+            <i class="ti ${icon} text-gray-400 shrink-0"></i>
+            <span class="font-medium whitespace-nowrap">${label} ${infoBtn(infoType)}</span>
           </div>
-          <div class="text-sm font-medium mb-4 ${getScoreColor(d.finalScore)}">${getScoreLabel(d.finalScore)}</div>
-          <div class="space-y-3 text-sm">
-            <div class="flex justify-between items-center border-t pt-3">
-              <div>
-                <div class="font-medium text-gray-700">Air Quality ${infoBtn('aqi')}</div>
-                <div class="text-xs text-gray-400">AQI ${d.aqi} — ${getAQILabel(d.aqi)}</div>
-              </div>
-              <div class="font-semibold ${getScoreColor(d.aqiScore)}">${d.aqiScore} / 10</div>
-            </div>
-            <div class="flex justify-between items-center border-t pt-3">
-              <div>
-                <div class="font-medium text-gray-700">Heat & Humidity ${infoBtn('heat')}</div>
-                <div class="text-xs text-gray-400">Feels like ${d.feelsLike}°C · Humidity ${d.humidity}%</div>
-              </div>
-              <div class="font-semibold ${getScoreColor(d.heatScore)}">${d.heatScore} / 10</div>
-            </div>
-            <div class="flex justify-between items-center border-t pt-3">
-              <div>
-                <div class="font-medium text-gray-700">Green Cover ${infoBtn('ndvi')}</div>
-                <div class="text-xs text-gray-400">NDVI ${d.ndvi} · ${getNDVILabel(d.ndvi)}</div>
-              </div>
-              <div class="font-semibold ${getScoreColor(d.ndviScore)}">${d.ndviScore} / 10</div>
-            </div>
-            <div class="flex justify-between items-center border-t pt-3">
-  <div>
-    <div class="font-medium text-gray-700">Noise ${infoBtn('noise')}</div>
-    <div class="text-xs text-gray-400">${d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet"}</div>
-  </div>
-  <div class="font-semibold ${getScoreColor(d.noiseScore)}">${d.noiseScore} / 10</div>
-</div>
-            <div class="flex justify-between items-center border-t pt-3">
-  <div>
-    <div class="font-medium text-gray-700">Water Quality ${infoBtn('water')}</div>
-    <div class="text-xs text-gray-400">TDS ${d.water} ppm · ${getWaterLabel(d.water)}</div>
-  </div>
-  <div class="font-semibold ${getScoreColor(d.waterScore)}">${d.waterScore} / 10</div>
-</div>
-            <div class="flex justify-between items-center border-t pt-3">
-  <div>
-    <div class="font-medium text-gray-700">Infrastructure ${infoBtn('infrastructure')}</div>
-    <div class="text-xs text-gray-400">${getInfraLabel(d.infraScore)}</div>
-  </div>
-  <div class="font-semibold ${getScoreColor(d.infraScore)}">${d.infraScore} / 10</div>
-</div>
-            <div class="flex justify-between items-center border-t pt-3">
-  <div>
-    <div class="font-medium text-gray-700">Walkability ${infoBtn('walkability')}</div>
-    <div class="text-xs text-gray-400">${getWalkLabel(d.walkScore)}</div>
-  </div>
-  <div class="font-semibold ${getScoreColor(d.walkScore)}">${d.walkScore} / 10</div>
-</div>
-            <div class="flex justify-between items-center border-t pt-3">
-  <div>
-    <div class="font-medium text-gray-700">Traffic ${infoBtn('traffic')}</div>
-    <div class="text-xs text-gray-400">${getTrafficLabel(d.trafficScore)}</div>
-  </div>
-  <div class="font-semibold ${getScoreColor(d.trafficScore)}">${d.trafficScore} / 10</div>
-</div>
-            <div class="flex justify-between items-center border-t pt-3">
-  <div>
-    <div class="font-medium text-gray-700">Safety ${infoBtn('safety')}</div>
-    <div class="text-xs text-gray-400">${getSafetyLabel(d.safetyScore)}</div>
-  </div>
-  <div class="font-semibold ${getScoreColor(d.safetyScore)}">${d.safetyScore} / 10</div>
-</div>
-<div class="flex justify-between border-t pt-3 text-xs text-gray-400">
-  <span>Wind ${d.windSpeed} km/h · ${d.windSpeed > 15 ? "Good dispersion" : "Low dispersion"}</span>
-</div>
-            <div class="pt-2 border-t text-xs text-gray-400">
-              AQI and weather are live. Green cover from ESA satellites. Noise, water, infrastructure, walkability, traffic and safety are from researched baseline data.
-            </div>
-          </div>
-          ${buildRealEstateSection(d.nearbyProjects)}
+          <div class="font-semibold text-gray-700 text-right min-w-0">${valueHtml}</div>
         </div>`;
+    }
+
+    function buildLayerCardShell(icon, title, subScore10, summaryText, rowsHtml) {
+      let band = getBandInfo(subScore10);
+      return `
+        <div class="${band.bg} rounded-2xl p-6">
+          <div class="flex justify-between items-center gap-2 mb-1">
+            <div class="flex items-center gap-2 min-w-0">
+              <i class="ti ${icon} ${band.text} text-lg shrink-0"></i>
+              <span class="font-semibold text-gray-800 truncate">${title}</span>
+            </div>
+            <span class="text-2xl font-bold ${band.text} shrink-0">${Math.round(subScore10 * 10)}</span>
+          </div>
+          <div class="text-sm text-gray-500 mb-1">${summaryText}</div>
+          <div>${rowsHtml}</div>
+        </div>`;
+    }
+
+    function buildEnvironmentalCard(d) {
+      let envSubScore = avgScore(d.aqiScore, d.heatScore, d.ndviScore, d.noiseScore, d.waterScore);
+      let rows = [
+        buildParamRow("ti-wind", "Air Quality", `${d.aqi} · ${getAQILabel(d.aqi)}`, "aqi"),
+        buildParamRow("ti-temperature", "Feels Like", `${d.feelsLike}°C`, "heat"),
+        buildParamRow("ti-plant-2", "Green Cover", `${Math.round(d.ndvi * 100)}%`, "ndvi"),
+        buildParamRow("ti-volume", "Noise", d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet", "noise"),
+        buildParamRow("ti-droplet", "Water Quality", `${getWaterLabel(d.water)} · ${d.water}ppm`, "water")
+      ].join("");
+      let summary = `Air quality ${getAQILabel(d.aqi).toLowerCase()}, ${getNDVILabel(d.ndvi).toLowerCase()}, water ${getWaterLabel(d.water).toLowerCase()}.`;
+      return buildLayerCardShell("ti-leaf", "Environmental", envSubScore, summary, rows);
+    }
+
+    function buildLiveabilityCard(d) {
+      let liveSubScore = avgScore(d.infraScore, d.walkScore, d.trafficScore, d.safetyScore);
+      let rows = [
+        buildParamRow("ti-building", "Infrastructure", `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure"),
+        buildParamRow("ti-walk", "Walkability", `${Math.round(d.walkScore * 10)} · ${getWalkLabel(d.walkScore)}`, "walkability"),
+        buildParamRow("ti-car", "Traffic", `${Math.round(d.trafficScore * 10)} · ${getTrafficLabel(d.trafficScore)}`, "traffic"),
+        buildParamRow("ti-shield-check", "Safety", `${Math.round(d.safetyScore * 10)} · ${getSafetyLabel(d.safetyScore)}`, "safety")
+      ].join("");
+      let summary = `${getWalkLabel(d.walkScore)}, ${getTrafficLabel(d.trafficScore).toLowerCase()}, ${getSafetyLabel(d.safetyScore).toLowerCase()}.`;
+      return buildLayerCardShell("ti-walk", "Liveability", liveSubScore, summary, rows);
     }
 
     function buildRealEstateSection(nearbyProjects) {
-      if (!nearbyProjects || nearbyProjects.length === 0) return "";
-      return `
-        <div class="mt-4 pt-4 border-t-2 border-dashed border-gray-200">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Real Estate — Nearby Projects</span>
-            <span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Informational only — not part of Green Score</span>
-          </div>
-          <div class="space-y-2">
-            ${nearbyProjects.map(p => `
-              <div class="bg-gray-50 rounded-lg p-3 text-xs">
-                <div class="flex justify-between items-start gap-2">
-                  <div>
-                    <div class="font-medium text-gray-700">${p.name}</div>
-                    <div class="text-gray-400">${p.builder} · ${p.type.charAt(0).toUpperCase() + p.type.slice(1)}</div>
-                    ${p.locationNote ? `<div class="text-gray-400 mt-0.5">${p.locationNote}</div>` : ""}
-                    ${p.expectedPossession ? `<div class="text-gray-400 mt-0.5">Expected possession: ${p.expectedPossession}</div>` : ""}
-                  </div>
-                  <span class="shrink-0 text-[10px] px-2 py-0.5 rounded-full ${p.status === "ready" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}">${p.status === "ready" ? "Ready" : "Under construction"}</span>
-                </div>
-                <a href="${p.verifyUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline mt-2 inline-block">Verify on TG-RERA →</a>
-                ${p.verifyNote ? `<div class="text-gray-400 mt-1">${p.verifyNote}</div>` : ""}
+      if (nearbyProjects && nearbyProjects.length > 0) {
+        let rows = nearbyProjects.map(p => {
+          let details = [p.builder, p.type, p.status];
+          if (p.expectedPossession) details.push("expected " + p.expectedPossession);
+          let line = details.join(" · ");
+          if (p.locationNote) line += " — " + p.locationNote;
+          return `
+            <div class="border-t border-black/5 py-2.5 text-sm">
+              <div class="font-medium text-gray-700">${p.name}</div>
+              <div class="text-gray-400 text-xs mt-0.5">${line}</div>
+            </div>`;
+        }).join("");
+        return `
+          <div class="bg-white rounded-2xl p-6">
+            <div class="flex justify-between items-center gap-2 mb-1">
+              <div class="flex items-center gap-2 min-w-0">
+                <i class="ti ti-building-community text-gray-500 text-lg shrink-0"></i>
+                <span class="font-semibold text-gray-800 truncate">Real Estate</span>
               </div>
-            `).join("")}
+              <span class="shrink-0 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Informational only</span>
+            </div>
+            <div>${rows}</div>
+            <div class="pt-3 mt-1 border-t border-black/5 text-xs">
+              <a href="${nearbyProjects[0].verifyUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">Verify on the state RERA portal →</a>
+              <div class="text-gray-400 mt-1">Search a project's name on the portal to confirm its current status and registration number.</div>
+            </div>
+          </div>`;
+      }
+
+      return `
+        <div class="bg-gray-50 rounded-2xl p-6">
+          <div class="flex items-center gap-2 mb-1">
+            <i class="ti ti-building-community text-gray-400 text-lg"></i>
+            <span class="font-semibold text-gray-500">Real Estate</span>
           </div>
-          <div class="text-[11px] text-gray-400 mt-3">
-            Verify current status on official TG-RERA portal before making decisions.
-          </div>
+          <div class="text-sm text-gray-400">Real estate data coming soon for this neighbourhood.</div>
         </div>`;
     }
 
-    async function checkSingle() {
-      let city     = document.getElementById("city-select").value;
-      let nVal     = document.getElementById("neighbourhood-select").value;
-      let statusEl = document.getElementById("single-status");
-      let resultEl = document.getElementById("single-result");
-      statusEl.innerHTML = getSpinner();
-      resultEl.classList.add("hidden");
-      try {
-        let d = await fetchAreaData(city, nVal);
-        statusEl.innerHTML = "";
-        resultEl.innerHTML = buildScoreCard(d, false);
-        resultEl.classList.remove("hidden");
-      } catch (err) {
-        statusEl.innerHTML = "Could not load data. Check console (F12).";
-        console.error(err);
+    // Approximates a "better than X% of neighbourhoods" ranking using only
+    // static baseline fields (no extra live AQI/weather fetches per neighbour
+    // in the city, which would multiply API calls ~10x for one lookup).
+    // Weights are the finalScore weights for the 7 static params, renormalized
+    // to sum to 1 since aqi/heat (which need live data) are excluded here.
+    function computeBenchmarkPercentile(d) {
+      const w = { ndvi: 0.2647, water: 0.2206, infra: 0.1471, walk: 0.1176, noise: 0.1029, safety: 0.0882, traffic: 0.0588 };
+      function staticScore(n) {
+        return (calculateNDVIScore(n.ndvi) * w.ndvi)
+          + (calculateWaterScore(n.water) * w.water)
+          + (n.infra * w.infra)
+          + (n.walk * w.walk)
+          + (n.noise * w.noise)
+          + (n.safety * w.safety)
+          + (n.traffic * w.traffic);
       }
+      let neighbourhoods = cities[d.city] || [];
+      if (neighbourhoods.length <= 1) return 100;
+      let currentEntry = neighbourhoods.find(n => n.name === d.name);
+      if (!currentEntry) return 50;
+      let currentScore = staticScore(currentEntry);
+      let betterCount = neighbourhoods.filter(n => staticScore(n) < currentScore).length;
+      return Math.round((betterCount / (neighbourhoods.length - 1)) * 100);
+    }
+
+    function buildScoreCard(d, highlight) {
+      let ringClass    = highlight ? "ring-2 ring-green-400 ring-offset-2" : "";
+      let badge        = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Better area</span>' : "";
+      let band         = getBandInfo(d.finalScore);
+      let cityName     = d.city.charAt(0).toUpperCase() + d.city.slice(1);
+      let benchmarkPct = computeBenchmarkPercentile(d);
+
+      return `
+        <div class="rounded-2xl p-2 ${ringClass}">
+          <div class="text-center mb-5">
+            <div class="text-lg font-bold text-gray-800">${d.name}</div>
+            <div class="text-sm text-gray-400">${cityName}</div>
+            <div class="flex items-center justify-center gap-2 mt-3">
+              <span class="text-6xl font-bold ${band.text}">${Math.round(d.finalScore * 10)}</span>
+              ${infoBtn('score')}
+              ${badge}
+            </div>
+            <div class="text-base font-medium ${band.text}">${band.label}</div>
+            <div class="text-xs text-gray-400 mt-2">Better than ${benchmarkPct}% of neighbourhoods in ${cityName}</div>
+          </div>
+          <div class="space-y-4">
+            ${buildEnvironmentalCard(d)}
+            ${buildLiveabilityCard(d)}
+            ${buildRealEstateSection(d.nearbyProjects)}
+          </div>
+          <div class="pt-4 text-center text-xs text-gray-400">
+            AQI and weather are live. Green cover from ESA satellites. Noise, water, infrastructure, walkability, traffic and safety are from researched baseline data.
+          </div>
+        </div>`;
     }
 
     async function checkCompare() {
@@ -934,9 +936,14 @@ let finalScore = parseFloat((
                <span class="font-medium text-green-600">${aWins ? dA.name : dB.name}</span>
                scores ${Math.abs(dA.finalScore - dB.finalScore).toFixed(1)} points higher
              </div>`;
+        // The immersive card design (generous padding, large icon+label+value
+        // rows) needs full width to render without wrapping/overflow — a
+        // side-by-side 2-column grid doesn't leave enough room per card at
+        // typical widths, and redesigning for that is explicitly out of scope
+        // here. Stack the two full-width cards vertically instead.
         statusEl.innerHTML = "";
         resultEl.innerHTML = summary +
-          '<div class="grid grid-cols-2 gap-4">' +
+          '<div class="space-y-6">' +
           buildScoreCard(dA, aWins && !tie) +
           buildScoreCard(dB, !aWins && !tie) +
           '</div>';
@@ -947,7 +954,6 @@ let finalScore = parseFloat((
       }
     }
 
-    updateNeighbourhoods("neighbourhood-select", "city-select");
     updateNeighbourhoods("neighbourhood-a", "city-a");
     updateNeighbourhoods("neighbourhood-b", "city-b");
 
