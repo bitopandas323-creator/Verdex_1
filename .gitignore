@@ -3,3 +3,4 @@ notes.txt.docx
 .env
 .env.local
 .env.*.local
+node_modules/

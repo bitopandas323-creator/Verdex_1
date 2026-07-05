@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/snapshot.js": {
+      "maxDuration": 60
+    }
+  }
+}
