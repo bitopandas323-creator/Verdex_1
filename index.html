@@ -7,9 +7,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <style>
     @keyframes spin { to { transform: rotate(360deg); } }
     .suggestion-item:hover { background: var(--tw-color-gray-50); }
+    .aqi-pin { border-radius: 50%; width: 18px; height: 18px; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -40,7 +43,15 @@
       </div>
     </div>
 
-    
+    <div class="mb-6">
+      <button id="locate-me-btn" onclick="locateMe()"
+        class="flex items-center gap-2 text-sm text-green-700 bg-green-50 hover:bg-green-100 px-4 py-2 rounded-full font-medium">
+        <i class="ti ti-current-location"></i>
+        Locate me
+      </button>
+      <div id="locate-me-status" class="mt-2 text-xs text-gray-400"></div>
+    </div>
+
     <!-- Mode Toggle -->
     <div class="flex gap-2 mb-6">
       <button id="btn-single" onclick="setMode('single')"
@@ -50,6 +61,10 @@
       <button id="btn-compare" onclick="setMode('compare')"
         class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
         Compare two areas
+      </button>
+      <button id="btn-map" onclick="setMode('map')"
+        class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
+        Map view
       </button>
     </div>
 
@@ -129,6 +144,27 @@
       <div id="compare-result" class="hidden mt-6"></div>
     </div>
 
+    <!-- Map Mode -->
+    <div id="map-mode" class="hidden">
+      <div class="mb-4">
+        <label class="block text-sm text-gray-500 mb-2">City</label>
+        <select id="city-map-select" onchange="loadCityMap(this.value)"
+          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
+          <option value="hyderabad">Hyderabad</option>
+          <option value="mumbai">Mumbai</option>
+          <option value="delhi">Delhi</option>
+          <option value="bangalore">Bangalore</option>
+          <option value="chennai">Chennai</option>
+          <option value="pune">Pune</option>
+          <option value="kolkata">Kolkata</option>
+          <option value="ahmedabad">Ahmedabad</option>
+        </select>
+      </div>
+      <div id="map-status" class="text-sm text-gray-400 text-center mb-2"></div>
+      <div id="map-container" style="height:320px" class="rounded-2xl overflow-hidden border border-gray-100"></div>
+      <div id="map-result" class="hidden mt-6"></div>
+    </div>
+
   </div>
 
   <!-- Info Modal -->
@@ -159,6 +195,9 @@
     // destroy the previous chart before the DOM node it was bound to gets
     // replaced (avoids leaking Chart.js instances over a session).
     const aqiTrendCharts = {};
+
+    // Map view state — one Leaflet map instance reused across city switches.
+    const mapState = { initialized: false, leafletMap: null, markers: [] };
 
     function getCached(key) {
       if (!cache[key]) return null;
@@ -582,17 +621,18 @@
       });
     }
 
+    const MODE_BTN_ACTIVE   = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white";
+    const MODE_BTN_INACTIVE = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600";
+
     function setMode(mode) {
-      if (mode === "single") {
-        document.getElementById("single-mode").classList.remove("hidden");
-        document.getElementById("compare-mode").classList.add("hidden");
-        document.getElementById("btn-single").className  = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white";
-        document.getElementById("btn-compare").className = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600";
-      } else {
-        document.getElementById("single-mode").classList.add("hidden");
-        document.getElementById("compare-mode").classList.remove("hidden");
-        document.getElementById("btn-compare").className = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white";
-        document.getElementById("btn-single").className  = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600";
+      const modes = ["single", "compare", "map"];
+      modes.forEach(m => {
+        document.getElementById(m + "-mode").classList.toggle("hidden", m !== mode);
+        document.getElementById("btn-" + m).className = m === mode ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
+      });
+
+      if (mode === "map" && !mapState.initialized) {
+        loadCityMap(document.getElementById("city-map-select").value);
       }
     }
 
@@ -676,11 +716,15 @@
 
     // Immersive-cards display bands — separate from getScoreColor/getScoreLabel
     // above (different thresholds/labels), operates on the same 0-10 scores.
+    // `pin` is a saturated variant of the same band color for use on map
+    // markers, where the pale `bg` card-tint would be nearly invisible —
+    // kept in this one function so every band-color consumer (cards, map
+    // pins) shares a single source of truth.
     function getBandInfo(score10) {
-      if (score10 >= 8.0) return { label: "Excellent", text: "text-emerald-600", bg: "bg-emerald-50" };
-      if (score10 >= 6.0) return { label: "Good",      text: "text-blue-600",    bg: "bg-blue-50" };
-      if (score10 >= 4.0) return { label: "Fair",       text: "text-amber-600",  bg: "bg-amber-50" };
-      return                     { label: "Poor",       text: "text-red-600",    bg: "bg-red-50" };
+      if (score10 >= 8.0) return { label: "Excellent", text: "text-emerald-600", bg: "bg-emerald-50", pin: "bg-emerald-500" };
+      if (score10 >= 6.0) return { label: "Good",      text: "text-blue-600",    bg: "bg-blue-50",    pin: "bg-blue-500" };
+      if (score10 >= 4.0) return { label: "Fair",       text: "text-amber-600",  bg: "bg-amber-50",   pin: "bg-amber-500" };
+      return                     { label: "Poor",       text: "text-red-600",    bg: "bg-red-50",     pin: "bg-red-500" };
     }
 
     function avgScore(...vals) {
@@ -1109,6 +1153,229 @@ let finalScore = parseFloat((
         statusEl.innerHTML = "Could not load data. Check console (F12).";
         console.error(err);
       }
+    }
+
+    // Live-fetches every neighbourhood in `city` via the exact same
+    // fetchAreaData used everywhere else in the app (not a separate,
+    // possibly-stale Supabase snapshot), so a pin's color always matches
+    // what tapping into it shows — fetchAreaData's own 10-minute cache means
+    // the tap-in call below hits the cache and returns the identical object
+    // that colored the pin. Trade-off: this also live-fetches NDVI/Sentinel
+    // Hub once per neighbourhood per map load (fetchAreaData always does
+    // this, before its own cache check), unlike the Phase 2 snapshot
+    // pipeline which deliberately skips NDVI to save quota — accepted here
+    // since guaranteed pin/card consistency was the explicit priority.
+    const MAP_CONCURRENCY = 5;
+
+    async function loadCityMap(city) {
+      mapState.initialized = true;
+
+      const statusEl = document.getElementById("map-status");
+      const resultEl = document.getElementById("map-result");
+      resultEl.classList.add("hidden");
+      resultEl.innerHTML = "";
+      statusEl.textContent = "Loading neighbourhoods…";
+
+      mapState.markers.forEach(m => m.remove());
+      mapState.markers = [];
+
+      const neighbourhoods = cities[city] || [];
+      if (neighbourhoods.length === 0) {
+        statusEl.textContent = "No neighbourhoods available for this city.";
+        return;
+      }
+
+      if (!mapState.leafletMap) {
+        mapState.leafletMap = L.map("map-container");
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap contributors",
+          maxZoom: 18
+        }).addTo(mapState.leafletMap);
+      }
+
+      const avgLat = neighbourhoods.reduce((sum, n) => sum + n.lat, 0) / neighbourhoods.length;
+      const avgLon = neighbourhoods.reduce((sum, n) => sum + n.lon, 0) / neighbourhoods.length;
+      mapState.leafletMap.setView([avgLat, avgLon], 11);
+      // Leaflet mis-measures its container if it was hidden (display:none)
+      // at construction time — map-mode's hidden class is removed just
+      // before this runs, but the browser needs a tick to lay it out.
+      setTimeout(() => mapState.leafletMap.invalidateSize(), 0);
+
+      // Batched concurrency — same lesson learned in Phase 2's snapshot
+      // pipeline (open-meteo returns 429 above ~5 concurrent requests).
+      for (let i = 0; i < neighbourhoods.length; i += MAP_CONCURRENCY) {
+        const chunk = neighbourhoods.slice(i, i + MAP_CONCURRENCY);
+        await Promise.all(chunk.map(async n => {
+          const value = n.lat + "|" + n.lon + "|" + n.name + "|" + n.ndvi + "|" +
+            n.noise + "|" + n.water + "|" + n.traffic + "|" + n.safety + "|" + n.infra + "|" + n.walk;
+
+          let pinClass = "bg-gray-400";
+          let label = n.name;
+          try {
+            const d = await fetchAreaData(city, value);
+            const band = getBandInfo(d.finalScore);
+            pinClass = band.pin;
+            label = `${n.name} · ${Math.round(d.finalScore * 10)}`;
+          } catch (err) {
+            console.warn("Map pin data failed for " + n.name, err);
+            label += " · data unavailable";
+          }
+
+          const icon = L.divIcon({
+            className: "",
+            html: `<div class="aqi-pin ${pinClass}"></div>`,
+            iconSize: [18, 18]
+          });
+          const marker = L.marker([n.lat, n.lon], { icon }).addTo(mapState.leafletMap);
+          marker.bindTooltip(label);
+          marker.on("click", () => showMapPinResult(n.name, city));
+          mapState.markers.push(marker);
+        }));
+      }
+
+      statusEl.textContent = "";
+    }
+
+    async function showMapPinResult(name, city) {
+      const resultEl = document.getElementById("map-result");
+      const entry = (cities[city] || []).find(n => n.name === name);
+      if (!entry) return;
+
+      const value = entry.lat + "|" + entry.lon + "|" + entry.name + "|" + entry.ndvi + "|" +
+        entry.noise + "|" + entry.water + "|" + entry.traffic + "|" + entry.safety + "|" + entry.infra + "|" + entry.walk;
+
+      resultEl.innerHTML = getSpinner();
+      resultEl.classList.remove("hidden");
+      try {
+        // Hits fetchAreaData's cache — this is the same call loadCityMap
+        // just made to color this pin, so the card shown here is guaranteed
+        // identical to what determined the pin's color.
+        const d = await fetchAreaData(city, value);
+        resultEl.innerHTML = buildScoreCard(d, false, "map");
+        loadAqiTrend(d.name, d.city, "map");
+        resultEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } catch (err) {
+        resultEl.innerHTML = '<div class="text-sm text-gray-400 text-center">Could not load data. Check console (F12).</div>';
+        console.error(err);
+      }
+    }
+
+    // Same formula as api/aqi.js's haversineKm — reimplemented client-side
+    // since that file is a server-only Node module and every neighbourhood's
+    // coordinates are already available here in `cities`, so no server
+    // round-trip is needed for this.
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // Tightened from an initially-proposed 50km (matching api/aqi.js's own
+    // station-distance sanity check) down to 15km — a "closest match" 50km
+    // away isn't really "their area" the way a same-city neighbourhood is.
+    const LOCATE_ME_MAX_DISTANCE_KM = 15;
+
+    function findNearestNeighbourhood(lat, lon) {
+      let nearest = null;
+      let nearestDistanceKm = Infinity;
+      Object.keys(cities).forEach(city => {
+        cities[city].forEach(entry => {
+          const distanceKm = haversineKm(lat, lon, entry.lat, entry.lon);
+          if (distanceKm < nearestDistanceKm) {
+            nearestDistanceKm = distanceKm;
+            nearest = { entry, city, distanceKm };
+          }
+        });
+      });
+      return nearest;
+    }
+
+    async function loadExactLocationNdvi(lat, lon, containerId) {
+      const statusEl = document.getElementById(containerId + "-status");
+      if (!statusEl) return;
+      try {
+        const res = await fetch("/api/ndvi?lat=" + lat + "&lon=" + lon);
+        const data = await res.json();
+        if (typeof data.ndvi !== "number") throw new Error(data.reason || "NDVI unavailable");
+        statusEl.textContent = `NDVI ${data.ndvi} · ${getNDVILabel(data.ndvi)}`;
+      } catch (err) {
+        console.warn("Exact-location NDVI fetch failed", err);
+        statusEl.textContent = "Green cover reading unavailable for this exact point right now.";
+      }
+    }
+
+    // Never sends the coordinate anywhere persistent — used only to compute
+    // the nearest neighbourhood (client-side haversine) and, for the bonus
+    // NDVI reading, one read-only call to /api/ndvi (which itself performs
+    // a Sentinel Hub computation and returns a value, nothing is stored).
+    function locateMe() {
+      const statusEl = document.getElementById("locate-me-status");
+
+      if (!navigator.geolocation) {
+        statusEl.textContent = "Geolocation isn't supported in this browser.";
+        return;
+      }
+
+      statusEl.textContent = "Requesting your location…";
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+
+          const nearest = findNearestNeighbourhood(latitude, longitude);
+          if (!nearest || nearest.distanceKm > LOCATE_ME_MAX_DISTANCE_KM) {
+            statusEl.textContent = "No closely-matched neighbourhood found near your location.";
+            return;
+          }
+          statusEl.textContent = "";
+
+          setMode("single");
+          const singleStatusEl = document.getElementById("single-status");
+          const resultEl       = document.getElementById("single-result");
+          singleStatusEl.innerHTML = getSpinner();
+          resultEl.classList.add("hidden");
+
+          const { entry, city, distanceKm } = nearest;
+          const value = entry.lat + "|" + entry.lon + "|" + entry.name + "|" + entry.ndvi + "|" +
+            entry.noise + "|" + entry.water + "|" + entry.traffic + "|" + entry.safety + "|" + entry.infra + "|" + entry.walk;
+
+          try {
+            const d = await fetchAreaData(city, value);
+            singleStatusEl.innerHTML = "";
+
+            const distanceNote = `
+              <div class="text-center text-sm text-gray-500 mb-3">
+                Closest matched area: <span class="font-medium text-gray-700">${d.name}</span>
+                (${distanceKm.toFixed(1)}km from your location)
+              </div>`;
+            const ndviContainerId = "exact-ndvi-single";
+            const exactNdviBlock = `
+              <div class="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-sm" id="${ndviContainerId}">
+                <div class="text-xs text-gray-500 mb-1">Green cover at your exact location</div>
+                <div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>
+              </div>`;
+
+            resultEl.innerHTML = distanceNote + buildScoreCard(d, false, "single") + exactNdviBlock;
+            resultEl.classList.remove("hidden");
+            loadAqiTrend(d.name, d.city, "single");
+            loadExactLocationNdvi(latitude, longitude, ndviContainerId);
+            resultEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          } catch (err) {
+            singleStatusEl.innerHTML = "Could not load data. Check console (F12).";
+            console.error(err);
+          }
+        },
+        (error) => {
+          if (error.code === error.PERMISSION_DENIED) {
+            statusEl.textContent = "Location access declined — search or browse the map instead.";
+          } else {
+            statusEl.textContent = "Couldn't get your location — try search instead.";
+          }
+        }
+      );
     }
 
     updateNeighbourhoods("neighbourhood-select", "city-select");
