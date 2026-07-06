@@ -13,6 +13,15 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .suggestion-item:hover { background: var(--tw-color-gray-50); }
     .aqi-pin { border-radius: 50%; width: 18px; height: 18px; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+    /* Deliberately distinct from .aqi-pin on size, border weight, icon
+       presence, and a fixed color that never varies by score band — so it
+       can never be mistaken for a neighbourhood score pin. */
+    .user-location-pin {
+      border-radius: 50%; width: 26px; height: 26px; border: 3px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.45); background: #2563eb;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 13px;
+    }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -197,7 +206,13 @@
     const aqiTrendCharts = {};
 
     // Map view state — one Leaflet map instance reused across city switches.
-    const mapState = { initialized: false, leafletMap: null, markers: [] };
+    // userLocation/userMarker/userLine are session-only, in-memory state for
+    // the "you are here" marker — never sent anywhere, cleared on any new
+    // search/lookup or on leaving map view (see clearUserLocationPin()).
+    const mapState = {
+      initialized: false, leafletMap: null, markers: [],
+      userLocation: null, userMarker: null, userLine: null
+    };
 
     function getCached(key) {
       if (!cache[key]) return null;
@@ -344,6 +359,7 @@
     }
 
     async function checkScoreFromSearch(s) {
+      clearUserLocationPin();
       const statusEl = document.getElementById('single-status');
       const resultEl = document.getElementById('single-result');
 
@@ -624,6 +640,17 @@
     const MODE_BTN_ACTIVE   = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white";
     const MODE_BTN_INACTIVE = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600";
 
+    // Removes the "you are here" marker/line and forgets the located
+    // position — called whenever the person moves on to something else
+    // (a new search/lookup, or leaving map view), since a stale location
+    // dot from a previous "Locate me" tap shouldn't linger into an
+    // unrelated context.
+    function clearUserLocationPin() {
+      if (mapState.userMarker) { mapState.userMarker.remove(); mapState.userMarker = null; }
+      if (mapState.userLine)   { mapState.userLine.remove();   mapState.userLine   = null; }
+      mapState.userLocation = null;
+    }
+
     function setMode(mode) {
       const modes = ["single", "compare", "map"];
       modes.forEach(m => {
@@ -631,7 +658,19 @@
         document.getElementById("btn-" + m).className = m === mode ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
       });
 
-      if (mode === "map" && !mapState.initialized) {
+      if (mode !== "map") {
+        clearUserLocationPin();
+        return;
+      }
+
+      if (mapState.userLocation) {
+        // A "Locate me" match is active — sync the map to that city so the
+        // person's marker actually shows, even if the map was already
+        // showing a different city before.
+        const citySelect = document.getElementById("city-map-select");
+        citySelect.value = mapState.userLocation.city;
+        loadCityMap(citySelect.value);
+      } else if (!mapState.initialized) {
         loadCityMap(document.getElementById("city-map-select").value);
       }
     }
@@ -1095,6 +1134,7 @@ let finalScore = parseFloat((
     }
 
     async function checkSingle() {
+      clearUserLocationPin();
       let city     = document.getElementById("city-select").value;
       let nVal     = document.getElementById("neighbourhood-select").value;
       let statusEl = document.getElementById("single-status");
@@ -1114,6 +1154,7 @@ let finalScore = parseFloat((
     }
 
     async function checkCompare() {
+      clearUserLocationPin();
       let cityA    = document.getElementById("city-a").value;
       let cityB    = document.getElementById("city-b").value;
       let nValA    = document.getElementById("neighbourhood-a").value;
@@ -1178,6 +1219,8 @@ let finalScore = parseFloat((
 
       mapState.markers.forEach(m => m.remove());
       mapState.markers = [];
+      if (mapState.userMarker) { mapState.userMarker.remove(); mapState.userMarker = null; }
+      if (mapState.userLine)   { mapState.userLine.remove();   mapState.userLine   = null; }
 
       const neighbourhoods = cities[city] || [];
       if (neighbourhoods.length === 0) {
@@ -1231,6 +1274,31 @@ let finalScore = parseFloat((
           marker.on("click", () => showMapPinResult(n.name, city));
           mapState.markers.push(marker);
         }));
+      }
+
+      // "You are here" marker — only for the city it was actually matched
+      // in, and only while mapState.userLocation is still set (cleared by
+      // clearUserLocationPin() on any new search or on leaving map view).
+      if (mapState.userLocation && mapState.userLocation.city === city) {
+        const { lat, lon, matchedName, distanceKm } = mapState.userLocation;
+
+        const userIcon = L.divIcon({
+          className: "",
+          html: '<div class="user-location-pin"><i class="ti ti-current-location"></i></div>',
+          iconSize: [26, 26]
+        });
+        mapState.userMarker = L.marker([lat, lon], { icon: userIcon, zIndexOffset: 1000 })
+          .addTo(mapState.leafletMap)
+          .bindTooltip("Your location");
+
+        const matchedEntry = neighbourhoods.find(n => n.name === matchedName);
+        if (matchedEntry) {
+          mapState.userLine = L.polyline(
+            [[lat, lon], [matchedEntry.lat, matchedEntry.lon]],
+            { color: "#2563eb", weight: 2, dashArray: "4 6", opacity: 0.7 }
+          ).addTo(mapState.leafletMap)
+           .bindTooltip(distanceKm.toFixed(1) + " km", { permanent: true, direction: "center", className: "text-xs" });
+        }
       }
 
       statusEl.textContent = "";
@@ -1345,6 +1413,11 @@ let finalScore = parseFloat((
           try {
             const d = await fetchAreaData(city, value);
             singleStatusEl.innerHTML = "";
+
+            // Available for Map view to render the "you are here" marker if
+            // the person switches there — see clearUserLocationPin() for
+            // when this gets forgotten again. Never sent anywhere.
+            mapState.userLocation = { lat: latitude, lon: longitude, city, matchedName: d.name, distanceKm };
 
             const distanceNote = `
               <div class="text-center text-sm text-gray-500 mb-3">
