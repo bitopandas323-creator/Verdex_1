@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
   <style>
     @keyframes spin { to { transform: rotate(360deg); } }
     .suggestion-item:hover { background: var(--tw-color-gray-50); }
@@ -143,9 +144,21 @@
 
   <script>
 
+    // --- SUPABASE (read-only, client-side) ---
+    // The anon/publishable key is designed to be embedded in browser code —
+    // access is controlled by Supabase Row Level Security policies on the
+    // table, not by keeping this key secret.
+    const SUPABASE_URL      = "https://dydqiislptgwaoiprwxh.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_rn1V_hZdE9NVpvOBP0fqSw_OvbNJOvS";
+
     // --- CACHE ---
     const cache = {};
     const CACHE_DURATION = 10 * 60 * 1000;
+
+    // Tracks live Chart.js instances by chartId so repeated lookups can
+    // destroy the previous chart before the DOM node it was bound to gets
+    // replaced (avoids leaking Chart.js instances over a session).
+    const aqiTrendCharts = {};
 
     function getCached(key) {
       if (!cache[key]) return null;
@@ -314,9 +327,10 @@
 
         const d = await fetchAreaData(s.city || 'hyderabad', neighbourhoodValue);
         statusEl.innerHTML = '';
-        resultEl.innerHTML = buildScoreCard(d, false);
+        resultEl.innerHTML = buildScoreCard(d, false, 'single');
         resultEl.classList.remove('hidden');
         resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        loadAqiTrend(d.name, d.city, 'single');
       } catch (err) {
         statusEl.innerHTML = 'Could not load data. Check console (F12).';
         console.error(err);
@@ -817,7 +831,7 @@ let finalScore = parseFloat((
         </div>`;
     }
 
-    function buildEnvironmentalCard(d) {
+    function buildEnvironmentalCard(d, chartId) {
       let envSubScore = avgScore(d.aqiScore, d.heatScore, d.ndviScore, d.noiseScore, d.waterScore);
       let rows = [
         buildParamRow("ti-wind", "Air Quality", `${d.aqi} · ${getAQILabel(d.aqi)}`, "aqi"),
@@ -825,9 +839,20 @@ let finalScore = parseFloat((
         buildParamRow("ti-plant-2", "Green Cover", `${Math.round(d.ndvi * 100)}%`, "ndvi"),
         buildParamRow("ti-volume", "Noise", d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet", "noise"),
         buildParamRow("ti-droplet", "Water Quality", `${getWaterLabel(d.water)} · ${d.water}ppm`, "water")
-      ].join("");
+      ].join("") + buildAqiTrendContainer(chartId);
       let summary = `Air quality ${getAQILabel(d.aqi).toLowerCase()}, ${getNDVILabel(d.ndvi).toLowerCase()}, water ${getWaterLabel(d.water).toLowerCase()}.`;
       return buildLayerCardShell("ti-leaf", "Environmental", envSubScore, summary, rows);
+    }
+
+    function buildAqiTrendContainer(chartId) {
+      return `
+        <div class="mt-3 pt-3 border-t border-black/5">
+          <div class="text-xs text-gray-500 mb-2">Today's AQI trend</div>
+          <div id="aqi-trend-${chartId}-status" class="text-xs text-gray-400">Loading trend…</div>
+          <div class="hidden" id="aqi-trend-${chartId}-chart-wrap" style="height:110px">
+            <canvas id="aqi-trend-${chartId}-canvas"></canvas>
+          </div>
+        </div>`;
     }
 
     function buildLiveabilityCard(d) {
@@ -907,7 +932,8 @@ let finalScore = parseFloat((
       return Math.round((betterCount / (neighbourhoods.length - 1)) * 100);
     }
 
-    function buildScoreCard(d, highlight) {
+    function buildScoreCard(d, highlight, chartId) {
+      chartId = chartId || "single";
       let ringClass    = highlight ? "ring-2 ring-green-400 ring-offset-2" : "";
       let badge        = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Better area</span>' : "";
       let band         = getBandInfo(d.finalScore);
@@ -928,7 +954,7 @@ let finalScore = parseFloat((
             <div class="text-xs text-gray-400 mt-2">Better than ${benchmarkPct}% of neighbourhoods in ${cityName}</div>
           </div>
           <div class="space-y-4">
-            ${buildEnvironmentalCard(d)}
+            ${buildEnvironmentalCard(d, chartId)}
             ${buildLiveabilityCard(d)}
             ${buildRealEstateSection(d.nearbyProjects)}
           </div>
@@ -936,6 +962,92 @@ let finalScore = parseFloat((
             AQI and weather are live. Green cover from ESA satellites. Noise, water, infrastructure, walkability, traffic and safety are from researched baseline data.
           </div>
         </div>`;
+    }
+
+    const AQI_TREND_MIN_POINTS = 12;
+
+    // Fetches the last 24h of this neighbourhood's AQI snapshots directly
+    // from Supabase (read-only, anon key) and renders a line chart — but
+    // only if there's enough real data to be meaningful. Fewer than
+    // AQI_TREND_MIN_POINTS rows, or any fetch failure, shows a plain
+    // "still building up" message instead of a sparse or broken chart.
+    async function loadAqiTrend(name, city, chartId) {
+      const statusEl = document.getElementById(`aqi-trend-${chartId}-status`);
+      const wrapEl   = document.getElementById(`aqi-trend-${chartId}-chart-wrap`);
+      const canvasEl = document.getElementById(`aqi-trend-${chartId}-canvas`);
+      if (!statusEl || !wrapEl || !canvasEl) return;
+
+      if (aqiTrendCharts[chartId]) {
+        aqiTrendCharts[chartId].destroy();
+        delete aqiTrendCharts[chartId];
+      }
+
+      const showNotEnoughData = () => {
+        statusEl.textContent = "Building up today's trend — check back soon";
+        statusEl.classList.remove("hidden");
+        wrapEl.classList.add("hidden");
+      };
+
+      try {
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const url = SUPABASE_URL + "/rest/v1/score_snapshots"
+          + "?select=aqi,created_at"
+          + "&neighbourhood=eq." + encodeURIComponent(name)
+          + "&city=eq." + encodeURIComponent(city)
+          + "&created_at=gte." + encodeURIComponent(since)
+          + "&order=created_at.asc";
+
+        const res = await fetch(url, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: "Bearer " + SUPABASE_ANON_KEY
+          }
+        });
+
+        if (!res.ok) throw new Error("Supabase request failed: " + res.status);
+        const rows = await res.json();
+
+        if (!Array.isArray(rows) || rows.length < AQI_TREND_MIN_POINTS) {
+          showNotEnoughData();
+          return;
+        }
+
+        const labels = rows.map(r => new Date(r.created_at).toLocaleTimeString("en-IN", {
+          timeZone: "Asia/Kolkata", hour: "numeric"
+        }));
+        const values = rows.map(r => r.aqi);
+
+        statusEl.classList.add("hidden");
+        wrapEl.classList.remove("hidden");
+
+        aqiTrendCharts[chartId] = new Chart(canvasEl, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [{
+              label: "AQI",
+              data: values,
+              borderColor: "#2563eb",
+              backgroundColor: "rgba(37, 99, 235, 0.08)",
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { maxTicksLimit: 6, font: { size: 10 } }, grid: { display: false } },
+              y: { ticks: { font: { size: 10 } }, beginAtZero: true }
+            }
+          }
+        });
+      } catch (err) {
+        console.warn("AQI trend fetch failed — showing fallback message", err);
+        showNotEnoughData();
+      }
     }
 
     async function checkSingle() {
@@ -948,8 +1060,9 @@ let finalScore = parseFloat((
       try {
         let d = await fetchAreaData(city, nVal);
         statusEl.innerHTML = "";
-        resultEl.innerHTML = buildScoreCard(d, false);
+        resultEl.innerHTML = buildScoreCard(d, false, "single");
         resultEl.classList.remove("hidden");
+        loadAqiTrend(d.name, d.city, "single");
       } catch (err) {
         statusEl.innerHTML = "Could not load data. Check console (F12).";
         console.error(err);
@@ -986,10 +1099,12 @@ let finalScore = parseFloat((
         statusEl.innerHTML = "";
         resultEl.innerHTML = summary +
           '<div class="space-y-6">' +
-          buildScoreCard(dA, aWins && !tie) +
-          buildScoreCard(dB, !aWins && !tie) +
+          buildScoreCard(dA, aWins && !tie, "compare-a") +
+          buildScoreCard(dB, !aWins && !tie, "compare-b") +
           '</div>';
         resultEl.classList.remove("hidden");
+        loadAqiTrend(dA.name, dA.city, "compare-a");
+        loadAqiTrend(dB.name, dB.city, "compare-b");
       } catch (err) {
         statusEl.innerHTML = "Could not load data. Check console (F12).";
         console.error(err);
