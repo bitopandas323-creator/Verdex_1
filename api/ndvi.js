@@ -63,8 +63,24 @@ export default async function handler(req, res) {
         },
         aggregationInterval: { of: "P90D" },
         evalscript: evalscript,
-        resx: 10,
-        resy: 10
+        // bounds.properties.crs is EPSG:4326 (degrees), so resx/resy must be
+        // in degrees too — the literal "10" was being read as 10 degrees
+        // (~1100km), collapsing the whole ~1km target area into a single
+        // giant pixel (confirmed via a live query: sampleCount was 1,
+        // geometryPixelCount was 1). Fixing this raised sampleCount to
+        // 10000 for the same bbox.
+        //
+        // resy (north-south) is ~invariant at ~111.32km/degree everywhere,
+        // so a flat 0.0001deg (~11m) is fine. resx (east-west) is NOT
+        // invariant — longitude degrees compress by cos(latitude) toward
+        // the poles, so a flat value would be ~10% off between our
+        // southernmost (~13°N, Bangalore/Chennai) and northernmost (~28.6°N,
+        // Delhi) cities. Empirically this barely moved the aggregate NDVI
+        // mean (<=0.002 difference across a multi-city test), since we're
+        // averaging thousands of pixels — but correcting it is free, so no
+        // reason to leave a known, precisely-computable skew in place.
+        resx: 0.0001 / Math.cos(latF * Math.PI / 180),
+        resy: 0.0001
       },
       calculations: {
         ndvi: {
