@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
 
   const { lat, lon } = req.query;
-  if (!lat || !lon) return res.status(400).json({ error: "lat and lon required" });
+  if (!lat || !lon) return res.status(400).json({ ndvi: null, reason: "lat and lon required" });
 
   const CLIENT_ID     = process.env.SENTINEL_CLIENT_ID;
   const CLIENT_SECRET = process.env.SENTINEL_CLIENT_SECRET;
@@ -23,7 +23,10 @@ export default async function handler(req, res) {
 
     const tokenData = await tokenRes.json();
     if (!tokenData.access_token) {
-      return res.status(401).json({ error: "Auth failed", detail: tokenData });
+      // A real failure — the request never reached Sentinel Hub's imagery
+      // service at all. Distinct from the 200/ndvi:null case below, which
+      // means we successfully queried but genuinely found no usable pixel.
+      return res.status(401).json({ ndvi: null, reason: "Sentinel Hub auth failed", detail: tokenData });
     }
     const token = tokenData.access_token;
 
@@ -107,10 +110,22 @@ export default async function handler(req, res) {
     );
 
     const rawText = await statsRes.text();
+
+    if (!statsRes.ok) {
+      // Sentinel Hub rejected the request itself (bad payload, rate limit,
+      // service outage, etc.) — a real failure, not "no imagery available".
+      return res.status(502).json({
+        ndvi: null,
+        reason: "Sentinel Hub statistics request failed",
+        status: statsRes.status,
+        detail: rawText.substring(0, 400)
+      });
+    }
+
     let data;
     try { data = JSON.parse(rawText); }
     catch (e) {
-      return res.status(200).json({ ndvi: null, reason: "parse error", raw: rawText.substring(0, 400) });
+      return res.status(502).json({ ndvi: null, reason: "Could not parse Sentinel Hub response", raw: rawText.substring(0, 400) });
     }
 
     if (data.data && data.data.length > 0) {
@@ -127,14 +142,18 @@ export default async function handler(req, res) {
       }
     }
 
+    // The request itself succeeded (statsRes.ok, valid JSON) but no usable
+    // vegetation pixel was found — e.g. persistent cloud cover for this
+    // 90-day window. A legitimate empty result, not a system failure, so
+    // this stays a 200 — callers should distinguish this from the 401/502
+    // cases above via response status, not just a null ndvi field.
     return res.status(200).json({
       ndvi:   null,
-      reason: "No valid NDVI extracted",
-      status: statsRes.status,
+      reason: "No cloud-free imagery available for this location in the last 90 days",
       debug:  JSON.stringify(data).substring(0, 600)
     });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ ndvi: null, reason: "Unexpected error", error: err.message });
   }
 }

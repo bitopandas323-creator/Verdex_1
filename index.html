@@ -799,15 +799,25 @@ let walk    = parseFloat(parts[9]) || 6.0;
       // value string, since it's an array of objects, not a scalar.
       let neighbourhoodEntry = (cities[city] || []).find(n => n.name === name);
       let nearbyProjects = (neighbourhoodEntry && neighbourhoodEntry.nearbyProjects) || [];
-      // Fetch live NDVI from satellite
+      // Fetch live NDVI from satellite. api/ndvi.js distinguishes a real
+      // failure (non-2xx status: auth broken, upstream rejected the
+      // request, etc.) from a legitimate empty result (200 with ndvi:null,
+      // e.g. no cloud-free imagery available) — every fallback-to-baseline
+      // path here logs which one happened, so this never fails silently
+      // the way it used to (a 401 with a JSON body doesn't throw, so the
+      // old code's try/catch never even saw it).
       try {
         const ndviRes  = await fetch("/api/ndvi?lat=" + lat + "&lon=" + lon);
         const ndviData = await ndviRes.json();
-        if (ndviData.ndvi !== null && ndviData.ndvi !== undefined) {
+        if (!ndviRes.ok) {
+          console.warn(`Live NDVI request failed (HTTP ${ndviRes.status}) — using baseline value. Reason: ${ndviData.reason || ndviData.error || "unknown"}`);
+        } else if (typeof ndviData.ndvi === "number") {
           ndvi = ndviData.ndvi;
+        } else {
+          console.warn(`Live NDVI returned no usable reading — using baseline value. Reason: ${ndviData.reason || "unknown"}`);
         }
       } catch (e) {
-        console.warn("Live NDVI fetch failed — using baseline value");
+        console.warn("Live NDVI fetch threw an exception (network/parse error) — using baseline value.", e.message);
       }
 
       let cacheKey = city + "|" + lat + "|" + lon;
@@ -1364,14 +1374,29 @@ let finalScore = parseFloat((
     async function loadExactLocationNdvi(lat, lon, containerId) {
       const statusEl = document.getElementById(containerId + "-status");
       if (!statusEl) return;
+
+      const showUnavailable = () => {
+        statusEl.textContent = "Green cover reading unavailable for this exact point right now.";
+      };
+
       try {
-        const res = await fetch("/api/ndvi?lat=" + lat + "&lon=" + lon);
+        const res  = await fetch("/api/ndvi?lat=" + lat + "&lon=" + lon);
         const data = await res.json();
-        if (typeof data.ndvi !== "number") throw new Error(data.reason || "NDVI unavailable");
+
+        if (!res.ok) {
+          console.warn(`Exact-location NDVI request failed (HTTP ${res.status}). Reason: ${data.reason || data.error || "unknown"}`);
+          showUnavailable();
+          return;
+        }
+        if (typeof data.ndvi !== "number") {
+          console.warn(`Exact-location NDVI returned no usable reading. Reason: ${data.reason || "unknown"}`);
+          showUnavailable();
+          return;
+        }
         statusEl.textContent = `NDVI ${data.ndvi} · ${getNDVILabel(data.ndvi)}`;
       } catch (err) {
-        console.warn("Exact-location NDVI fetch failed", err);
-        statusEl.textContent = "Green cover reading unavailable for this exact point right now.";
+        console.warn("Exact-location NDVI fetch threw an exception (network/parse error).", err.message);
+        showUnavailable();
       }
     }
 
