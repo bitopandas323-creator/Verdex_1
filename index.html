@@ -412,7 +412,7 @@
           Data is sourced live from government monitoring stations.`
       },
       heat: {
-        title: "Heat & Humidity",
+        title: "Feels Like",
         body: `This shows how hot it <i>actually feels</i> — not just the temperature.<br><br>
           Humidity makes heat feel much worse. 32°C with 80% humidity feels like 40°C.<br><br>
           <b>Below 25°C</b> → Very comfortable<br>
@@ -425,18 +425,17 @@
       ndvi: {
         title: "Green Cover (NDVI)",
         body: `NDVI measures how much healthy vegetation exists in an area, captured by satellites.<br><br>
-          <b>0.4 and above</b> → Well vegetated. Lots of trees and parks.<br>
-          <b>0.2–0.4</b> → Moderate greenery. Some trees and grass.<br>
-          <b>0.0–0.2</b> → Sparse. Mostly concrete and roads.<br><br>
+          <b>40% and above</b> → Well vegetated. Lots of trees and parks.<br>
+          <b>20–40%</b> → Moderate greenery. Some trees and grass.<br>
+          <b>0–20%</b> → Sparse. Mostly concrete and roads.<br><br>
           Data comes from European Space Agency satellites photographing India every 5 days.`
       },
       noise: {
   title: "Noise Pollution",
-  body: `Measures how much traffic and railway noise affects this area.<br><br>
-    <b>8–10</b> → Quiet. Mostly residential roads, away from highways.<br>
-    <b>6–8</b> → Moderate. Some main roads nearby but liveable.<br>
-    <b>4–6</b> → Noisy. Near major roads or busy intersections.<br>
-    <b>Below 4</b> → Very noisy. Near highways, railways or industrial areas.<br><br>
+  body: `Measures how much traffic and railway noise affects this area, on a 0–10 scale.<br><br>
+    <b>Above 6</b> → Relatively quiet. Mostly residential roads, away from highways.<br>
+    <b>4–6</b> → Moderate noise. Some main roads nearby but liveable.<br>
+    <b>0–4</b> → High traffic area. Near highways, railways or industrial areas.<br><br>
     Based on proximity to major roads and railways from OpenStreetMap data.`
 },
       water: {
@@ -452,38 +451,41 @@
       infrastructure: {
         title: "Infrastructure",
         body: `Measures access to essential civic amenities — hospitals, schools, pharmacies and markets — within 2km.<br><br>
-          <b>8–10</b> → Well served. Multiple amenities of each type nearby.<br>
-          <b>6–8</b> → Adequately served.<br>
-          <b>4–6</b> → Limited amenities nearby.<br>
-          <b>Below 4</b> → Sparse amenities.<br><br>
+          <b>80–100</b> → Well served. Multiple amenities of each type nearby.<br>
+          <b>60–80</b> → Adequately served.<br>
+          <b>40–60</b> → Limited amenities nearby.<br>
+          <b>Below 40</b> → Sparse amenities.<br><br>
           Based on researched baseline data for each neighbourhood.`
       },
       walkability: {
         title: "Walkability",
         body: `Measures how easy it is to get around on foot — parks, grocery stores, cafes and bus stops within 500m.<br><br>
-          <b>8–10</b> → Very walkable. Daily needs reachable on foot.<br>
-          <b>6–8</b> → Walkable.<br>
-          <b>4–6</b> → Car-dependent for most errands.<br>
-          <b>Below 4</b> → Not walkable.<br><br>
+          <b>80–100</b> → Very walkable. Daily needs reachable on foot.<br>
+          <b>60–80</b> → Walkable.<br>
+          <b>40–60</b> → Car-dependent for most errands.<br>
+          <b>Below 40</b> → Not walkable.<br><br>
           Based on researched baseline data for each neighbourhood.`
       },
       traffic: {
         title: "Traffic Congestion",
         body: `Reflects typical peak vs off-peak road conditions in the area.<br><br>
-          <b>7–10</b> → Free-flowing, even at peak hours.<br>
-          <b>5–7</b> → Moderate congestion at peak times.<br>
-          <b>3–5</b> → Heavy congestion, especially IT/commercial corridors.<br>
-          <b>Below 3</b> → Severe, near-daily congestion.<br><br>
+          <b>70–100</b> → Free-flowing, even at peak hours.<br>
+          <b>50–70</b> → Moderate congestion at peak times.<br>
+          <b>30–50</b> → Heavy congestion, especially IT/commercial corridors.<br>
+          <b>Below 30</b> → Severe, near-daily congestion.<br><br>
           Based on researched baseline conditions for each neighbourhood — not live traffic data.`
       },
       safety: {
         title: "Safety",
         body: `A general indicator of the built environment — street lighting, mix of residential and commercial activity, and typical foot traffic — not crime statistics.<br><br>
+          <b>75–100</b> → Well lit, active area.<br>
+          <b>60–75</b> → Generally well served.<br>
+          <b>Below 60</b> → Quieter, less foot traffic.<br><br>
           This score reflects broad, researched characteristics of the area's layout and activity levels, not incident data or official crime records. It should not be treated as a definitive safety assessment or used as the sole basis for personal safety decisions.`
       },
       score: {
         title: "How is the Green Score calculated?",
-        body: `The Green Score combines nine parameters into one number from 0 to 10, weighted so environmental factors count for the most:<br><br>
+        body: `The Green Score combines nine parameters into one number from 0 to 100, weighted so environmental factors count for the most:<br><br>
           <b>Air Quality → 22% weight</b><br>
           <b>Green Cover → 18% weight</b><br>
           <b>Water Quality → 15% weight</b><br>
@@ -493,10 +495,10 @@
           <b>Noise → 7% weight</b><br>
           <b>Safety → 6% weight</b><br>
           <b>Traffic → 4% weight</b><br><br>
-          <b>8–10</b> → Excellent<br>
-          <b>6–8</b> → Good<br>
-          <b>4–6</b> → Moderate<br>
-          <b>Below 4</b> → Poor`
+          <b>80–100</b> → Excellent<br>
+          <b>60–80</b> → Good<br>
+          <b>40–60</b> → Fair<br>
+          <b>Below 40</b> → Poor`
       }
     };
 
@@ -928,9 +930,9 @@ let finalScore = parseFloat((
       let envSubScore = avgScore(d.aqiScore, d.heatScore, d.ndviScore, d.noiseScore, d.waterScore);
       let rows = [
         buildParamRow("ti-wind", "Air Quality", `${d.aqi} · ${getAQILabel(d.aqi)}`, "aqi"),
-        buildParamRow("ti-temperature", "Feels Like", `${d.feelsLike}°C`, "heat"),
+        buildParamRow("ti-temperature", "Feels Like", `${d.feelsLike}°C · ${d.humidity}% humidity`, "heat"),
         buildParamRow("ti-plant-2", "Green Cover", `${Math.round(d.ndvi * 100)}%`, "ndvi"),
-        buildParamRow("ti-volume", "Noise", d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet", "noise"),
+        buildParamRow("ti-volume", "Noise", `${d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet"} · ${d.noise}/10`, "noise"),
         buildParamRow("ti-droplet", "Water Quality", `${getWaterLabel(d.water)} · ${d.water}ppm`, "water")
       ].join("") + buildAqiTrendContainer(chartId);
       let summary = `Air quality ${getAQILabel(d.aqi).toLowerCase()}, ${getNDVILabel(d.ndvi).toLowerCase()}, water ${getWaterLabel(d.water).toLowerCase()}.`;
