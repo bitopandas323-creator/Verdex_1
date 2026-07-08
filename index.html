@@ -483,6 +483,12 @@
           <b>Below 60</b> → Quieter, less foot traffic.<br><br>
           This score reflects broad, researched characteristics of the area's layout and activity levels, not incident data or official crime records. It should not be treated as a definitive safety assessment or used as the sole basis for personal safety decisions.`
       },
+      nearbyPlaces: {
+        title: "Nearby Places",
+        body: `Straight-line distance to the nearest hospital, school, police station and major-highway access point, sourced from OpenStreetMap within a 5km search radius.<br><br>
+          This is baseline data refreshed periodically (roughly monthly), not a live lookup.<br><br>
+          A "Data unavailable" result usually means OpenStreetMap has no matching location tagged nearby — not that nothing exists in that area.`
+      },
       score: {
         title: "How is the Green Score calculated?",
         body: `The Green Score combines nine parameters into one number from 0 to 100, weighted so environmental factors count for the most:<br><br>
@@ -785,6 +791,23 @@
         style="font-size:10px;line-height:1">i</button>`;
     }
 
+    // Static, periodically-refreshed batch data (nearest hospital/school/
+    // police/highway per neighbourhood) — fetched once per page session and
+    // cached in memory, never re-fetched live per search.
+    let nearbyPlacesIndex = null;
+    async function getNearbyPlacesIndex() {
+      if (nearbyPlacesIndex) return nearbyPlacesIndex;
+      try {
+        const res = await fetch("/data/nearby-places.json");
+        const arr = await res.json();
+        nearbyPlacesIndex = new Map(arr.map(e => [e.city + "|" + e.name, e]));
+      } catch (e) {
+        console.warn("Failed to load nearby-places.json — nearby places section will show as unavailable.", e.message);
+        nearbyPlacesIndex = new Map();
+      }
+      return nearbyPlacesIndex;
+    }
+
     async function fetchAreaData(city, neighbourhoodValue) {
       let parts = neighbourhoodValue.split("|");
       let lat   = parts[0];
@@ -801,6 +824,7 @@ let walk    = parseFloat(parts[9]) || 6.0;
       // value string, since it's an array of objects, not a scalar.
       let neighbourhoodEntry = (cities[city] || []).find(n => n.name === name);
       let nearbyProjects = (neighbourhoodEntry && neighbourhoodEntry.nearbyProjects) || [];
+      let nearbyPlaces = (await getNearbyPlacesIndex()).get(city + "|" + name) || null;
       // Fetch live NDVI from satellite. api/ndvi.js distinguishes a real
       // failure (non-2xx status: auth broken, upstream rejected the
       // request, etc.) from a legitimate empty result (200 with ndvi:null,
@@ -891,7 +915,8 @@ let finalScore = parseFloat((
         infraScore, walkScore, traffic, trafficScore, safety, safetyScore,
         finalScore,
         // Informational only — deliberately excluded from finalScore above.
-        nearbyProjects
+        nearbyProjects,
+        nearbyPlaces
       };
       setCached(cacheKey, result);
       return result;
@@ -960,6 +985,40 @@ let finalScore = parseFloat((
       ].join("");
       let summary = `${getWalkLabel(d.walkScore)}, ${getTrafficLabel(d.trafficScore).toLowerCase()}, ${getSafetyLabel(d.safetyScore).toLowerCase()}.`;
       return buildLayerCardShell("ti-walk", "Liveability", liveSubScore, summary, rows);
+    }
+
+    function formatNearbyPlace(place) {
+      if (!place) return `<span class="text-gray-400">Data unavailable for this area</span>`;
+      return place.name ? `${place.distanceKm} km (${place.name})` : `${place.distanceKm} km`;
+    }
+
+    function buildNearbyPlaceRow(icon, label, place) {
+      return `
+        <div class="flex justify-between items-start gap-2 border-t border-black/5 py-2.5 text-sm">
+          <div class="flex items-center gap-2 text-gray-700 shrink-0">
+            <i class="ti ${icon} text-gray-400 shrink-0"></i>
+            <span class="font-medium whitespace-nowrap">${label}</span>
+          </div>
+          <div class="font-semibold text-gray-700 text-right min-w-0">${formatNearbyPlace(place)}</div>
+        </div>`;
+    }
+
+    function buildNearbyPlacesSection(nearbyPlaces) {
+      let rows = [
+        buildNearbyPlaceRow("ti-first-aid-kit", "Nearest hospital", nearbyPlaces && nearbyPlaces.hospital),
+        buildNearbyPlaceRow("ti-school", "Nearest school", nearbyPlaces && nearbyPlaces.school),
+        buildNearbyPlaceRow("ti-shield", "Nearest police station", nearbyPlaces && nearbyPlaces.police),
+        buildNearbyPlaceRow("ti-road", "Highway access", nearbyPlaces && nearbyPlaces.highway)
+      ].join("");
+      return `
+        <div class="bg-white rounded-2xl p-6">
+          <div class="flex items-center gap-2 mb-1">
+            <i class="ti ti-map-pin text-gray-500 text-lg"></i>
+            <span class="font-semibold text-gray-800">Nearby Places</span>
+            ${infoBtn('nearbyPlaces')}
+          </div>
+          <div>${rows}</div>
+        </div>`;
     }
 
     function buildRealEstateSection(nearbyProjects) {
@@ -1051,10 +1110,11 @@ let finalScore = parseFloat((
           <div class="space-y-4">
             ${buildEnvironmentalCard(d, chartId)}
             ${buildLiveabilityCard(d)}
+            ${buildNearbyPlacesSection(d.nearbyPlaces)}
             ${buildRealEstateSection(d.nearbyProjects)}
           </div>
           <div class="pt-4 text-center text-xs text-gray-400">
-            AQI and weather are live. Green cover from ESA satellites. Noise, water, infrastructure, walkability, traffic and safety are from researched baseline data.
+            AQI and weather are live. Green cover from ESA satellites. Noise, water, infrastructure, walkability, traffic and safety are from researched baseline data. Nearby places from OpenStreetMap, refreshed periodically.
           </div>
         </div>`;
     }

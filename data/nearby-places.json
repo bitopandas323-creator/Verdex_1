@@ -1,0 +1,1362 @@
+[
+  {
+    "name": "Banjara Hills",
+    "city": "hyderabad",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Banjara Hills Road Number 10"
+    }
+  },
+  {
+    "name": "Jubilee Hills",
+    "city": "hyderabad",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Stopiles"
+    },
+    "school": {
+      "distanceKm": 0.4,
+      "name": "Indus International primary school, Jubilee Hills"
+    },
+    "police": {
+      "distanceKm": 1.4,
+      "name": "Madhapur Police Station"
+    },
+    "highway": null
+  },
+  {
+    "name": "Secunderabad",
+    "city": "hyderabad",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Regimental Bazar Main Road"
+    }
+  },
+  {
+    "name": "Hitech City",
+    "city": "hyderabad",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "MAXCURE SUYOSHA WOMAN & CHILD HOSPITAL"
+    },
+    "school": {
+      "distanceKm": 1.1,
+      "name": "Meridian School"
+    },
+    "police": {
+      "distanceKm": 0.7,
+      "name": "Madhapur traffic police booth Cyberabad"
+    },
+    "highway": null
+  },
+  {
+    "name": "Gachibowli",
+    "city": "hyderabad",
+    "hospital": {
+      "distanceKm": 1.1,
+      "name": "Himagiri Hospital"
+    },
+    "school": {
+      "distanceKm": 0.7,
+      "name": "Kendirya Vidyalaya"
+    },
+    "police": {
+      "distanceKm": 0.6,
+      "name": "Gachibowli Police station"
+    },
+    "highway": null
+  },
+  {
+    "name": "Old City",
+    "city": "hyderabad",
+    "hospital": {
+      "distanceKm": 0.1,
+      "name": "Nizamia Government General Hospital"
+    },
+    "school": {
+      "distanceKm": 0.8,
+      "name": "Dharmavant High School"
+    },
+    "police": {
+      "distanceKm": 0.1,
+      "name": "Traffic Police Station Charminar"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "Charminar Circle"
+    }
+  },
+  {
+    "name": "Kukatpally",
+    "city": "hyderabad",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "KPHB Road No 1 Road"
+    }
+  },
+  {
+    "name": "Madhapur",
+    "city": "hyderabad",
+    "hospital": {
+      "distanceKm": 0.5,
+      "name": "lifespan hospitals"
+    },
+    "school": {
+      "distanceKm": 0.1,
+      "name": "Green Gables International school"
+    },
+    "police": {
+      "distanceKm": 1.1,
+      "name": "Madhapur traffic police booth Cyberabad"
+    },
+    "highway": null
+  },
+  {
+    "name": "LB Nagar",
+    "city": "hyderabad",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "SHINE CHILDREN'S HOSPITAL"
+    },
+    "school": {
+      "distanceKm": 0.5,
+      "name": "little flower school"
+    },
+    "police": {
+      "distanceKm": 0.2,
+      "name": "LB Nagar Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Vijayavada Highway Flyover"
+    }
+  },
+  {
+    "name": "Uppal",
+    "city": "hyderabad",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": null
+  },
+  {
+    "name": "Bandra",
+    "city": "mumbai",
+    "hospital": {
+      "distanceKm": 0.5,
+      "name": "K B Bhabha Municipal General Hospital"
+    },
+    "school": {
+      "distanceKm": 0.2,
+      "name": "Safari Kid"
+    },
+    "police": {
+      "distanceKm": 0.4,
+      "name": "Police Chowki"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "Gurunanak Marg"
+    }
+  },
+  {
+    "name": "Andheri",
+    "city": "mumbai",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.2,
+      "name": "Mathuradas Vasanji Road (Andheri Kurla Road)"
+    }
+  },
+  {
+    "name": "Worli",
+    "city": "mumbai",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.2,
+      "name": "Khan Abdul Gaffar Khan Marg"
+    }
+  },
+  {
+    "name": "Powai",
+    "city": "mumbai",
+    "hospital": {
+      "distanceKm": 0.5,
+      "name": null
+    },
+    "school": {
+      "distanceKm": 0.4,
+      "name": "Hiranandani Foundation School"
+    },
+    "police": {
+      "distanceKm": 2.4,
+      "name": "Marol Police Camp"
+    },
+    "highway": null
+  },
+  {
+    "name": "Dharavi",
+    "city": "mumbai",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Janani Hospital"
+    },
+    "school": {
+      "distanceKm": 0.1,
+      "name": null
+    },
+    "police": {
+      "distanceKm": 0.4,
+      "name": "Dharavi Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.2,
+      "name": "90 Feet Road"
+    }
+  },
+  {
+    "name": "Juhu",
+    "city": "mumbai",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.3,
+      "name": "Vaikunthlal Mehta Road"
+    }
+  },
+  {
+    "name": "Malad",
+    "city": "mumbai",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Devangi Hospital"
+    },
+    "school": {
+      "distanceKm": 0.3,
+      "name": "Universal High School"
+    },
+    "police": {
+      "distanceKm": 0.6,
+      "name": null
+    },
+    "highway": null
+  },
+  {
+    "name": "Thane",
+    "city": "mumbai",
+    "hospital": {
+      "distanceKm": 0.1,
+      "name": "Dr Jyotsna Jagtaps Ent Hospital and Hearing Aid Centre"
+    },
+    "school": {
+      "distanceKm": 0.6,
+      "name": "DAV School"
+    },
+    "police": {
+      "distanceKm": 1,
+      "name": "Rabodi Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Kapurbawdi Flyover"
+    }
+  },
+  {
+    "name": "Kurla",
+    "city": "mumbai",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "bhabha hospital"
+    },
+    "school": {
+      "distanceKm": 0.5,
+      "name": "Orchids The International School, Kurla"
+    },
+    "police": {
+      "distanceKm": 0.5,
+      "name": "VB Nagar Police Station"
+    },
+    "highway": null
+  },
+  {
+    "name": "Borivali",
+    "city": "mumbai",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Dr. Khatavs Mother and Child Hospital"
+    },
+    "school": {
+      "distanceKm": 0.5,
+      "name": "Muncipal School"
+    },
+    "police": {
+      "distanceKm": 0.2,
+      "name": "Borivali Police Station"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "Swami Vivekanand Road"
+    }
+  },
+  {
+    "name": "Connaught Place",
+    "city": "delhi",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0,
+      "name": "Baba Kharak Singh Marg"
+    }
+  },
+  {
+    "name": "Hauz Khas",
+    "city": "delhi",
+    "hospital": {
+      "distanceKm": 0.5,
+      "name": "Cygnus Orthocare Hospital"
+    },
+    "school": {
+      "distanceKm": 0.1,
+      "name": "St. Paul's School"
+    },
+    "police": {
+      "distanceKm": 2.1,
+      "name": "Police Station Malviya Nagar"
+    },
+    "highway": null
+  },
+  {
+    "name": "Dwarka",
+    "city": "delhi",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Bensups Hospital"
+    },
+    "school": {
+      "distanceKm": 0.3,
+      "name": "Adarsh World School"
+    },
+    "police": {
+      "distanceKm": 0.4,
+      "name": null
+    },
+    "highway": {
+      "distanceKm": 0.6,
+      "name": "Road 205"
+    }
+  },
+  {
+    "name": "Rohini",
+    "city": "delhi",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.8,
+      "name": "Kanjhawala road"
+    }
+  },
+  {
+    "name": "Lajpat Nagar",
+    "city": "delhi",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Lajpat Nagar Colony Hospital"
+    },
+    "school": {
+      "distanceKm": 0.3,
+      "name": "Shaheed Hemu Kalani Rajkiya Sarvoday Bal Vidyalay"
+    },
+    "police": {
+      "distanceKm": 0.3,
+      "name": "Lajpat Nagar Police Station"
+    },
+    "highway": null
+  },
+  {
+    "name": "Vasant Kunj",
+    "city": "delhi",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Fortis Hospital"
+    },
+    "school": {
+      "distanceKm": 0.3,
+      "name": null
+    },
+    "police": {
+      "distanceKm": 1.8,
+      "name": null
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Abdul Gaffar Khan Marg"
+    }
+  },
+  {
+    "name": "Saket",
+    "city": "delhi",
+    "hospital": {
+      "distanceKm": 0.4,
+      "name": "MAX Hospital"
+    },
+    "school": {
+      "distanceKm": 0.1,
+      "name": "Green Field School"
+    },
+    "police": {
+      "distanceKm": 0.1,
+      "name": "Saket Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.4,
+      "name": "Pandit Trilok Chandra Sharma Marg"
+    }
+  },
+  {
+    "name": "Noida Sector 18",
+    "city": "delhi",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Maharaja Agrasen Marg"
+    }
+  },
+  {
+    "name": "Janakpuri",
+    "city": "delhi",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.6,
+      "name": "Bhagwan Mahavir Marg"
+    }
+  },
+  {
+    "name": "Greater Kailash",
+    "city": "delhi",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.5,
+      "name": "Ho Chi Minh Marg"
+    }
+  },
+  {
+    "name": "Koramangala",
+    "city": "bangalore",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "HCG, Koramangala"
+    },
+    "school": {
+      "distanceKm": 0.2,
+      "name": "GLPS Mestri Palya"
+    },
+    "police": {
+      "distanceKm": 0.7,
+      "name": "Koramangala Police Station"
+    },
+    "highway": null
+  },
+  {
+    "name": "Indiranagar",
+    "city": "bangalore",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Healing Hands Clinic - Indiranagar, Bengaluru"
+    },
+    "school": {
+      "distanceKm": 0.2,
+      "name": "Rhythms Institute of Fine Arts"
+    },
+    "police": {
+      "distanceKm": 0,
+      "name": "Indiranagar Traffic Police Station"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "100 Feet Road"
+    }
+  },
+  {
+    "name": "Whitefield",
+    "city": "bangalore",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0,
+      "name": "Whitefield Main Road"
+    }
+  },
+  {
+    "name": "Jayanagar",
+    "city": "bangalore",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Narayan Multispeciality clinic"
+    },
+    "school": {
+      "distanceKm": 0.5,
+      "name": null
+    },
+    "police": {
+      "distanceKm": 0.3,
+      "name": "Jayanagar 4th Block Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "9th Main Road"
+    }
+  },
+  {
+    "name": "Hebbal",
+    "city": "bangalore",
+    "hospital": {
+      "distanceKm": 0.7,
+      "name": "Sanjeevini Children & Women Clinic"
+    },
+    "school": {
+      "distanceKm": 0.2,
+      "name": null
+    },
+    "police": {
+      "distanceKm": 0.9,
+      "name": "Hebbal Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.7,
+      "name": "Outer Ring Road"
+    }
+  },
+  {
+    "name": "Electronic City",
+    "city": "bangalore",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0,
+      "name": "Hosur Road"
+    }
+  },
+  {
+    "name": "Marathahalli",
+    "city": "bangalore",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "New Akshay Mallya Hospital"
+    },
+    "school": {
+      "distanceKm": 0.3,
+      "name": "Vimanapura East Extension Primary School"
+    },
+    "police": {
+      "distanceKm": 0.5,
+      "name": "Traffic Police Cabin"
+    },
+    "highway": null
+  },
+  {
+    "name": "Malleshwaram",
+    "city": "bangalore",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Sri Sanjeevini Cold Laser Therapy"
+    },
+    "school": {
+      "distanceKm": 0.1,
+      "name": "Vidya Mandir School"
+    },
+    "police": {
+      "distanceKm": 0.7,
+      "name": "Maleshwaram Police station"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Margosa Road"
+    }
+  },
+  {
+    "name": "HSR Layout",
+    "city": "bangalore",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0,
+      "name": "17th Cross Road"
+    }
+  },
+  {
+    "name": "Yelahanka",
+    "city": "bangalore",
+    "hospital": {
+      "distanceKm": 0.1,
+      "name": "NDR Orthopaedic"
+    },
+    "school": {
+      "distanceKm": 0.7,
+      "name": "Poornaprajna High School"
+    },
+    "police": {
+      "distanceKm": 0.7,
+      "name": "Yelahanka Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.2,
+      "name": "Bhagyada Bagilu Road"
+    }
+  },
+  {
+    "name": "Anna Nagar",
+    "city": "chennai",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0,
+      "name": "2nd Avenue, Anna Nagar West"
+    }
+  },
+  {
+    "name": "Adyar",
+    "city": "chennai",
+    "hospital": {
+      "distanceKm": 0.1,
+      "name": "Vasan Eye Care Hospital"
+    },
+    "school": {
+      "distanceKm": 0.1,
+      "name": "Bharath HSS"
+    },
+    "police": {
+      "distanceKm": 0.4,
+      "name": "Adyar J2"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "Dr Muthulakshmi Salai"
+    }
+  },
+  {
+    "name": "T Nagar",
+    "city": "chennai",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Sathya Physiotherapy Centre"
+    },
+    "school": {
+      "distanceKm": 0.1,
+      "name": "Ramakrishna Mission HSS"
+    },
+    "police": {
+      "distanceKm": 0.9,
+      "name": "Mambalam Police Station"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "Gopathi Narayanaswami Road"
+    }
+  },
+  {
+    "name": "Velachery",
+    "city": "chennai",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Dr.Agarwals Eye Hospital - Velacherry"
+    },
+    "school": {
+      "distanceKm": 0.4,
+      "name": "Chennai Higher Secondary School"
+    },
+    "police": {
+      "distanceKm": 0.3,
+      "name": "Velachery Police Station"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "Velachery Bypass Road"
+    }
+  },
+  {
+    "name": "Porur",
+    "city": "chennai",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Parvathy Hospital"
+    },
+    "school": {
+      "distanceKm": 0.3,
+      "name": "Grace Matriculation Higher Secondary School"
+    },
+    "police": {
+      "distanceKm": 0.6,
+      "name": "Porur Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.3,
+      "name": "Arcot Road"
+    }
+  },
+  {
+    "name": "OMR",
+    "city": "chennai",
+    "hospital": {
+      "distanceKm": 0.1,
+      "name": "KL Hospital"
+    },
+    "school": {
+      "distanceKm": 0.7,
+      "name": "model school"
+    },
+    "police": {
+      "distanceKm": 0,
+      "name": "J-10 Semmenchery Police Station"
+    },
+    "highway": null
+  },
+  {
+    "name": "Perambur",
+    "city": "chennai",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Abhijay Hospital"
+    },
+    "school": {
+      "distanceKm": 0.5,
+      "name": null
+    },
+    "police": {
+      "distanceKm": 1.1,
+      "name": "Peravallur Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.3,
+      "name": "Paper Mills Road"
+    }
+  },
+  {
+    "name": "Mylapore",
+    "city": "chennai",
+    "hospital": {
+      "distanceKm": 0.7,
+      "name": "Sri Ranga Hospitals"
+    },
+    "school": {
+      "distanceKm": 0.3,
+      "name": null
+    },
+    "police": {
+      "distanceKm": 0.2,
+      "name": "Railway Police"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "RK Mutt Road"
+    }
+  },
+  {
+    "name": "Tambaram",
+    "city": "chennai",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Sarjana Hospital"
+    },
+    "school": {
+      "distanceKm": 0.9,
+      "name": "SKB Vidhyashram Play School - எஸ்கேபி வித்யாஸ்ரம் பிளே ஸ்கூல்"
+    },
+    "police": {
+      "distanceKm": 1.4,
+      "name": "police station s11"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "Tambaram - Mudichur - Sriperumbudur Road"
+    }
+  },
+  {
+    "name": "Nungambakkam",
+    "city": "chennai",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0,
+      "name": "Tank Bund Road"
+    }
+  },
+  {
+    "name": "Koregaon Park",
+    "city": "pune",
+    "hospital": {
+      "distanceKm": 0.7,
+      "name": "Sadhu Vaswani Missions Medical Complex"
+    },
+    "school": {
+      "distanceKm": 1,
+      "name": "JN Petit Technical High School"
+    },
+    "police": {
+      "distanceKm": 0.2,
+      "name": "Koregaon Park Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.3,
+      "name": "South Main Road"
+    }
+  },
+  {
+    "name": "Hinjewadi",
+    "city": "pune",
+    "hospital": {
+      "distanceKm": 0.1,
+      "name": "Sanjeevani Hospital"
+    },
+    "school": {
+      "distanceKm": 0.4,
+      "name": "EuraKids Preschool in hinjewadi ,pune"
+    },
+    "police": {
+      "distanceKm": 0.1,
+      "name": "Hinjawadi Police Chowki"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "Hinjawadi Road"
+    }
+  },
+  {
+    "name": "Kothrud",
+    "city": "pune",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Sahyadri Hospital"
+    },
+    "school": {
+      "distanceKm": 0.5,
+      "name": "Sahyadri Internationsal School"
+    },
+    "police": {
+      "distanceKm": 0.6,
+      "name": "Kothrud Police Station"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "Paud Road"
+    }
+  },
+  {
+    "name": "Viman Nagar",
+    "city": "pune",
+    "hospital": {
+      "distanceKm": 0.4,
+      "name": "apollo clinic"
+    },
+    "school": {
+      "distanceKm": 0.7,
+      "name": "air force school viman nagar"
+    },
+    "police": {
+      "distanceKm": 1.7,
+      "name": "Ramwadi Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.8,
+      "name": "Airport New Road"
+    }
+  },
+  {
+    "name": "Hadapsar",
+    "city": "pune",
+    "hospital": {
+      "distanceKm": 0.5,
+      "name": "Noble Hospital"
+    },
+    "school": {
+      "distanceKm": 1.6,
+      "name": "Credo Kids School, Malwadi -Hadapsar"
+    },
+    "police": {
+      "distanceKm": 0.9,
+      "name": null
+    },
+    "highway": {
+      "distanceKm": 0.3,
+      "name": "Mundhwa Road"
+    }
+  },
+  {
+    "name": "Aundh",
+    "city": "pune",
+    "hospital": {
+      "distanceKm": 0.1,
+      "name": "Parmar Multi Speciality Hospital and Maternity Home"
+    },
+    "school": {
+      "distanceKm": 0.2,
+      "name": "indira kids"
+    },
+    "police": {
+      "distanceKm": 2.3,
+      "name": "Chavan Nagar - Pune Rural Police Headquarters"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "ITI Road"
+    }
+  },
+  {
+    "name": "Baner",
+    "city": "pune",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Pancard Club Road"
+    }
+  },
+  {
+    "name": "Wakad",
+    "city": "pune",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Polaris Health Care"
+    },
+    "school": {
+      "distanceKm": 0.3,
+      "name": "Robotics paathshala"
+    },
+    "police": {
+      "distanceKm": 0.8,
+      "name": "Wakad Police Chowky"
+    },
+    "highway": {
+      "distanceKm": 0.3,
+      "name": "Datta Mandir Road"
+    }
+  },
+  {
+    "name": "Magarpatta",
+    "city": "pune",
+    "hospital": {
+      "distanceKm": 0.5,
+      "name": "Noble Hospital"
+    },
+    "school": {
+      "distanceKm": 1.6,
+      "name": "Credo Kids School, Malwadi -Hadapsar"
+    },
+    "police": {
+      "distanceKm": 0.9,
+      "name": null
+    },
+    "highway": {
+      "distanceKm": 0.3,
+      "name": "Mundhwa Road"
+    }
+  },
+  {
+    "name": "Kharadi",
+    "city": "pune",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Shree Hospital"
+    },
+    "school": {
+      "distanceKm": 0.3,
+      "name": "Nirmala Convent School"
+    },
+    "police": {
+      "distanceKm": 0.4,
+      "name": "Kharadi Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.3,
+      "name": "Kharadi South Main Road"
+    }
+  },
+  {
+    "name": "Salt Lake",
+    "city": "kolkata",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 0.3,
+      "name": null
+    }
+  },
+  {
+    "name": "Park Street",
+    "city": "kolkata",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Royd Nursing Home and Healthcare Limited"
+    },
+    "school": {
+      "distanceKm": 0.2,
+      "name": "Jewish Girls' School"
+    },
+    "police": {
+      "distanceKm": 0.4,
+      "name": "Park Street Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Park Street"
+    }
+  },
+  {
+    "name": "Howrah",
+    "city": "kolkata",
+    "hospital": {
+      "distanceKm": 1.1,
+      "name": "Bankra Hospital"
+    },
+    "school": {
+      "distanceKm": 2.9,
+      "name": "Mohiary Kundu Chaudhury Institution"
+    },
+    "police": {
+      "distanceKm": 4.5,
+      "name": "Nadial Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Kona Expressway"
+    }
+  },
+  {
+    "name": "New Town",
+    "city": "kolkata",
+    "hospital": {
+      "distanceKm": 1.3,
+      "name": "ASMII Save The Sight Foundation"
+    },
+    "school": {
+      "distanceKm": 2.7,
+      "name": null
+    },
+    "police": {
+      "distanceKm": 3.9,
+      "name": "Baguiati Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": null
+    }
+  },
+  {
+    "name": "Ballygunge",
+    "city": "kolkata",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Deshari Complete Eye Care"
+    },
+    "school": {
+      "distanceKm": 0.2,
+      "name": "M G Rungta Academy"
+    },
+    "police": {
+      "distanceKm": 0.7,
+      "name": "गरियाहाट पुलिस थाना"
+    },
+    "highway": null
+  },
+  {
+    "name": "Alipore",
+    "city": "kolkata",
+    "hospital": {
+      "distanceKm": 0.5,
+      "name": "Military Hospital"
+    },
+    "school": {
+      "distanceKm": 0.8,
+      "name": "St Thomas Girls School"
+    },
+    "police": {
+      "distanceKm": 1,
+      "name": "Gokhale Road Police Quarters"
+    },
+    "highway": {
+      "distanceKm": 0.2,
+      "name": null
+    }
+  },
+  {
+    "name": "Dumdum",
+    "city": "kolkata",
+    "hospital": {
+      "distanceKm": 1.4,
+      "name": "Orbis Eye and Dental Care Centre"
+    },
+    "school": {
+      "distanceKm": 0.6,
+      "name": "Ramakrishna Mission School"
+    },
+    "police": {
+      "distanceKm": 1.9,
+      "name": "Baranagar Police Station"
+    },
+    "highway": null
+  },
+  {
+    "name": "Rajarhat",
+    "city": "kolkata",
+    "hospital": {
+      "distanceKm": 1.2,
+      "name": "Bhattacharya Orthopaedics and Related Research Centre Pvt Ltd"
+    },
+    "school": {
+      "distanceKm": 3,
+      "name": null
+    },
+    "police": {
+      "distanceKm": 3.7,
+      "name": "Baguiati Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.2,
+      "name": null
+    }
+  },
+  {
+    "name": "Behala",
+    "city": "kolkata",
+    "hospital": {
+      "distanceKm": 0.4,
+      "name": "Vidyasagar State General Hospital"
+    },
+    "school": {
+      "distanceKm": 0.8,
+      "name": "Shaw Public Girls High School"
+    },
+    "police": {
+      "distanceKm": 0.8,
+      "name": "Behala Thana"
+    },
+    "highway": null
+  },
+  {
+    "name": "Tollygunge",
+    "city": "kolkata",
+    "hospital": {
+      "distanceKm": 0.1,
+      "name": "MR Bangur Hospital"
+    },
+    "school": {
+      "distanceKm": 0.8,
+      "name": "Montclair School"
+    },
+    "police": {
+      "distanceKm": 2.1,
+      "name": "Jadavpur Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.2,
+      "name": "Prince Anwar Shah Road"
+    }
+  },
+  {
+    "name": "Navrangpura",
+    "city": "ahmedabad",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": null
+  },
+  {
+    "name": "Satellite",
+    "city": "ahmedabad",
+    "hospital": {
+      "distanceKm": 0.6,
+      "name": "Tulip Women's Hospital"
+    },
+    "school": {
+      "distanceKm": 0.4,
+      "name": "SN School"
+    },
+    "police": {
+      "distanceKm": 0.6,
+      "name": "Satelite Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.4,
+      "name": "Satellite Road"
+    }
+  },
+  {
+    "name": "Bopal",
+    "city": "ahmedabad",
+    "hospital": null,
+    "school": null,
+    "police": null,
+    "highway": {
+      "distanceKm": 1.1,
+      "name": "Vakil Saheb Flyover"
+    }
+  },
+  {
+    "name": "Maninagar",
+    "city": "ahmedabad",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Palak Eye Hospital"
+    },
+    "school": {
+      "distanceKm": 0.6,
+      "name": "Jivkorbhai Lallubhai High School"
+    },
+    "police": {
+      "distanceKm": 0.6,
+      "name": "Maninagar Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": null
+    }
+  },
+  {
+    "name": "Prahlad Nagar",
+    "city": "ahmedabad",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Shalby Hospital"
+    },
+    "school": {
+      "distanceKm": 0.6,
+      "name": "Anand Niketan"
+    },
+    "police": {
+      "distanceKm": 1.3,
+      "name": "Satelite Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "NH147"
+    }
+  },
+  {
+    "name": "Vastrapur",
+    "city": "ahmedabad",
+    "hospital": {
+      "distanceKm": 0.1,
+      "name": "Excel Eye Care"
+    },
+    "school": {
+      "distanceKm": 0.4,
+      "name": "Kameshwar School"
+    },
+    "police": {
+      "distanceKm": 1.2,
+      "name": "Mahila Police station West"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Judges Bunglow Road"
+    }
+  },
+  {
+    "name": "Chandkheda",
+    "city": "ahmedabad",
+    "hospital": {
+      "distanceKm": 0.3,
+      "name": "Utkarsh hospital"
+    },
+    "school": {
+      "distanceKm": 0.6,
+      "name": "IP School"
+    },
+    "police": {
+      "distanceKm": 3,
+      "name": "Sabarmati Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.4,
+      "name": "SH41"
+    }
+  },
+  {
+    "name": "Gota",
+    "city": "ahmedabad",
+    "hospital": {
+      "distanceKm": 0.8,
+      "name": "Satyam Hospital"
+    },
+    "school": {
+      "distanceKm": 2,
+      "name": "Nalanda School"
+    },
+    "police": {
+      "distanceKm": 1.2,
+      "name": "SOLA POLICE STATION"
+    },
+    "highway": {
+      "distanceKm": 0.1,
+      "name": "Sundersingh Bhandari Flyover"
+    }
+  },
+  {
+    "name": "SG Highway",
+    "city": "ahmedabad",
+    "hospital": {
+      "distanceKm": 0.2,
+      "name": "Shalby Hospital"
+    },
+    "school": {
+      "distanceKm": 0.3,
+      "name": "Anand Niketan"
+    },
+    "police": {
+      "distanceKm": 1.1,
+      "name": "Satelite Police Station"
+    },
+    "highway": {
+      "distanceKm": 0,
+      "name": "NH147"
+    }
+  },
+  {
+    "name": "Thaltej",
+    "city": "ahmedabad",
+    "hospital": {
+      "distanceKm": 0.4,
+      "name": "Apex Heart Institute"
+    },
+    "school": {
+      "distanceKm": 0.7,
+      "name": "Nirma Vidyavihar"
+    },
+    "police": {
+      "distanceKm": 1.4,
+      "name": "Vastrapur Police Station"
+    },
+    "highway": {
+      "distanceKm": 0.4,
+      "name": null
+    }
+  }
+]
