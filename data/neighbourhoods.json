@@ -704,8 +704,8 @@
   {
     "name": "Hadapsar",
     "city": "pune",
-    "lat": 18.5089,
-    "lon": 73.926,
+    "lat": 18.5008,
+    "lon": 73.9379,
     "ndvi": 0.22,
     "noise": 4.5,
     "water": 380,
@@ -756,8 +756,8 @@
   {
     "name": "Magarpatta",
     "city": "pune",
-    "lat": 18.5089,
-    "lon": 73.926,
+    "lat": 18.5147,
+    "lon": 73.9307,
     "ndvi": 0.29,
     "noise": 5.5,
     "water": 310,
@@ -808,8 +808,8 @@
   {
     "name": "Howrah",
     "city": "kolkata",
-    "lat": 22.5958,
-    "lon": 88.2636,
+    "lat": 22.5829,
+    "lon": 88.3428,
     "ndvi": 0.15,
     "noise": 3,
     "water": 380,

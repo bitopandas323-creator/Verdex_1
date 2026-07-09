@@ -1,16 +1,38 @@
 // Batch job: for each of the 80 neighbourhoods in data/neighbourhoods.json,
-// finds the nearest hospital, school, police station, and major-highway
-// access point via OpenStreetMap (Overpass). Writes data/nearby-places.json.
+// finds the nearest instance of ~17 place categories (hospital, school,
+// grocery, transit, etc.) plus major-highway access, via OpenStreetMap
+// (Overpass). Writes data/nearby-places.json.
 //
 // This is NOT called live per user search — it's meant to be re-run
 // periodically (e.g. monthly) since these facilities rarely change:
-//   node scripts/fetch-nearby-places.mjs
+//   node scripts/fetch-nearby-places.mjs                    (full run, all 80)
+//   node scripts/fetch-nearby-places.mjs --limit=5          (test run, first N)
+//   node scripts/fetch-nearby-places.mjs --retry-failed     (re-query only categories
+//                                                             that failed last time)
+//   node scripts/fetch-nearby-places.mjs --widen=fire_station (re-search a specific
+//                                                             category at its
+//                                                             CATEGORY_RADIUS_OVERRIDES
+//                                                             radius, only for
+//                                                             neighbourhoods currently
+//                                                             null for it; --widen=all
+//                                                             does every category)
+//   node scripts/fetch-nearby-places.mjs --only=Howrah      (fully re-fetch all 18
+//                                                             categories for specific
+//                                                             neighbourhoods by name —
+//                                                             e.g. after correcting a
+//                                                             wrong coordinate)
 //
 // Uses bbox + haversine post-filtering rather than Overpass's `around:`
 // filter — `around:` was found to time out under load during this project's
 // earlier infrastructure/walkability work, and the same lesson applies here.
+//
+// All 18 categories (17 point/area types + highway) are requested in a
+// SINGLE combined query per neighbourhood, not one query per category —
+// v1 of this script ran 2 queries/neighbourhood (160 total) and contributed
+// to Overpass throttling. One combined query per neighbourhood means 80
+// requests for a full run, even with more than 4x the categories.
 
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -20,9 +42,24 @@ const NEIGHBOURHOODS = JSON.parse(
 );
 
 const RADIUS_M = 5000;
-const USER_AGENT = "Verdex-NearbyPlaces/1.0 (periodic batch job; contact: bitopandas323@gmail.com)";
+const USER_AGENT = "Verdex-NearbyPlaces/2.0 (periodic batch job; contact: bitopandas323@gmail.com)";
 const REQUEST_DELAY_MS = 1500;
-const OVERPASS_ENDPOINTS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+const CANDIDATE_MIRRORS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.openstreetmap.fr/api/interpreter"
+];
+let OVERPASS_ENDPOINTS = CANDIDATE_MIRRORS;
+
+// Bundling 17 categories into one query means a heavier response per
+// neighbourhood than v1's smaller per-category queries. The server-side
+// [timeout:25] below asks Overpass for up to 25s to process; the client
+// timeout must clear that with room for network transfer, or we abort our
+// own healthy-but-slow queries (the exact bug found and fixed tonight when
+// this was 15s against a 25s server budget).
+const OVERPASS_CLIENT_TIMEOUT_MS = 45000;
+
+const outPath = join(__dirname, "..", "data", "nearby-places.json");
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -30,13 +67,9 @@ function sleep(ms) {
 
 // IMPORTANT: the timeout must cover the full request lifecycle, including
 // reading/parsing the response body — not just the initial fetch() call.
-// An earlier version of this function cleared the AbortController's timer
-// as soon as fetch() resolved (i.e. once headers arrived), leaving res.json()
-// completely unprotected. Overpass returning a 200 quickly but then dripping
-// a large body slowly caused the script to hang indefinitely on a single
-// neighbourhood with no way out — confirmed live (script sat on
-// "[19/80] Kurla, mumbai" for 10+ minutes with zero progress, far past the
-// ~130s worst-case the old per-fetch-only timeout should have guaranteed).
+// An earlier version cleared the AbortController's timer as soon as fetch()
+// resolved (i.e. once headers arrived), leaving res.json() completely
+// unprotected — a fast-header/slow-body response could hang indefinitely.
 async function fetchJsonWithTimeout(url, options, ms) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), ms);
@@ -57,7 +90,7 @@ async function queryOverpassWithRetry(query) {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
           body: "data=" + encodeURIComponent(query)
-        }, 15000);
+        }, OVERPASS_CLIENT_TIMEOUT_MS);
         if (!Array.isArray(data.elements)) throw new Error("no elements");
         return data.elements;
       } catch (err) {
@@ -65,7 +98,35 @@ async function queryOverpassWithRetry(query) {
       }
     }
   }
-  return null; // both endpoints failed after retry
+  return null; // every mirror failed after retry
+}
+
+// Picks the fastest of the candidate mirrors with one cheap, identical test
+// query before the real run starts, and reorders OVERPASS_ENDPOINTS to try
+// the fastest one first (all candidates stay in the fallback chain — this
+// only affects order, never reduces resilience below the fixed 2-mirror list
+// used before).
+async function benchmarkMirrors() {
+  const testQuery = `[out:json][timeout:10];node(28.60,77.20,28.601,77.201);out;`;
+  const results = [];
+  for (const url of CANDIDATE_MIRRORS) {
+    const start = Date.now();
+    try {
+      await fetchJsonWithTimeout(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
+        body: "data=" + encodeURIComponent(testQuery)
+      }, 10000);
+      results.push({ url, ms: Date.now() - start, ok: true });
+    } catch (err) {
+      results.push({ url, ms: Infinity, ok: false });
+    }
+  }
+  results.sort((a, b) => a.ms - b.ms);
+  console.log("Mirror benchmark:");
+  results.forEach(r => console.log(`  ${r.url}: ${r.ok ? r.ms + "ms" : "FAILED"}`));
+  const usable = results.filter(r => r.ok).map(r => r.url);
+  return usable.length > 0 ? usable : CANDIDATE_MIRRORS;
 }
 
 function haversineKm(lat1, lon1, lat2, lon2) {
@@ -83,137 +144,357 @@ function bboxAround(lat, lon, radiusM) {
   return [lat - dLat, lon - dLon, lat + dLat, lon + dLon]; // south, west, north, east
 }
 
+// Confirmed by direct testing: when an Overpass `out` statement requests
+// BOTH `center` and `geom` together (needed here since highway ways need
+// full geometry while every other category just needs a point), Overpass
+// omits `.center` for way/relation elements and returns only `.geometry` —
+// even though a `center`-only query for the exact same element returns it
+// fine. Without this fallback, every POI mapped as a way (e.g. a college
+// or hospital drawn as a building outline rather than a single node) was
+// silently skipped — not because it wasn't found, but because coordsOf()
+// had no way to place it. This surfaced as real, findable places incorrectly
+// showing as "no_match_found" (found via direct comparison: a college
+// 1.4km from Dwarka, tagged plainly as amenity=college, was missing from
+// every run including a same-radius recheck, until this fix).
 function coordsOf(el) {
   if (el.lat !== undefined) return [el.lat, el.lon];
   if (el.center) return [el.center.lat, el.center.lon];
+  if (Array.isArray(el.geometry) && el.geometry.length > 0) {
+    const latSum = el.geometry.reduce((sum, p) => sum + p.lat, 0);
+    const lonSum = el.geometry.reduce((sum, p) => sum + p.lon, 0);
+    return [latSum / el.geometry.length, lonSum / el.geometry.length];
+  }
   return null;
 }
 
-// --- Nearest hospital / school / police (combined single query) ---
+// --- Category definitions: drive both the query and the classification ---
 
-async function findNearestAmenities(lat, lon) {
-  const [s, w, n, e] = bboxAround(lat, lon, RADIUS_M);
+const CATEGORY_DEFS = [
+  { key: "hospital",        clause: bbox => `nwr["amenity"="hospital"](${bbox});` },
+  { key: "clinic",          clause: bbox => `nwr["amenity"~"^(clinic|doctors)$"](${bbox});` },
+  { key: "school",          clause: bbox => `nwr["amenity"="school"](${bbox});` },
+  { key: "college",         clause: bbox => `nwr["amenity"~"^(college|university)$"](${bbox});` },
+  { key: "police",          clause: bbox => `nwr["amenity"="police"](${bbox});` },
+  { key: "fire_station",    clause: bbox => `nwr["amenity"="fire_station"](${bbox});` },
+  { key: "grocery",         clause: bbox => `nwr["shop"~"^(supermarket|convenience|grocery)$"](${bbox});` },
+  { key: "pharmacy",        clause: bbox => `nwr["amenity"="pharmacy"](${bbox});` },
+  { key: "atm_bank",        clause: bbox => `nwr["amenity"~"^(atm|bank)$"](${bbox});` },
+  { key: "bus_stop",        clause: bbox => `nwr["highway"="bus_stop"](${bbox});\n  nwr["amenity"="bus_station"](${bbox});` },
+  { key: "metro_station",   clause: bbox => `nwr["railway"~"^(station|subway_entrance)$"](${bbox});` },
+  { key: "restaurant_cafe", clause: bbox => `nwr["amenity"~"^(restaurant|cafe)$"](${bbox});` },
+  { key: "park",            clause: bbox => `nwr["leisure"="park"](${bbox});` },
+  { key: "gym",             clause: bbox => `nwr["leisure"="fitness_centre"](${bbox});` },
+  { key: "mall",            clause: bbox => `nwr["shop"~"^(mall|department_store)$"](${bbox});` },
+  { key: "worship",         clause: bbox => `nwr["amenity"="place_of_worship"](${bbox});` },
+  { key: "fuel",            clause: bbox => `nwr["amenity"="fuel"](${bbox});` },
+  { key: "highway",         clause: bbox => `way["highway"~"^(motorway|trunk|primary|secondary)$"](${bbox});` }
+];
+
+const HIGHWAY_RE = /^(motorway|trunk|primary|secondary)$/;
+
+// Classifies a returned element into exactly one of the 17 point/area
+// category keys by its own tags (Overpass doesn't tell us which query
+// clause produced a result once everything's merged into one union).
+// Returns null for elements that don't match any point/area category —
+// including highway ways, which are handled separately below since they
+// need geometry-walking, not a single coordsOf() point.
+function matchPointCategory(tags) {
+  if (!tags) return null;
+  if (tags.amenity === "hospital") return "hospital";
+  if (tags.amenity === "clinic" || tags.amenity === "doctors") return "clinic";
+  if (tags.amenity === "school") return "school";
+  if (tags.amenity === "college" || tags.amenity === "university") return "college";
+  if (tags.amenity === "police") return "police";
+  if (tags.amenity === "fire_station") return "fire_station";
+  if (tags.shop === "supermarket" || tags.shop === "convenience" || tags.shop === "grocery") return "grocery";
+  if (tags.amenity === "pharmacy") return "pharmacy";
+  if (tags.amenity === "atm" || tags.amenity === "bank") return "atm_bank";
+  if (tags.highway === "bus_stop" || tags.amenity === "bus_station") return "bus_stop";
+  if (tags.railway === "station" || tags.railway === "subway_entrance") return "metro_station";
+  if (tags.amenity === "restaurant" || tags.amenity === "cafe") return "restaurant_cafe";
+  if (tags.leisure === "park") return "park";
+  if (tags.leisure === "fitness_centre") return "gym";
+  if (tags.shop === "mall" || tags.shop === "department_store") return "mall";
+  if (tags.amenity === "place_of_worship") return "worship";
+  if (tags.amenity === "fuel") return "fuel";
+  return null;
+}
+
+function buildQuery(bbox, defs) {
+  const clauses = defs.map(d => d.clause(bbox)).join("\n  ");
+  return `[out:json][timeout:25];\n(\n  ${clauses}\n);\nout center geom tags;`;
+}
+
+// Runs one combined query for the given category subset (all 18 for a full
+// Fire stations are legitimately sparser than every other category (they
+// serve a wide area by design, unlike a grocery store or ATM), so the
+// default 5km radius that works fine for the other 17 categories is too
+// tight for this one specifically — confirmed by direct testing: multiple
+// "no_match_found" neighbourhoods had a real fire station just past 5km
+// (5.1-5.6km). This is a radius/category-density mismatch, not sparse OSM
+// tagging for India. See CHANGELOG note near --widen below.
+const CATEGORY_RADIUS_OVERRIDES = { fire_station: 15000 };
+
+// run, a smaller subset for --retry-failed) and returns { key: {value, reason} }
+// for exactly those keys. radiusM overrides RADIUS_M for this call only —
+// used by --widen to re-search a specific category at a larger radius
+// without touching every other category's default 5km.
+async function fetchPlaces(lat, lon, defs, radiusM) {
+  radiusM = radiusM || RADIUS_M;
+  const [s, w, n, e] = bboxAround(lat, lon, radiusM);
   const bbox = `${s},${w},${n},${e}`;
-  const query = `
-    [out:json][timeout:25];
-    (
-      nwr["amenity"="hospital"](${bbox});
-      nwr["amenity"="school"](${bbox});
-      nwr["amenity"="police"](${bbox});
-    );
-    out center tags;
-  `;
+  const query = buildQuery(bbox, defs);
 
   const elements = await queryOverpassWithRetry(query);
-  const result = { hospital: null, school: null, police: null };
+
+  const result = {};
   if (!elements) {
-    console.warn(`    amenities query failed after retries (Overpass unavailable)`);
+    defs.forEach(d => { result[d.key] = { value: null, reason: "retry_exhausted" }; });
     return result;
   }
 
-  const nearest = { hospital: null, school: null, police: null };
+  const wantHighway = defs.some(d => d.key === "highway");
+  const nearest = {};
+  defs.forEach(d => { nearest[d.key] = null; });
+
   for (const el of elements) {
-    const amenity = el.tags && el.tags.amenity;
-    if (!nearest.hasOwnProperty(amenity)) continue;
-    const c = coordsOf(el);
-    if (!c) continue;
-    const dist = haversineKm(lat, lon, c[0], c[1]);
-    if (dist > RADIUS_M / 1000) continue; // bbox is a square superset — enforce true circular radius
-    if (!nearest[amenity] || dist < nearest[amenity].distanceKm) {
-      nearest[amenity] = { distanceKm: dist, name: (el.tags && el.tags.name) || null };
+    const pointKey = matchPointCategory(el.tags);
+    if (pointKey && nearest.hasOwnProperty(pointKey)) {
+      const c = coordsOf(el);
+      if (!c) continue;
+      const dist = haversineKm(lat, lon, c[0], c[1]);
+      if (dist > radiusM / 1000) continue; // bbox is a square superset — enforce true circular radius
+      if (!nearest[pointKey] || dist < nearest[pointKey].distanceKm) {
+        nearest[pointKey] = { distanceKm: dist, name: (el.tags && el.tags.name) || null };
+      }
+      continue;
     }
-  }
-
-  for (const key of Object.keys(nearest)) {
-    if (nearest[key]) {
-      result[key] = { distanceKm: Math.round(nearest[key].distanceKm * 10) / 10, name: nearest[key].name };
-    }
-  }
-  return result;
-}
-
-// --- Nearest major-highway access point ---
-
-async function findNearestHighway(lat, lon) {
-  const [s, w, n, e] = bboxAround(lat, lon, RADIUS_M);
-  const bbox = `${s},${w},${n},${e}`;
-  const query = `
-    [out:json][timeout:25];
-    (
-      way["highway"~"^(motorway|trunk|primary|secondary)$"](${bbox});
-    );
-    out geom;
-  `;
-
-  const elements = await queryOverpassWithRetry(query);
-  if (!elements) {
-    console.warn(`    highway query failed after retries (Overpass unavailable)`);
-    return null;
-  }
-
-  let nearest = null;
-  for (const way of elements) {
-    if (!Array.isArray(way.geometry)) continue;
-    for (const pt of way.geometry) {
-      const dist = haversineKm(lat, lon, pt.lat, pt.lon);
-      if (dist > RADIUS_M / 1000) continue;
-      if (!nearest || dist < nearest.distanceKm) {
-        nearest = { distanceKm: dist, name: (way.tags && (way.tags.name || way.tags.ref)) || null };
+    if (wantHighway && el.type === "way" && el.tags && HIGHWAY_RE.test(el.tags.highway || "")) {
+      if (!Array.isArray(el.geometry)) continue;
+      for (const pt of el.geometry) {
+        const dist = haversineKm(lat, lon, pt.lat, pt.lon);
+        if (dist > radiusM / 1000) continue;
+        if (!nearest.highway || dist < nearest.highway.distanceKm) {
+          nearest.highway = { distanceKm: dist, name: (el.tags.name || el.tags.ref) || null };
+        }
       }
     }
   }
 
-  if (!nearest) return null;
-  return { distanceKm: Math.round(nearest.distanceKm * 10) / 10, name: nearest.name };
+  defs.forEach(d => {
+    if (nearest[d.key]) {
+      result[d.key] = { value: { distanceKm: Math.round(nearest[d.key].distanceKm * 10) / 10, name: nearest[d.key].name }, reason: null };
+    } else {
+      result[d.key] = { value: null, reason: "no_match_found" };
+    }
+  });
+  return result;
 }
 
-// --- Run ---
+function logFailures(name, city, places, radiusM) {
+  radiusM = radiusM || RADIUS_M;
+  const failed = Object.entries(places).filter(([, v]) => v.reason);
+  failed.forEach(([k, v]) => {
+    const label = v.reason === "retry_exhausted" ? "Overpass retry exhausted (transient failure)" : `genuine empty result (no match within ${radiusM / 1000}km)`;
+    console.log(`    ${k}: ${label}`);
+  });
+  return failed.length;
+}
 
-(async () => {
-  console.log(`Fetching nearby places for ${NEIGHBOURHOODS.length} neighbourhoods (radius ${RADIUS_M / 1000}km)...\n`);
+// --- Full run ---
+
+async function runFull(limit) {
+  const neighbourhoods = limit ? NEIGHBOURHOODS.slice(0, limit) : NEIGHBOURHOODS;
+  console.log(`Fetching nearby places for ${neighbourhoods.length} neighbourhoods (radius ${RADIUS_M / 1000}km, ${CATEGORY_DEFS.length} categories, 1 query each)...\n`);
 
   const results = [];
-  const missing = [];
-  const outPath = join(__dirname, "..", "data", "nearby-places.json");
+  let totalFailed = 0, totalEmpty = 0;
 
-  for (let i = 0; i < NEIGHBOURHOODS.length; i++) {
-    const n = NEIGHBOURHOODS[i];
-    console.log(`[${i + 1}/${NEIGHBOURHOODS.length}] ${n.name}, ${n.city}`);
+  for (let i = 0; i < neighbourhoods.length; i++) {
+    const n = neighbourhoods[i];
+    console.log(`[${i + 1}/${neighbourhoods.length}] ${n.name}, ${n.city}`);
 
-    const amenities = await findNearestAmenities(n.lat, n.lon);
-    await sleep(REQUEST_DELAY_MS);
-    const highway = await findNearestHighway(n.lat, n.lon);
-    await sleep(REQUEST_DELAY_MS);
+    const places = await fetchPlaces(n.lat, n.lon, CATEGORY_DEFS);
+    results.push({ name: n.name, city: n.city, places });
 
-    const entry = {
-      name: n.name,
-      city: n.city,
-      hospital: amenities.hospital,
-      school: amenities.school,
-      police: amenities.police,
-      highway
-    };
-    results.push(entry);
-
-    const missingCategories = ["hospital", "school", "police", "highway"].filter(k => !entry[k]);
-    if (missingCategories.length > 0) {
-      missing.push({ name: n.name, city: n.city, missingCategories });
-      console.log(`    missing: ${missingCategories.join(", ")}`);
-    }
+    logFailures(n.name, n.city, places);
+    totalFailed += Object.values(places).filter(v => v.reason === "retry_exhausted").length;
+    totalEmpty += Object.values(places).filter(v => v.reason === "no_match_found").length;
 
     // Checkpoint after every neighbourhood — an 80-stop unattended run is
     // long enough that losing all progress to one hang/interrupt near the
     // end is expensive. Cheap to write (a few KB), so no reason not to.
     writeFileSync(outPath, JSON.stringify(results, null, 2));
+
+    await sleep(REQUEST_DELAY_MS);
   }
 
   console.log(`\nWrote ${results.length} entries to ${outPath}`);
+  console.log(`${totalFailed} category lookups failed due to Overpass retry exhaustion (transient — NOT evidence of absence). Re-run with --retry-failed to retry just these.`);
+  console.log(`${totalEmpty} category lookups genuinely found nothing within 5km (real sparse-OSM-tagging case).`);
+}
 
-  if (missing.length > 0) {
-    console.log(`\n--- ${missing.length} neighbourhoods have at least one missing category ---`);
-    missing.forEach(m => console.log(`  ${m.name}, ${m.city}: ${m.missingCategories.join(", ")}`));
-    console.log("\nThis usually reflects sparse OpenStreetMap tagging in that area, not a script failure — spot-check a couple on openstreetmap.org before assuming a systematic problem.");
+// --- Only run: fully re-fetches all 18 categories for specific
+// neighbourhoods by name (e.g. after correcting a wrong coordinate, where
+// every category needs re-querying, not just the ones that were null).
+// Unlike runFull, this merges into the existing file rather than
+// overwriting it from scratch — runFull's write-as-you-go checkpointing
+// only contains neighbourhoods processed so far in that run, which would
+// silently wipe out the other 79 entries if used for a partial run.
+
+async function runOnly(namesArg) {
+  if (!existsSync(outPath)) {
+    console.error(`${outPath} doesn't exist yet — run a full pass first.`);
+    process.exit(1);
+  }
+  const names = namesArg.split(",").map(n => n.trim()).filter(Boolean);
+  const existing = JSON.parse(readFileSync(outPath, "utf8"));
+
+  for (const name of names) {
+    const n = NEIGHBOURHOODS.find(x => x.name === name);
+    if (!n) {
+      console.warn(`Skipping "${name}" — not found in data/neighbourhoods.json.`);
+      continue;
+    }
+    const entryIdx = existing.findIndex(e => e.name === name && e.city === n.city);
+    console.log(`Fully re-fetching ${n.name}, ${n.city} (${n.lat}, ${n.lon})...\n`);
+
+    const places = await fetchPlaces(n.lat, n.lon, CATEGORY_DEFS);
+    const entry = { name: n.name, city: n.city, places };
+    if (entryIdx === -1) existing.push(entry);
+    else existing[entryIdx] = entry;
+
+    logFailures(n.name, n.city, places);
+    writeFileSync(outPath, JSON.stringify(existing, null, 2));
+    await sleep(REQUEST_DELAY_MS);
+  }
+
+  console.log(`\nUpdated ${outPath}`);
+}
+
+// --- Retry-failed run: only re-queries categories marked retry_exhausted ---
+
+async function runRetryFailed() {
+  if (!existsSync(outPath)) {
+    console.error(`${outPath} doesn't exist yet — run a full pass first.`);
+    process.exit(1);
+  }
+  const existing = JSON.parse(readFileSync(outPath, "utf8"));
+
+  const toRetry = existing
+    .map(entry => ({
+      entry,
+      failedKeys: Object.entries(entry.places).filter(([, v]) => v.reason === "retry_exhausted").map(([k]) => k)
+    }))
+    .filter(x => x.failedKeys.length > 0);
+
+  console.log(`${toRetry.length}/${existing.length} neighbourhoods have at least one retry_exhausted category. Retrying only those categories for those neighbourhoods.\n`);
+
+  for (let i = 0; i < toRetry.length; i++) {
+    const { entry, failedKeys } = toRetry[i];
+    const n = NEIGHBOURHOODS.find(x => x.name === entry.name && x.city === entry.city);
+    if (!n) {
+      console.warn(`  Skipping ${entry.name}, ${entry.city} — not found in data/neighbourhoods.json (renamed/removed?).`);
+      continue;
+    }
+    console.log(`[${i + 1}/${toRetry.length}] ${entry.name}, ${entry.city} — retrying: ${failedKeys.join(", ")}`);
+
+    const defs = CATEGORY_DEFS.filter(d => failedKeys.includes(d.key));
+    const updated = await fetchPlaces(n.lat, n.lon, defs);
+    Object.assign(entry.places, updated); // only overwrites the retried keys — everything else in `entry.places` is untouched
+
+    const stillFailed = logFailures(entry.name, entry.city, updated);
+    if (stillFailed === 0) console.log("    all retried categories resolved");
+
+    writeFileSync(outPath, JSON.stringify(existing, null, 2));
+    await sleep(REQUEST_DELAY_MS);
+  }
+
+  console.log(`\nUpdated ${outPath}`);
+}
+
+// --- Widen/recheck run: re-searches specific categories for neighbourhoods
+// where that category currently has no value (either reason), at that
+// category's configured radius — CATEGORY_RADIUS_OVERRIDES[key] if one
+// exists (e.g. fire_station's 15km), otherwise the standard RADIUS_M. With
+// no override this is a plain re-query at the same radius as before, useful
+// for checking whether a null result was genuine or a one-off Overpass
+// hiccup. Categories already resolved are left untouched — a match already
+// found is by definition also the nearest within any larger radius, so
+// re-checking it would be wasted work. `--widen=all` rechecks every
+// category's nulls in one pass. Results found at a non-default radius get
+// a `radiusKm` field recorded alongside them; default-radius results
+// (including ones resolved on a plain recheck) carry no such field.
+
+async function runWiden(keysArg) {
+  if (!existsSync(outPath)) {
+    console.error(`${outPath} doesn't exist yet — run a full pass first.`);
+    process.exit(1);
+  }
+  const keys = keysArg === "all"
+    ? CATEGORY_DEFS.map(d => d.key)
+    : keysArg.split(",").map(k => k.trim()).filter(Boolean);
+  const unknown = keys.filter(k => !CATEGORY_DEFS.some(d => d.key === k));
+  if (unknown.length > 0) {
+    console.error(`Unknown categor${unknown.length > 1 ? "ies" : "y"}: ${unknown.join(", ")}`);
+    process.exit(1);
+  }
+
+  const existing = JSON.parse(readFileSync(outPath, "utf8"));
+
+  for (const key of keys) {
+    const radiusM = CATEGORY_RADIUS_OVERRIDES[key] || RADIUS_M;
+    const def = CATEGORY_DEFS.find(d => d.key === key);
+    const toWiden = existing.filter(entry => !entry.places[key].value);
+    if (toWiden.length === 0) continue;
+
+    console.log(`\n=== Widening "${key}" to ${radiusM / 1000}km for ${toWiden.length}/${existing.length} neighbourhoods currently null ===\n`);
+
+    for (let i = 0; i < toWiden.length; i++) {
+      const entry = toWiden[i];
+      const n = NEIGHBOURHOODS.find(x => x.name === entry.name && x.city === entry.city);
+      if (!n) {
+        console.warn(`  Skipping ${entry.name}, ${entry.city} — not found in data/neighbourhoods.json.`);
+        continue;
+      }
+      console.log(`[${i + 1}/${toWiden.length}] ${entry.name}, ${entry.city}`);
+
+      const updated = await fetchPlaces(n.lat, n.lon, [def], radiusM);
+      const widenedResult = updated[key];
+      if (widenedResult.value) widenedResult.radiusKm = radiusM / 1000;
+      entry.places[key] = widenedResult;
+
+      logFailures(entry.name, entry.city, { [key]: widenedResult }, radiusM);
+      if (widenedResult.value) console.log(`    found at ${widenedResult.value.distanceKm}km (within ${radiusM / 1000}km search)`);
+
+      writeFileSync(outPath, JSON.stringify(existing, null, 2));
+      await sleep(REQUEST_DELAY_MS);
+    }
+  }
+
+  console.log(`\nUpdated ${outPath}`);
+}
+
+// --- Entry point ---
+
+(async () => {
+  OVERPASS_ENDPOINTS = await benchmarkMirrors();
+  console.log(`Using mirror order: ${OVERPASS_ENDPOINTS.join(", ")}\n`);
+
+  const args = process.argv.slice(2);
+  const retryFailed = args.includes("--retry-failed");
+  const widenArg = args.find(a => a.startsWith("--widen="));
+  const onlyArg = args.find(a => a.startsWith("--only="));
+  const limitArg = args.find(a => a.startsWith("--limit="));
+  const limit = limitArg ? parseInt(limitArg.split("=")[1], 10) : null;
+
+  if (onlyArg) {
+    await runOnly(onlyArg.split("=")[1]);
+  } else if (widenArg) {
+    await runWiden(widenArg.split("=")[1]);
+  } else if (retryFailed) {
+    await runRetryFailed();
   } else {
-    console.log("\nAll neighbourhoods have complete data.");
+    await runFull(limit);
   }
 })();

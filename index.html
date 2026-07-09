@@ -485,9 +485,9 @@
       },
       nearbyPlaces: {
         title: "Nearby Places",
-        body: `Straight-line distance to the nearest hospital, school, police station and major-highway access point, sourced from OpenStreetMap within a 5km search radius.<br><br>
-          This is baseline data refreshed periodically (roughly monthly), not a live lookup.<br><br>
-          A "Data unavailable" result usually means OpenStreetMap has no matching location tagged nearby — not that nothing exists in that area.`
+        body: `Straight-line distance to the nearest hospital, school, grocery store and 14 other everyday categories (clinics, transit, parks, worship, fuel and more), sourced from OpenStreetMap within a 5km search radius. Fire stations are searched within a wider 15km radius, since they're naturally spaced much further apart than the other categories.<br><br>
+          Only categories where something was actually found are shown — nearest hospital, school, grocery store and highway access appear by default; tap "Show more" for everything else found nearby.<br><br>
+          This is baseline data refreshed periodically (roughly monthly), not a live lookup. A category not appearing usually means OpenStreetMap has no matching location tagged within its search radius — not that nothing exists in that area.`
       },
       score: {
         title: "How is the Green Score calculated?",
@@ -601,17 +601,17 @@
     { name: "Hinjewadi",       lat: 18.5912, lon: 73.7389, ndvi: 0.28, noise: 5.0, water: 380, traffic: 2, safety: 6, infra: 5, walk: 3.5 },
     { name: "Kothrud",         lat: 18.5074, lon: 73.8077, ndvi: 0.32, noise: 6.0, water: 300, traffic: 4.5, safety: 7, infra: 7.5, walk: 6.5 },
     { name: "Viman Nagar",     lat: 18.5679, lon: 73.9143, ndvi: 0.25, noise: 5.5, water: 320, traffic: 4, safety: 6.5, infra: 7, walk: 6 },
-    { name: "Hadapsar",        lat: 18.5089, lon: 73.9260, ndvi: 0.22, noise: 4.5, water: 380, traffic: 3.5, safety: 6, infra: 6, walk: 5 },
+    { name: "Hadapsar",        lat: 18.5008, lon: 73.9379, ndvi: 0.22, noise: 4.5, water: 380, traffic: 3.5, safety: 6, infra: 6, walk: 5 },
     { name: "Aundh",           lat: 18.5590, lon: 73.8080, ndvi: 0.35, noise: 6.0, water: 290, traffic: 5, safety: 7.5, infra: 7.5, walk: 6.5 },
     { name: "Baner",           lat: 18.5590, lon: 73.7868, ndvi: 0.30, noise: 5.5, water: 340, traffic: 3, safety: 6.5, infra: 6, walk: 5 },
     { name: "Wakad",           lat: 18.5985, lon: 73.7611, ndvi: 0.26, noise: 5.0, water: 370, traffic: 3, safety: 6.5, infra: 6, walk: 5 },
-    { name: "Magarpatta",      lat: 18.5089, lon: 73.9260, ndvi: 0.29, noise: 5.5, water: 310, traffic: 5, safety: 7.5, infra: 8, walk: 8 },
+    { name: "Magarpatta",      lat: 18.5147, lon: 73.9307, ndvi: 0.29, noise: 5.5, water: 310, traffic: 5, safety: 7.5, infra: 8, walk: 8 },
     { name: "Kharadi",         lat: 18.5512, lon: 73.9442, ndvi: 0.23, noise: 5.0, water: 350, traffic: 3, safety: 6.5, infra: 6, walk: 5 }
   ],
   kolkata: [
     { name: "Salt Lake",       lat: 22.5958, lon: 88.4147, ndvi: 0.32, noise: 6.5, water: 260, traffic: 6, safety: 7.5, infra: 7, walk: 6 },
     { name: "Park Street",     lat: 22.5520, lon: 88.3529, ndvi: 0.18, noise: 3.5, water: 240, traffic: 3, safety: 7, infra: 8.5, walk: 8 },
-    { name: "Howrah",          lat: 22.5958, lon: 88.2636, ndvi: 0.15, noise: 3.0, water: 380, traffic: 2.5, safety: 6, infra: 7.5, walk: 7 },
+    { name: "Howrah",          lat: 22.5829, lon: 88.3428, ndvi: 0.15, noise: 3.0, water: 380, traffic: 2.5, safety: 6, infra: 7.5, walk: 7 },
     { name: "New Town",        lat: 22.6275, lon: 88.4625, ndvi: 0.35, noise: 7.0, water: 250, traffic: 6.5, safety: 7, infra: 5.5, walk: 5 },
     { name: "Ballygunge",      lat: 22.5263, lon: 88.3676, ndvi: 0.28, noise: 5.5, water: 260, traffic: 5, safety: 7.5, infra: 7.5, walk: 7 },
     { name: "Alipore",         lat: 22.5355, lon: 88.3353, ndvi: 0.30, noise: 6.0, water: 250, traffic: 5.5, safety: 8, infra: 7, walk: 6 },
@@ -791,8 +791,9 @@
         style="font-size:10px;line-height:1">i</button>`;
     }
 
-    // Static, periodically-refreshed batch data (nearest hospital/school/
-    // police/highway per neighbourhood) — fetched once per page session and
+    // Static, periodically-refreshed batch data (nearest hospital, school,
+    // grocery, transit, etc. per neighbourhood — see CATEGORY_DEFS in
+    // scripts/fetch-nearby-places.mjs) — fetched once per page session and
     // cached in memory, never re-fetched live per search.
     let nearbyPlacesIndex = null;
     async function getNearbyPlacesIndex() {
@@ -987,29 +988,80 @@ let finalScore = parseFloat((
       return buildLayerCardShell("ti-walk", "Liveability", liveSubScore, summary, rows);
     }
 
+    // Mirrors the CATEGORY_DEFS keys in scripts/fetch-nearby-places.mjs —
+    // label/icon are display-only, not needed server-side.
+    const NEARBY_PLACE_META = {
+      hospital:        { label: "Nearest hospital",             icon: "ti-first-aid-kit" },
+      clinic:          { label: "Nearest clinic",                icon: "ti-stethoscope" },
+      school:          { label: "Nearest school",                icon: "ti-school" },
+      college:         { label: "Nearest college",                icon: "ti-book-2" },
+      police:          { label: "Nearest police station",         icon: "ti-shield" },
+      fire_station:    { label: "Nearest fire station",           icon: "ti-flame" },
+      grocery:         { label: "Nearest grocery store",          icon: "ti-shopping-cart" },
+      pharmacy:        { label: "Nearest pharmacy",                icon: "ti-pill" },
+      atm_bank:        { label: "Nearest ATM/bank",                icon: "ti-building-bank" },
+      bus_stop:        { label: "Nearest bus stop",                icon: "ti-bus" },
+      metro_station:   { label: "Nearest metro/rail station",      icon: "ti-train" },
+      restaurant_cafe: { label: "Nearest restaurant/cafe",         icon: "ti-tools-kitchen-2" },
+      park:            { label: "Nearest park",                   icon: "ti-trees" },
+      gym:             { label: "Nearest gym",                    icon: "ti-barbell" },
+      mall:            { label: "Nearest mall",                   icon: "ti-shopping-bag" },
+      worship:         { label: "Nearest place of worship",       icon: "ti-building-church" },
+      fuel:            { label: "Nearest petrol pump",             icon: "ti-gas-station" },
+      highway:         { label: "Highway access",                 icon: "ti-road" }
+    };
+    const NEARBY_PLACES_PRIMARY = ["hospital", "school", "grocery", "highway"];
+
     function formatNearbyPlace(place) {
-      if (!place) return `<span class="text-gray-400">Data unavailable for this area</span>`;
       return place.name ? `${place.distanceKm} km (${place.name})` : `${place.distanceKm} km`;
     }
 
-    function buildNearbyPlaceRow(icon, label, place) {
+    function buildNearbyPlaceRow(key, place) {
+      let meta = NEARBY_PLACE_META[key];
       return `
         <div class="flex justify-between items-start gap-2 border-t border-black/5 py-2.5 text-sm">
           <div class="flex items-center gap-2 text-gray-700 shrink-0">
-            <i class="ti ${icon} text-gray-400 shrink-0"></i>
-            <span class="font-medium whitespace-nowrap">${label}</span>
+            <i class="ti ${meta.icon} text-gray-400 shrink-0"></i>
+            <span class="font-medium whitespace-nowrap">${meta.label}</span>
           </div>
           <div class="font-semibold text-gray-700 text-right min-w-0">${formatNearbyPlace(place)}</div>
         </div>`;
     }
 
-    function buildNearbyPlacesSection(nearbyPlaces) {
-      let rows = [
-        buildNearbyPlaceRow("ti-first-aid-kit", "Nearest hospital", nearbyPlaces && nearbyPlaces.hospital),
-        buildNearbyPlaceRow("ti-school", "Nearest school", nearbyPlaces && nearbyPlaces.school),
-        buildNearbyPlaceRow("ti-shield", "Nearest police station", nearbyPlaces && nearbyPlaces.police),
-        buildNearbyPlaceRow("ti-road", "Highway access", nearbyPlaces && nearbyPlaces.highway)
-      ].join("");
+    function toggleNearbyPlacesExpand(sectionId, extraCount) {
+      let panel = document.getElementById("nearby-expand-" + sectionId);
+      let label = document.getElementById("nearby-expand-label-" + sectionId);
+      let nowHidden = !panel.classList.contains("hidden");
+      panel.classList.toggle("hidden");
+      label.textContent = nowHidden ? `Show ${extraCount} more nearby places` : "Show less";
+    }
+
+    // Only categories with an actual found value are ever shown — a missing
+    // category (genuinely nothing tagged nearby, or a failed lookup) is
+    // simply absent from the card, not rendered as a placeholder. If NO
+    // category has data for this neighbourhood, the whole card is omitted
+    // by the caller (see buildScoreCard) rather than showing an empty shell.
+    function buildNearbyPlacesSection(nearbyPlaces, sectionId) {
+      sectionId = sectionId || "single";
+      let places = (nearbyPlaces && nearbyPlaces.places) || {};
+      let available = Object.keys(NEARBY_PLACE_META).filter(k => places[k] && places[k].value);
+      if (available.length === 0) return "";
+
+      let primary = available.filter(k => NEARBY_PLACES_PRIMARY.includes(k));
+      let extra   = available.filter(k => !NEARBY_PLACES_PRIMARY.includes(k));
+
+      let primaryRows = primary.map(k => buildNearbyPlaceRow(k, places[k].value)).join("");
+      let expandBlock = "";
+      if (extra.length > 0) {
+        let extraRows = extra.map(k => buildNearbyPlaceRow(k, places[k].value)).join("");
+        expandBlock = `
+          <button onclick="toggleNearbyPlacesExpand('${sectionId}', ${extra.length})"
+            class="w-full text-left text-xs text-blue-500 hover:underline pt-2.5 border-t border-black/5">
+            <span id="nearby-expand-label-${sectionId}">Show ${extra.length} more nearby places</span>
+          </button>
+          <div id="nearby-expand-${sectionId}" class="hidden">${extraRows}</div>`;
+      }
+
       return `
         <div class="bg-white rounded-2xl p-6">
           <div class="flex items-center gap-2 mb-1">
@@ -1017,7 +1069,8 @@ let finalScore = parseFloat((
             <span class="font-semibold text-gray-800">Nearby Places</span>
             ${infoBtn('nearbyPlaces')}
           </div>
-          <div>${rows}</div>
+          <div>${primaryRows}</div>
+          ${expandBlock}
         </div>`;
     }
 
@@ -1110,7 +1163,7 @@ let finalScore = parseFloat((
           <div class="space-y-4">
             ${buildEnvironmentalCard(d, chartId)}
             ${buildLiveabilityCard(d)}
-            ${buildNearbyPlacesSection(d.nearbyPlaces)}
+            ${buildNearbyPlacesSection(d.nearbyPlaces, chartId)}
             ${buildRealEstateSection(d.nearbyProjects)}
           </div>
           <div class="pt-4 text-center text-xs text-gray-400">
