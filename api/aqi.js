@@ -1,8 +1,25 @@
+import { fetchJsonWithTimeout } from "./_lib/http.js";
+
 // WAQI's geo nearest-station index is sparse for many Indian stations, so a
 // "nearest" result can silently be hundreds of km away. Reject it beyond this
 // radius and fall through to search-based nearest-station lookup instead of
 // trusting it blindly.
 const MAX_STATION_DISTANCE_KM = 50;
+
+// None of the three WAQI calls below previously had any timeout — a
+// fast-header/slow-body response from any of them (including the up to 5
+// sequential attempts in the search-fallback loop) could hang this endpoint
+// indefinitely, the same bug class that hung scripts/fetch-nearby-places.mjs
+// on Kurla tonight.
+//
+// Worst case this function now makes 7 sequential WAQI calls (1 nearest +
+// 1 search + 5 candidates), so 7 * WAQI_TIMEOUT_MS = 42s. vercel.json sets
+// this route's maxDuration to 60s specifically so that ceiling has real
+// headroom above this worst case — without that override, this endpoint
+// runs on Vercel's plan-default timeout (10s on Hobby, 15s on Pro), which
+// would kill the function long before a 6s per-call timeout ever got the
+// chance to fire on a later candidate.
+const WAQI_TIMEOUT_MS = 6000;
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -23,8 +40,7 @@ export async function getAqi(lat, lon, city) {
 
   // Try nearest station first — more accurate than city-level
   const nearestURL = `https://api.waqi.info/feed/geo:${lat};${lon}/?token=${TOKEN}`;
-  const nearestRes = await fetch(nearestURL);
-  const nearestData = await nearestRes.json();
+  const nearestData = await fetchJsonWithTimeout(nearestURL, {}, WAQI_TIMEOUT_MS);
 
   if (nearestData.status === "ok" && nearestData.data && nearestData.data.aqi) {
     const stationGeo = nearestData.data.city && nearestData.data.city.geo;
@@ -44,8 +60,7 @@ export async function getAqi(lat, lon, city) {
   // actually closest to the requested coordinates.
   if (city) {
     const searchURL = `https://api.waqi.info/search/?keyword=${encodeURIComponent(city)}&token=${TOKEN}`;
-    const searchRes  = await fetch(searchURL);
-    const searchData = await searchRes.json();
+    const searchData = await fetchJsonWithTimeout(searchURL, {}, WAQI_TIMEOUT_MS);
 
     if (searchData.status === "ok" && Array.isArray(searchData.data) && searchData.data.length > 0) {
       const ranked = searchData.data
@@ -59,8 +74,7 @@ export async function getAqi(lat, lon, city) {
         .slice(0, 5);
 
       for (const candidate of ranked) {
-        const stationRes  = await fetch(`https://api.waqi.info/feed/@${candidate.uid}/?token=${TOKEN}`);
-        const stationData = await stationRes.json();
+        const stationData = await fetchJsonWithTimeout(`https://api.waqi.info/feed/@${candidate.uid}/?token=${TOKEN}`, {}, WAQI_TIMEOUT_MS);
 
         if (stationData.status === "ok" && stationData.data && typeof stationData.data.aqi === "number") {
           return { aqi: stationData.data.aqi, station: candidate.name, method: "search-nearest" };

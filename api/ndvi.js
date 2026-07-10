@@ -1,3 +1,21 @@
+import { fetchJsonWithTimeout, fetchTextWithTimeout } from "./_lib/http.js";
+
+// Sentinel Hub's token exchange should be near-instant (it's just an OAuth
+// grant); the statistics call does real satellite-imagery aggregation so
+// gets more headroom. Both previously had no timeout at all — a
+// fast-header/slow-body response from either would hang this endpoint
+// indefinitely, the same bug class that hung scripts/fetch-nearby-places.mjs
+// on Kurla tonight.
+//
+// Worst case this handler makes both calls sequentially: TOKEN_TIMEOUT_MS +
+// STATS_TIMEOUT_MS = 23s. vercel.json sets this route's maxDuration to 30s
+// specifically so that ceiling has real headroom above this worst case —
+// without that override, this endpoint runs on Vercel's plan-default
+// timeout (10s on Hobby, 15s on Pro), which would kill the function before
+// STATS_TIMEOUT_MS alone ever had the chance to fire.
+const TOKEN_TIMEOUT_MS = 8000;
+const STATS_TIMEOUT_MS = 15000;
+
 export default async function handler(req, res) {
 
   const { lat, lon } = req.query;
@@ -8,7 +26,7 @@ export default async function handler(req, res) {
 
   try {
 
-    const tokenRes = await fetch(
+    const tokenData = await fetchJsonWithTimeout(
       "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
       {
         method:  "POST",
@@ -18,10 +36,9 @@ export default async function handler(req, res) {
           client_id:     CLIENT_ID,
           client_secret: CLIENT_SECRET
         })
-      }
+      },
+      TOKEN_TIMEOUT_MS
     );
-
-    const tokenData = await tokenRes.json();
     if (!tokenData.access_token) {
       // A real failure — the request never reached Sentinel Hub's imagery
       // service at all. Distinct from the 200/ndvi:null case below, which
@@ -96,7 +113,7 @@ export default async function handler(req, res) {
       }
     };
 
-    const statsRes = await fetch(
+    const { ok: statsOk, status: statsStatus, text: rawText } = await fetchTextWithTimeout(
       "https://sh.dataspace.copernicus.eu/api/v1/statistics",
       {
         method:  "POST",
@@ -106,18 +123,17 @@ export default async function handler(req, res) {
           "Authorization": "Bearer " + token
         },
         body: JSON.stringify(statsRequest)
-      }
+      },
+      STATS_TIMEOUT_MS
     );
 
-    const rawText = await statsRes.text();
-
-    if (!statsRes.ok) {
+    if (!statsOk) {
       // Sentinel Hub rejected the request itself (bad payload, rate limit,
       // service outage, etc.) — a real failure, not "no imagery available".
       return res.status(502).json({
         ndvi: null,
         reason: "Sentinel Hub statistics request failed",
-        status: statsRes.status,
+        status: statsStatus,
         detail: rawText.substring(0, 400)
       });
     }
@@ -154,6 +170,9 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
+    if (err.name === "AbortError") {
+      return res.status(504).json({ ndvi: null, reason: "Sentinel Hub request timed out", error: err.message });
+    }
     return res.status(500).json({ ndvi: null, reason: "Unexpected error", error: err.message });
   }
 }

@@ -2,6 +2,12 @@
   "functions": {
     "api/snapshot.js": {
       "maxDuration": 60
+    },
+    "api/aqi.js": {
+      "maxDuration": 60
+    },
+    "api/ndvi.js": {
+      "maxDuration": 30
     }
   }
 }
