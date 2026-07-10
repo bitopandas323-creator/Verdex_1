@@ -8744,161 +8744,28 @@
     "places": {
       "hospital": {
         "value": {
-          "distanceKm": 1.4,
-          "name": "Orbis Eye and Dental Care Centre"
-        },
-        "reason": null
-      },
-      "clinic": {
-        "value": {
           "distanceKm": 0.7,
-          "name": "Aroma Yuth Ayurvedic Beauty Clinic"
-        },
-        "reason": null
-      },
-      "school": {
-        "value": {
-          "distanceKm": 0.6,
-          "name": "Ramakrishna Mission School"
-        },
-        "reason": null
-      },
-      "college": {
-        "value": {
-          "distanceKm": 4.2,
-          "name": "Taradevi Harak Chand Kankaria Jain College"
-        },
-        "reason": null
-      },
-      "police": {
-        "value": {
-          "distanceKm": 2.9,
-          "name": "Sinthee Police Station"
-        },
-        "reason": null
-      },
-      "fire_station": {
-        "value": {
-          "distanceKm": 8.6,
-          "name": "C R Avenue Fire Station"
-        },
-        "reason": null,
-        "radiusKm": 15
-      },
-      "grocery": {
-        "value": {
-          "distanceKm": 0.3,
-          "name": "Small Grocery Store"
-        },
-        "reason": null
-      },
-      "pharmacy": {
-        "value": {
-          "distanceKm": 1.1,
-          "name": "Medical Store"
-        },
-        "reason": null
-      },
-      "atm_bank": {
-        "value": {
-          "distanceKm": 2,
-          "name": null
-        },
-        "reason": null
-      },
-      "bus_stop": {
-        "value": {
-          "distanceKm": 0.9,
-          "name": "3 No. Pramod Nagar"
-        },
-        "reason": null
-      },
-      "metro_station": {
-        "value": {
-          "distanceKm": 1,
-          "name": "Baranagar"
-        },
-        "reason": null
-      },
-      "restaurant_cafe": {
-        "value": {
-          "distanceKm": 1,
-          "name": "Foodplex"
-        },
-        "reason": null
-      },
-      "park": {
-        "value": {
-          "distanceKm": 2.4,
-          "name": "Subhas Nagar Children' Park"
-        },
-        "reason": null
-      },
-      "gym": {
-        "value": {
-          "distanceKm": 2.4,
-          "name": "Elite Body Fitness"
-        },
-        "reason": null
-      },
-      "mall": {
-        "value": {
-          "distanceKm": 0.8,
-          "name": "Maa Tara Enterprise"
-        },
-        "reason": null
-      },
-      "worship": {
-        "value": {
-          "distanceKm": 0.6,
-          "name": "Ramakrishna Mission Mandir"
-        },
-        "reason": null
-      },
-      "fuel": {
-        "value": {
-          "distanceKm": 1.3,
-          "name": "Indian Oil"
-        },
-        "reason": null
-      },
-      "highway": {
-        "value": {
-          "distanceKm": 0,
-          "name": "Belghoria Expressway"
-        },
-        "reason": null
-      }
-    }
-  },
-  {
-    "name": "Rajarhat",
-    "city": "kolkata",
-    "places": {
-      "hospital": {
-        "value": {
-          "distanceKm": 1.2,
-          "name": "Bhattacharya Orthopaedics and Related Research Centre Pvt Ltd"
+          "name": "Phoenix Hospital And Diagnostic Centre Pvt Ltd"
         },
         "reason": null
       },
       "clinic": {
         "value": {
-          "distanceKm": 1.8,
-          "name": "Kolkata Nursing Home"
+          "distanceKm": 0.1,
+          "name": "Dr. Rathikul Hasan"
         },
         "reason": null
       },
       "school": {
         "value": {
-          "distanceKm": 3.2,
-          "name": "Little Friends school"
+          "distanceKm": 2.3,
+          "name": "auxiliam convent school"
         },
         "reason": null
       },
       "college": {
         "value": {
-          "distanceKm": 0.4,
+          "distanceKm": 3.1,
           "name": "Derozio memorial college"
         },
         "reason": null
@@ -8912,93 +8779,226 @@
       },
       "fire_station": {
         "value": {
-          "distanceKm": 11.7,
-          "name": "C R Avenue Fire Station"
+          "distanceKm": 5.4,
+          "name": "Madhyamgram Fire Station"
         },
         "reason": null,
         "radiusKm": 15
       },
       "grocery": {
         "value": {
-          "distanceKm": 1.9,
-          "name": "Spencer's"
+          "distanceKm": 1.1,
+          "name": "Biswa Bangla Store"
         },
         "reason": null
       },
       "pharmacy": {
         "value": {
-          "distanceKm": 2.6,
+          "distanceKm": 1,
           "name": "Apollo Pharmacy"
         },
         "reason": null
       },
       "atm_bank": {
         "value": {
-          "distanceKm": 1.3,
-          "name": "Axis Bank ATM"
+          "distanceKm": 1.1,
+          "name": null
         },
         "reason": null
       },
       "bus_stop": {
         "value": {
-          "distanceKm": 2.1,
-          "name": "Chinar Park"
+          "distanceKm": 0.8,
+          "name": null
         },
         "reason": null
       },
       "metro_station": {
         "value": {
-          "distanceKm": 3,
+          "distanceKm": 0.5,
           "name": "Jai Hind"
         },
         "reason": null
       },
       "restaurant_cafe": {
         "value": {
-          "distanceKm": 0.4,
-          "name": "Arbeu cafe"
+          "distanceKm": 1,
+          "name": "Biryani Bhai"
         },
         "reason": null
       },
       "park": {
         "value": {
-          "distanceKm": 0.1,
-          "name": "Alice in wonderland park"
+          "distanceKm": 0.3,
+          "name": "Median island park"
         },
         "reason": null
       },
       "gym": {
         "value": {
-          "distanceKm": 4.8,
+          "distanceKm": 3.1,
           "name": "Debonair Multy Gym & Swimming Club"
         },
         "reason": null
       },
       "mall": {
         "value": {
-          "distanceKm": 1.4,
-          "name": "city centre 2"
+          "distanceKm": 2.7,
+          "name": "Eats Treats"
         },
         "reason": null
       },
       "worship": {
         "value": {
-          "distanceKm": 1.8,
-          "name": "Kali Temple"
+          "distanceKm": 1.5,
+          "name": "Shitala Mandir"
         },
         "reason": null
       },
       "fuel": {
         "value": {
-          "distanceKm": 1.5,
-          "name": "HP"
+          "distanceKm": 1.2,
+          "name": "Bharat Petroleum"
         },
         "reason": null
       },
       "highway": {
         "value": {
           "distanceKm": 0.2,
+          "name": "Jessore Road"
+        },
+        "reason": null
+      }
+    }
+  },
+  {
+    "name": "Rajarhat",
+    "city": "kolkata",
+    "places": {
+      "hospital": {
+        "value": {
+          "distanceKm": 0.3,
+          "name": "Spandan Hospital"
+        },
+        "reason": null
+      },
+      "clinic": {
+        "value": {
+          "distanceKm": 0.4,
+          "name": "B B Eye Foundation VIP ROAD"
+        },
+        "reason": null
+      },
+      "school": {
+        "value": {
+          "distanceKm": 0.6,
+          "name": "Little Friends school"
+        },
+        "reason": null
+      },
+      "college": {
+        "value": {
+          "distanceKm": 1.8,
+          "name": "Sarojini Naidu College for Women"
+        },
+        "reason": null
+      },
+      "police": {
+        "value": {
+          "distanceKm": 1.1,
+          "name": "Baguiati Police Station"
+        },
+        "reason": null
+      },
+      "fire_station": {
+        "value": {
+          "distanceKm": 5.9,
           "name": null
+        },
+        "reason": null,
+        "radiusKm": 15
+      },
+      "grocery": {
+        "value": {
+          "distanceKm": 0.6,
+          "name": "Big Bazaar"
+        },
+        "reason": null
+      },
+      "pharmacy": {
+        "value": {
+          "distanceKm": 2.4,
+          "name": "Omnicare Pharmacy"
+        },
+        "reason": null
+      },
+      "atm_bank": {
+        "value": {
+          "distanceKm": 0.4,
+          "name": "HDFC Bank"
+        },
+        "reason": null
+      },
+      "bus_stop": {
+        "value": {
+          "distanceKm": 0.3,
+          "name": "Tegharia"
+        },
+        "reason": null
+      },
+      "metro_station": {
+        "value": {
+          "distanceKm": 2.1,
+          "name": "Jessore Road"
+        },
+        "reason": null
+      },
+      "restaurant_cafe": {
+        "value": {
+          "distanceKm": 0.6,
+          "name": "Aminia Restaurant - Rajarhat"
+        },
+        "reason": null
+      },
+      "park": {
+        "value": {
+          "distanceKm": 0.5,
+          "name": null
+        },
+        "reason": null
+      },
+      "gym": {
+        "value": {
+          "distanceKm": 2.7,
+          "name": "Debonair Multy Gym & Swimming Club"
+        },
+        "reason": null
+      },
+      "mall": {
+        "value": {
+          "distanceKm": 0.6,
+          "name": "O-Zone Mall"
+        },
+        "reason": null
+      },
+      "worship": {
+        "value": {
+          "distanceKm": 0.3,
+          "name": "Lokenath Temple"
+        },
+        "reason": null
+      },
+      "fuel": {
+        "value": {
+          "distanceKm": 0.9,
+          "name": null
+        },
+        "reason": null
+      },
+      "highway": {
+        "value": {
+          "distanceKm": 0.2,
+          "name": "Rajarhat Main Road"
         },
         "reason": null
       }
@@ -9796,8 +9796,8 @@
     "places": {
       "hospital": {
         "value": {
-          "distanceKm": 0.8,
-          "name": "Vismay Child Care Hospital"
+          "distanceKm": 0.7,
+          "name": "Shalby Hospital"
         },
         "reason": null
       },
@@ -9810,105 +9810,105 @@
       },
       "school": {
         "value": {
-          "distanceKm": 1.6,
-          "name": "SN School"
+          "distanceKm": 1,
+          "name": "Anand Niketan"
         },
         "reason": null
       },
       "college": {
         "value": {
-          "distanceKm": 1.6,
+          "distanceKm": 1.9,
           "name": "SN Collage"
         },
         "reason": null
       },
       "police": {
         "value": {
-          "distanceKm": 4.1,
-          "name": "Gujarat university police station"
+          "distanceKm": 1.7,
+          "name": "Satelite Police Station"
         },
         "reason": null
       },
       "fire_station": {
         "value": {
-          "distanceKm": 2.8,
+          "distanceKm": 3.2,
           "name": "Bodakdev Fire Station"
         },
         "reason": null
       },
       "grocery": {
         "value": {
-          "distanceKm": 1.1,
-          "name": "Shivalik Shilp"
+          "distanceKm": 1,
+          "name": "Star Bazaar"
         },
         "reason": null
       },
       "pharmacy": {
         "value": {
-          "distanceKm": 2.6,
+          "distanceKm": 2.5,
           "name": "Medilink Medical Store"
         },
         "reason": null
       },
       "atm_bank": {
         "value": {
-          "distanceKm": 0.9,
+          "distanceKm": 0.7,
           "name": "Yes Bank"
         },
         "reason": null
       },
       "bus_stop": {
         "value": {
-          "distanceKm": 1.2,
-          "name": "ISKCON Mandir"
+          "distanceKm": 1.6,
+          "name": "Iskcon Cross Road BRTS"
         },
         "reason": null
       },
       "metro_station": {
         "value": {
-          "distanceKm": 1.6,
+          "distanceKm": 1.3,
           "name": "Vastrapur"
         },
         "reason": null
       },
       "restaurant_cafe": {
         "value": {
-          "distanceKm": 0.5,
+          "distanceKm": 0.1,
           "name": "In-Garden Cafe"
         },
         "reason": null
       },
       "park": {
         "value": {
-          "distanceKm": 1.3,
-          "name": "Iskcon Garden"
+          "distanceKm": 0,
+          "name": "Prahladnagar Garden"
         },
         "reason": null
       },
       "gym": {
         "value": {
-          "distanceKm": 1.2,
-          "name": "Armstrong The Gym"
+          "distanceKm": 0.4,
+          "name": "Jodhpur Gym"
         },
         "reason": null
       },
       "mall": {
         "value": {
-          "distanceKm": 2.2,
-          "name": "Iscon Emporio"
+          "distanceKm": 2,
+          "name": "Iscon Mega Mall"
         },
         "reason": null
       },
       "worship": {
         "value": {
-          "distanceKm": 1.6,
-          "name": "Prerna Tirth Derasar"
+          "distanceKm": 1.4,
+          "name": "Vaijanath Mahadev Mandir"
         },
         "reason": null
       },
       "fuel": {
         "value": {
-          "distanceKm": 0.9,
+          "distanceKm": 0.7,
           "name": "Shell"
         },
         "reason": null
@@ -9916,7 +9916,7 @@
       "highway": {
         "value": {
           "distanceKm": 0.1,
-          "name": "NH147"
+          "name": "100 Ft. Road"
         },
         "reason": null
       }
@@ -10327,127 +10327,127 @@
     "places": {
       "hospital": {
         "value": {
-          "distanceKm": 0.7,
-          "name": "Vismay Child Care Hospital"
+          "distanceKm": 1,
+          "name": "Shalby Hospital"
         },
         "reason": null
       },
       "clinic": {
         "value": {
-          "distanceKm": 0.7,
-          "name": "Kirenben Maternity And Nursing Home"
+          "distanceKm": 0.5,
+          "name": "Dispensary"
         },
         "reason": null
       },
       "school": {
         "value": {
-          "distanceKm": 1.4,
-          "name": "SN School"
+          "distanceKm": 0.7,
+          "name": "Anand Niketan"
         },
         "reason": null
       },
       "college": {
         "value": {
-          "distanceKm": 1.4,
+          "distanceKm": 0.8,
           "name": "SN Collage"
         },
         "reason": null
       },
       "police": {
         "value": {
-          "distanceKm": 4,
-          "name": "Gujarat university police station"
+          "distanceKm": 0.4,
+          "name": "Satelite Police Station"
         },
         "reason": null
       },
       "fire_station": {
         "value": {
-          "distanceKm": 2.5,
+          "distanceKm": 1.6,
           "name": "Bodakdev Fire Station"
         },
         "reason": null
       },
       "grocery": {
         "value": {
-          "distanceKm": 0.8,
+          "distanceKm": 0.2,
           "name": "Shivalik Shilp"
         },
         "reason": null
       },
       "pharmacy": {
         "value": {
-          "distanceKm": 2.6,
+          "distanceKm": 2.7,
           "name": "Medilink Medical Store"
         },
         "reason": null
       },
       "atm_bank": {
         "value": {
-          "distanceKm": 0.8,
+          "distanceKm": 0.2,
           "name": "State Bank of India"
         },
         "reason": null
       },
       "bus_stop": {
         "value": {
-          "distanceKm": 0.8,
-          "name": "ISKCON Mandir"
+          "distanceKm": 0.2,
+          "name": "Iskcon Cross Road BRTS"
         },
         "reason": null
       },
       "metro_station": {
         "value": {
-          "distanceKm": 1.9,
-          "name": "Vastrapur"
+          "distanceKm": 2.4,
+          "name": "Thaltej Gam"
         },
         "reason": null
       },
       "restaurant_cafe": {
         "value": {
-          "distanceKm": 0.6,
-          "name": "Cafe Coffee Day"
+          "distanceKm": 0.2,
+          "name": "The Grill Street"
         },
         "reason": null
       },
       "park": {
         "value": {
-          "distanceKm": 1,
+          "distanceKm": 0.1,
           "name": "Iskcon Garden"
         },
         "reason": null
       },
       "gym": {
         "value": {
-          "distanceKm": 0.9,
+          "distanceKm": 0.3,
           "name": "Armstrong The Gym"
         },
         "reason": null
       },
       "mall": {
         "value": {
-          "distanceKm": 2.1,
-          "name": "Iscon Emporio"
+          "distanceKm": 0.2,
+          "name": "Iscon Mega Mall"
         },
         "reason": null
       },
       "worship": {
         "value": {
-          "distanceKm": 1.5,
-          "name": "Prerna Tirth Derasar"
+          "distanceKm": 0,
+          "name": "Iskcon Temple"
         },
         "reason": null
       },
       "fuel": {
         "value": {
-          "distanceKm": 1.2,
-          "name": "Shell"
+          "distanceKm": 0.9,
+          "name": "HP Fuel Station"
         },
         "reason": null
       },
       "highway": {
         "value": {
-          "distanceKm": 0,
-          "name": "NH147"
+          "distanceKm": 0.1,
+          "name": null
         },
         "reason": null
       }

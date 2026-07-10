@@ -860,8 +860,8 @@
   {
     "name": "Dumdum",
     "city": "kolkata",
-    "lat": 22.65,
-    "lon": 88.39,
+    "lat": 22.6521,
+    "lon": 88.436,
     "ndvi": 0.22,
     "noise": 4,
     "water": 340,
@@ -873,8 +873,8 @@
   {
     "name": "Rajarhat",
     "city": "kolkata",
-    "lat": 22.63,
-    "lon": 88.46,
+    "lat": 22.6215,
+    "lon": 88.4357,
     "ndvi": 0.33,
     "noise": 6.5,
     "water": 280,
@@ -964,8 +964,8 @@
   {
     "name": "Prahlad Nagar",
     "city": "ahmedabad",
-    "lat": 23.0168,
-    "lon": 72.5054,
+    "lat": 23.013,
+    "lon": 72.5061,
     "ndvi": 0.2,
     "noise": 6,
     "water": 440,
@@ -1016,8 +1016,8 @@
   {
     "name": "SG Highway",
     "city": "ahmedabad",
-    "lat": 23.02,
-    "lon": 72.505,
+    "lat": 23.0284,
+    "lon": 72.5069,
     "ndvi": 0.17,
     "noise": 3.5,
     "water": 460,

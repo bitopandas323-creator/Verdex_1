@@ -615,8 +615,15 @@
     { name: "New Town",        lat: 22.6275, lon: 88.4625, ndvi: 0.35, noise: 7.0, water: 250, traffic: 6.5, safety: 7, infra: 5.5, walk: 5 },
     { name: "Ballygunge",      lat: 22.5263, lon: 88.3676, ndvi: 0.28, noise: 5.5, water: 260, traffic: 5, safety: 7.5, infra: 7.5, walk: 7 },
     { name: "Alipore",         lat: 22.5355, lon: 88.3353, ndvi: 0.30, noise: 6.0, water: 250, traffic: 5.5, safety: 8, infra: 7, walk: 6 },
-    { name: "Dumdum",          lat: 22.6500, lon: 88.3900, ndvi: 0.22, noise: 4.0, water: 340, traffic: 4, safety: 6, infra: 7, walk: 6.5 },
-    { name: "Rajarhat",        lat: 22.6300, lon: 88.4600, ndvi: 0.33, noise: 6.5, water: 280, traffic: 6, safety: 6.5, infra: 5.5, walk: 5 },
+    // Dumdum/North Dumdum/South Dumdum are three separate, adjacent
+    // municipalities all derived from the same historical name — every
+    // specific landmark tested (the railway junction, Nagerbazar) resolved
+    // into North or South Dumdum's boundary, not plain "Dumdum" itself.
+    // This coordinate is OSM's own place=town node explicitly named "Dum
+    // Dum" — the best available anchor, not a fully unambiguous landmark
+    // like Howrah Junction or Magarpatta Circle.
+    { name: "Dumdum",          lat: 22.6521, lon: 88.4360, ndvi: 0.22, noise: 4.0, water: 340, traffic: 4, safety: 6, infra: 7, walk: 6.5 },
+    { name: "Rajarhat",        lat: 22.6215, lon: 88.4357, ndvi: 0.33, noise: 6.5, water: 280, traffic: 6, safety: 6.5, infra: 5.5, walk: 5 },
     { name: "Behala",          lat: 22.4996, lon: 88.3130, ndvi: 0.20, noise: 5.0, water: 350, traffic: 4, safety: 6, infra: 7, walk: 6.5 },
     { name: "Tollygunge",      lat: 22.4996, lon: 88.3476, ndvi: 0.24, noise: 5.0, water: 320, traffic: 4.5, safety: 6.5, infra: 7, walk: 6.5 }
   ],
@@ -625,11 +632,11 @@
     { name: "Satellite",       lat: 23.0245, lon: 72.5155, ndvi: 0.22, noise: 6.0, water: 460, traffic: 4.5, safety: 7.5, infra: 7.5, walk: 6.5 },
     { name: "Bopal",           lat: 23.0311, lon: 72.4673, ndvi: 0.30, noise: 6.5, water: 520, traffic: 5.5, safety: 6.5, infra: 5.5, walk: 5 },
     { name: "Maninagar",       lat: 22.9942, lon: 72.6054, ndvi: 0.15, noise: 4.0, water: 480, traffic: 3.5, safety: 6, infra: 7.5, walk: 7 },
-    { name: "Prahlad Nagar",   lat: 23.0168, lon: 72.5054, ndvi: 0.20, noise: 6.0, water: 440, traffic: 4.5, safety: 7.5, infra: 7, walk: 6 },
+    { name: "Prahlad Nagar",   lat: 23.0130, lon: 72.5061, ndvi: 0.20, noise: 6.0, water: 440, traffic: 4.5, safety: 7.5, infra: 7, walk: 6 },
     { name: "Vastrapur",       lat: 23.0300, lon: 72.5300, ndvi: 0.24, noise: 5.5, water: 420, traffic: 5, safety: 7.5, infra: 7, walk: 6.5 },
     { name: "Chandkheda",      lat: 23.1100, lon: 72.5800, ndvi: 0.19, noise: 5.0, water: 500, traffic: 5.5, safety: 6, infra: 5, walk: 4.5 },
     { name: "Gota",            lat: 23.0900, lon: 72.5400, ndvi: 0.21, noise: 5.5, water: 510, traffic: 5.5, safety: 6, infra: 5, walk: 4.5 },
-    { name: "SG Highway",      lat: 23.0200, lon: 72.5050, ndvi: 0.17, noise: 3.5, water: 460, traffic: 3, safety: 6.5, infra: 7.5, walk: 4.5 },
+    { name: "SG Highway",      lat: 23.0284, lon: 72.5069, ndvi: 0.17, noise: 3.5, water: 460, traffic: 3, safety: 6.5, infra: 7.5, walk: 4.5 },
     { name: "Thaltej",         lat: 23.0450, lon: 72.5100, ndvi: 0.23, noise: 5.5, water: 430, traffic: 5, safety: 7.5, infra: 6.5, walk: 5.5 }
   ]
 };
