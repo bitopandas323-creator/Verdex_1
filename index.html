@@ -997,90 +997,84 @@ let finalScore = parseFloat((
     }
 
     // Mirrors the CATEGORY_DEFS keys in scripts/fetch-nearby-places.mjs —
-    // label/icon are display-only, not needed server-side.
+    // label/icon are display-only, not needed server-side. label is the
+    // short tile/modal-title form ("Hospital", not "Nearest hospital") —
+    // the grid replaced the old row layout where the longer phrasing made
+    // sense next to a distance value.
     const NEARBY_PLACE_META = {
-      hospital:        { label: "Nearest hospital",             icon: "ti-building-hospital" },
-      clinic:          { label: "Nearest clinic",                icon: "ti-stethoscope" },
-      school:          { label: "Nearest school",                icon: "ti-school" },
-      college:         { label: "Nearest college",                icon: "ti-books" },
-      police:          { label: "Nearest police station",         icon: "ti-shield" },
-      fire_station:    { label: "Nearest fire station",           icon: "ti-flame" },
-      grocery:         { label: "Nearest grocery store",          icon: "ti-shopping-cart" },
-      pharmacy:        { label: "Nearest pharmacy",                icon: "ti-pill" },
-      atm_bank:        { label: "Nearest ATM/bank",                icon: "ti-building-bank" },
-      bus_stop:        { label: "Nearest bus stop",                icon: "ti-bus" },
-      metro_station:   { label: "Nearest metro/rail station",      icon: "ti-train" },
-      restaurant_cafe: { label: "Nearest restaurant/cafe",         icon: "ti-tools-kitchen-2" },
-      park:            { label: "Nearest park",                   icon: "ti-trees" },
-      gym:             { label: "Nearest gym",                    icon: "ti-barbell" },
-      mall:            { label: "Nearest mall",                   icon: "ti-shopping-bag" },
-      worship:         { label: "Nearest place of worship",       icon: "ti-building-church" },
-      fuel:            { label: "Nearest petrol pump",             icon: "ti-gas-station" },
+      hospital:        { label: "Hospital",             icon: "ti-building-hospital" },
+      clinic:          { label: "Clinic",                icon: "ti-stethoscope" },
+      school:          { label: "School",                icon: "ti-school" },
+      college:         { label: "College",                icon: "ti-books" },
+      police:          { label: "Police",         icon: "ti-shield" },
+      fire_station:    { label: "Fire station",           icon: "ti-flame" },
+      grocery:         { label: "Grocery",          icon: "ti-shopping-cart" },
+      pharmacy:        { label: "Pharmacy",                icon: "ti-pill" },
+      atm_bank:        { label: "ATM/Bank",                icon: "ti-building-bank" },
+      bus_stop:        { label: "Bus stop",                icon: "ti-bus" },
+      metro_station:   { label: "Metro/Rail",      icon: "ti-train" },
+      restaurant_cafe: { label: "Restaurant/Cafe",         icon: "ti-tools-kitchen-2" },
+      park:            { label: "Park",                   icon: "ti-trees" },
+      gym:             { label: "Gym",                    icon: "ti-barbell" },
+      mall:            { label: "Mall",                   icon: "ti-shopping-bag" },
+      worship:         { label: "Worship",       icon: "ti-building-church" },
+      fuel:            { label: "Petrol pump",             icon: "ti-gas-station" },
       highway:         { label: "Highway access",                 icon: "ti-road" }
     };
-    const NEARBY_PLACES_PRIMARY = ["hospital", "school", "grocery", "highway"];
 
-    function formatNearbyPlace(place) {
-      return place.name ? `${place.distanceKm} km (${place.name})` : `${place.distanceKm} km`;
+    function formatNearbyPlace(place, fallbackLabel) {
+      return place.name || fallbackLabel;
+    }
+
+    // One icon+label tile per available category. Tapping it hides the
+    // grid and reveals that category's panel — both live as siblings inside
+    // the same card (see buildNearbyPlacesSection), so no positioning is
+    // needed at all: showing the panel is just a `hidden` class toggle,
+    // same mechanism the rest of this file already uses for expand/collapse.
+    function buildNearbyTile(key, sectionId) {
+      let meta = NEARBY_PLACE_META[key];
+      return `
+        <button onclick="openNearbyModal('${sectionId}','${key}')"
+          class="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-gray-50 transition-colors text-center">
+          <i class="ti ${meta.icon} text-gray-400 text-2xl"></i>
+          <span class="text-xs font-medium text-gray-600 leading-tight">${meta.label}</span>
+        </button>`;
     }
 
     // candidates is always an array (1-4 items), already sorted in display
-    // order by the batch script — this function never re-sorts or explains
-    // why candidates[0] is featured, it just renders whatever order it's
-    // given. Rows with more than one candidate become tappable, revealing
-    // the rest as plain name+distance rows — same style as every other row,
-    // no label distinguishing "why" one ranks above another.
-    function buildNearbyPlaceRow(key, candidates, rowId) {
+    // order by the batch script (chain-match tier, then wiki tier, then
+    // distance) — this just renders that order as plain rows, no rank
+    // styling or explanation of why the first one is first.
+    function buildNearbyPanel(key, candidates, sectionId) {
       let meta = NEARBY_PLACE_META[key];
-      let hasMore = candidates.length > 1;
-
-      let rowAttrs = hasMore
-        ? `class="flex justify-between items-start gap-2 py-2.5 text-sm cursor-pointer" onclick="toggleCandidateExpand('${rowId}')"`
-        : `class="flex justify-between items-start gap-2 py-2.5 text-sm"`;
-      let chevron = hasMore
-        ? `<i class="ti ti-chevron-down text-gray-400 text-xs shrink-0" id="chevron-${rowId}"></i>`
-        : "";
-
-      let expandPanel = "";
-      if (hasMore) {
-        let extraRows = candidates.slice(1).map(c => `
-          <div class="flex justify-between items-start gap-2 py-1 text-xs text-gray-400">
-            <span></span>
-            <span class="text-right min-w-0">${formatNearbyPlace(c)}</span>
-          </div>`).join("");
-        expandPanel = `<div class="hidden pb-1.5" id="candidates-${rowId}">${extraRows}</div>`;
-      }
+      let title = key === "highway" ? meta.label : `${meta.label} nearby`;
+      let rows = candidates.map(c => `
+        <div class="flex justify-between items-start gap-3 py-2 text-sm border-t border-black/5 first:border-t-0">
+          <span class="text-gray-700 min-w-0">${formatNearbyPlace(c, meta.label)}</span>
+          <span class="font-semibold text-gray-700 text-right shrink-0">${c.distanceKm} km</span>
+        </div>`).join("");
 
       return `
-        <div class="border-t border-black/5">
-          <div ${rowAttrs}>
-            <div class="flex items-center gap-2 text-gray-700 shrink-0">
-              <i class="ti ${meta.icon} text-gray-400 text-lg shrink-0"></i>
-              <span class="font-medium whitespace-nowrap">${meta.label}</span>
-            </div>
-            <div class="flex items-center gap-1 shrink-0">
-              <div class="font-semibold text-gray-700 text-right min-w-0">${formatNearbyPlace(candidates[0])}</div>
-              ${chevron}
-            </div>
+        <div class="hidden" id="nearby-panel-${sectionId}-${key}">
+          <div class="flex justify-between items-start mb-3">
+            <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+              <i class="ti ${meta.icon} text-gray-400 text-lg"></i>
+              ${title}
+            </h3>
+            <button onclick="closeNearbyModal('${sectionId}','${key}')" class="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">×</button>
           </div>
-          ${expandPanel}
+          <div>${rows}</div>
         </div>`;
     }
 
-    function toggleCandidateExpand(rowId) {
-      let panel = document.getElementById("candidates-" + rowId);
-      let chevron = document.getElementById("chevron-" + rowId);
-      panel.classList.toggle("hidden");
-      chevron.classList.toggle("ti-chevron-down");
-      chevron.classList.toggle("ti-chevron-up");
+    function openNearbyModal(sectionId, key) {
+      document.getElementById(`nearby-grid-${sectionId}`).classList.add("hidden");
+      document.getElementById(`nearby-panel-${sectionId}-${key}`).classList.remove("hidden");
     }
 
-    function toggleNearbyPlacesExpand(sectionId, extraCount) {
-      let panel = document.getElementById("nearby-expand-" + sectionId);
-      let label = document.getElementById("nearby-expand-label-" + sectionId);
-      let nowHidden = !panel.classList.contains("hidden");
-      panel.classList.toggle("hidden");
-      label.textContent = nowHidden ? `Show ${extraCount} more nearby places` : "Show less";
+    function closeNearbyModal(sectionId, key) {
+      document.getElementById(`nearby-panel-${sectionId}-${key}`).classList.add("hidden");
+      document.getElementById(`nearby-grid-${sectionId}`).classList.remove("hidden");
     }
 
     // Only categories with at least one candidate are ever shown — a missing
@@ -1094,30 +1088,18 @@ let finalScore = parseFloat((
       let available = Object.keys(NEARBY_PLACE_META).filter(k => places[k] && places[k].candidates && places[k].candidates.length > 0);
       if (available.length === 0) return "";
 
-      let primary = available.filter(k => NEARBY_PLACES_PRIMARY.includes(k));
-      let extra   = available.filter(k => !NEARBY_PLACES_PRIMARY.includes(k));
-
-      let primaryRows = primary.map(k => buildNearbyPlaceRow(k, places[k].candidates, sectionId + "-" + k)).join("");
-      let expandBlock = "";
-      if (extra.length > 0) {
-        let extraRows = extra.map(k => buildNearbyPlaceRow(k, places[k].candidates, sectionId + "-" + k)).join("");
-        expandBlock = `
-          <button onclick="toggleNearbyPlacesExpand('${sectionId}', ${extra.length})"
-            class="w-full text-left text-xs text-blue-500 hover:underline pt-2.5 border-t border-black/5">
-            <span id="nearby-expand-label-${sectionId}">Show ${extra.length} more nearby places</span>
-          </button>
-          <div id="nearby-expand-${sectionId}" class="hidden">${extraRows}</div>`;
-      }
+      let tiles  = available.map(k => buildNearbyTile(k, sectionId)).join("");
+      let panels = available.map(k => buildNearbyPanel(k, places[k].candidates, sectionId)).join("");
 
       return `
         <div class="bg-white rounded-2xl p-6">
-          <div class="flex items-center gap-2 mb-1">
+          <div class="flex items-center gap-2 mb-3">
             <i class="ti ti-map-pin text-gray-500 text-lg"></i>
             <span class="font-semibold text-gray-800">Nearby Places</span>
             ${infoBtn('nearbyPlaces')}
           </div>
-          <div>${primaryRows}</div>
-          ${expandBlock}
+          <div class="grid grid-cols-3 sm:grid-cols-4 gap-1" id="nearby-grid-${sectionId}">${tiles}</div>
+          ${panels}
         </div>`;
     }
 
