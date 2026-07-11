@@ -81,16 +81,13 @@ export default async function handler(req, res) {
       + "?q=" + encodeURIComponent(q)
       + "&format=json&addressdetails=1&limit=5&countrycodes=in";
 
-    // Without this, a query like "Wipro Circle" with no city name in it
-    // ranks purely on Nominatim's own importance score — confirmed live,
-    // it doesn't even surface a Hyderabad result in the top 5 when the
-    // higher-importance Pune one exists. bounded=1 (not just viewbox alone)
-    // is required to actually restrict results to the selected city rather
-    // than merely nudge the ranking.
+    // Soft preference, not a hard filter: viewbox without bounded=1 boosts
+    // the rank of results near the selected city without excluding a real
+    // address that's genuinely outside it (e.g. just past a city's rough
+    // boundary) — deliberately chosen over bounded=1 so those don't vanish.
     const bbox = CITY_BBOXES[city];
     if (bbox) {
-      url += "&viewbox=" + bbox.minLon + "," + bbox.maxLat + "," + bbox.maxLon + "," + bbox.minLat
-        + "&bounded=1";
+      url += "&viewbox=" + bbox.minLon + "," + bbox.maxLat + "," + bbox.maxLon + "," + bbox.minLat;
     }
 
     const data = await fetchJsonWithTimeout(url, {
