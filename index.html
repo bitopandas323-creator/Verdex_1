@@ -52,6 +52,27 @@
       </div>
     </div>
 
+    <!-- Real Address Search (Nominatim/OpenStreetMap geocoding) — a
+         separate, precise option alongside Smart Search above and the
+         dropdown picker below, not a replacement for either. -->
+    <div class="mb-6 relative">
+      <label class="block text-sm text-gray-500 mb-2">Or search a real address (exact lane/building)</label>
+      <input
+        id="address-search-input"
+        type="text"
+        placeholder="e.g. Road 12, Banjara Hills, Hyderabad"
+        oninput="handleAddressSearch()"
+        onkeydown="handleAddressKeydown(event)"
+        class="w-full border border-gray-200 rounded-full px-5 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
+      />
+      <div id="address-search-spinner" class="hidden absolute right-3 top-10">
+        <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+      </div>
+      <div id="address-suggestions-box"
+        class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
+      </div>
+    </div>
+
     <div class="mb-6">
       <button id="locate-me-btn" onclick="locateMe()"
         class="flex items-center gap-2 text-sm text-green-700 bg-green-50 hover:bg-green-100 px-4 py-2 rounded-full font-medium">
@@ -396,6 +417,167 @@
     document.addEventListener('click', function(e) {
       if (!e.target.closest('#search-input') && !e.target.closest('#suggestions-box')) {
         document.getElementById('suggestions-box').classList.add('hidden');
+      }
+    });
+
+    // --- REAL ADDRESS SEARCH (Nominatim, via server-side /api/geocode) ---
+    //
+    // A separate flow from Smart Search above: that one matches the 80
+    // local neighbourhoods first and falls back to Open-Meteo's geocoder;
+    // this one is for an exact address/lane Nominatim can pinpoint. On
+    // selection it reuses findNearestNeighbourhood() and
+    // loadExactLocationNdvi() — the same functions locateMe() already
+    // uses — rather than duplicating that logic. Nearby Places
+    // intentionally shows the MATCHED neighbourhood's pre-computed data
+    // (fetchAreaData already does this), not a live per-address Overpass
+    // call — deferred to the Month 2 grid-cache mechanism (see the
+    // Gowlidoddy pilot), which will let this snap to a nearby pre-computed
+    // cell instead.
+    let addressSearchTimeout = null;
+    let addressSearchRequestId = 0;
+    let addressSelectedIndex = -1;
+    let currentAddressSuggestions = [];
+    let addressSearchSessionId = null;
+
+    // One ID per "typing session" (first keystroke until a selection is
+    // made or the page reloads) — lets the geocode_attempts log answer
+    // "how often did someone need a second/third search to find their
+    // address" via a query, without baking that computation in here.
+    function getAddressSearchSessionId() {
+      if (!addressSearchSessionId) {
+        addressSearchSessionId = (window.crypto && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
+      return addressSearchSessionId;
+    }
+
+    async function handleAddressSearch() {
+      const query = document.getElementById('address-search-input').value.trim();
+      const box   = document.getElementById('address-suggestions-box');
+      const spin  = document.getElementById('address-search-spinner');
+
+      if (query.length < 3) { box.classList.add('hidden'); return; }
+
+      clearTimeout(addressSearchTimeout);
+      // Nominatim's usage policy requires >=1 request/second spacing —
+      // longer than Smart Search's 400ms debounce further up, deliberately.
+      addressSearchTimeout = setTimeout(async () => {
+        const requestId = ++addressSearchRequestId;
+        spin.classList.remove('hidden');
+        try {
+          const url = "/api/geocode?q=" + encodeURIComponent(query) + "&session=" + getAddressSearchSessionId();
+          const res  = await fetch(url);
+          const data = await res.json();
+
+          // A newer keystroke already fired another request while this one
+          // was in flight — drop this now-stale response so a slow older
+          // reply can't clobber fresher suggestions on screen.
+          if (requestId !== addressSearchRequestId) return;
+
+          if (data.results && data.results.length > 0) {
+            showAddressSuggestions(data.results);
+          } else {
+            box.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">No results found</div>';
+            box.classList.remove('hidden');
+          }
+        } catch (e) {
+          if (requestId === addressSearchRequestId) box.classList.add('hidden');
+          console.warn("Address search request failed.", e.message);
+        }
+        if (requestId === addressSearchRequestId) spin.classList.add('hidden');
+      }, 1000);
+    }
+
+    function showAddressSuggestions(results) {
+      currentAddressSuggestions = results;
+      addressSelectedIndex = -1;
+      const box = document.getElementById('address-suggestions-box');
+      box.innerHTML = results.map((r, i) => `
+        <div class="suggestion-item px-4 py-3 cursor-pointer border-b border-gray-100 last:border-0 hover:bg-gray-50"
+          onclick="selectAddressSuggestion(${i})">
+          <div class="text-sm font-medium text-gray-800">${r.displayName}</div>
+        </div>
+      `).join('');
+      box.classList.remove('hidden');
+    }
+
+    function handleAddressKeydown(e) {
+      const box = document.getElementById('address-suggestions-box');
+      if (box.classList.contains('hidden')) return;
+      const items = box.querySelectorAll('.suggestion-item');
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        addressSelectedIndex = Math.min(addressSelectedIndex + 1, items.length - 1);
+        items.forEach((el, i) => el.style.background = i === addressSelectedIndex ? '#f9fafb' : '');
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        addressSelectedIndex = Math.max(addressSelectedIndex - 1, 0);
+        items.forEach((el, i) => el.style.background = i === addressSelectedIndex ? '#f9fafb' : '');
+      } else if (e.key === 'Enter' && addressSelectedIndex >= 0) {
+        selectAddressSuggestion(addressSelectedIndex);
+      } else if (e.key === 'Escape') {
+        box.classList.add('hidden');
+      }
+    }
+
+    async function selectAddressSuggestion(index) {
+      const s   = currentAddressSuggestions[index];
+      const box = document.getElementById('address-suggestions-box');
+      document.getElementById('address-search-input').value = s.displayName;
+      box.classList.add('hidden');
+
+      clearUserLocationPin();
+      setMode('single');
+      const statusEl = document.getElementById('single-status');
+      const resultEl = document.getElementById('single-result');
+      statusEl.innerHTML = getSpinner();
+      resultEl.classList.add('hidden');
+
+      const nearest = findNearestNeighbourhood(s.lat, s.lon);
+      if (!nearest || nearest.distanceKm > LOCATE_ME_MAX_DISTANCE_KM) {
+        statusEl.innerHTML = '';
+        resultEl.innerHTML = `<div class="text-center text-sm text-gray-500">No closely-matched neighbourhood found for this address.</div>`;
+        resultEl.classList.remove('hidden');
+        return;
+      }
+
+      const { entry, city, distanceKm } = nearest;
+      const value = entry.lat + '|' + entry.lon + '|' + entry.name + '|' + entry.ndvi + '|' +
+        entry.noise + '|' + entry.water + '|' + entry.traffic + '|' + entry.safety + '|' + entry.infra + '|' + entry.walk;
+
+      try {
+        const d = await fetchAreaData(city, value);
+        statusEl.innerHTML = '';
+
+        const distanceNote = `
+          <div class="text-center text-sm text-gray-500 mb-3">
+            Closest matched area: <span class="font-medium text-gray-700">${d.name}</span>
+            (${distanceKm.toFixed(1)}km from the searched address)
+          </div>`;
+        const ndviContainerId = "exact-ndvi-address";
+        const exactNdviBlock = `
+          <div class="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-sm" id="${ndviContainerId}">
+            <div class="text-xs text-gray-500 mb-1">Green cover at your exact address</div>
+            <div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>
+          </div>`;
+
+        resultEl.innerHTML = distanceNote + buildScoreCard(d, false, 'single') + exactNdviBlock;
+        resultEl.classList.remove('hidden');
+        resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        loadAqiTrend(d.name, d.city, 'single');
+        loadExactLocationNdvi(s.lat, s.lon, ndviContainerId);
+      } catch (err) {
+        statusEl.innerHTML = 'Could not load data. Check console (F12).';
+        console.error(err);
+      }
+    }
+
+    // Close address suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('#address-search-input') && !e.target.closest('#address-suggestions-box')) {
+        document.getElementById('address-suggestions-box').classList.add('hidden');
       }
     });
 

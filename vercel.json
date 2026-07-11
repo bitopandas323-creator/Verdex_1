@@ -8,6 +8,9 @@
     },
     "api/ndvi.js": {
       "maxDuration": 30
+    },
+    "api/geocode.js": {
+      "maxDuration": 15
     }
   }
 }
