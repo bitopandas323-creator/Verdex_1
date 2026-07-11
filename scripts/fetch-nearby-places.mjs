@@ -3,13 +3,15 @@
 // transit, etc.) plus major-highway access, via OpenStreetMap (Overpass).
 // Writes data/nearby-places.json.
 //
-// Most categories rank candidates by distance alone. Four — hospital,
-// college, school, mall — rank by OSM's wikipedia/wikidata tag presence
-// first, distance second: a well-known regional hospital 8km away is often
-// more useful than an unnamed clinic 0.3km away, and a wiki tag is a real,
-// independently-verified prominence signal rather than a guess. These four
-// also search at 15km instead of the default 5km, every run — prominence
-// ranking needs a wide candidate pool to have anything meaningful to rank.
+// Most categories rank candidates by distance alone. Eight — hospital,
+// college, school, mall, grocery, pharmacy, gym, fuel — rank by a curated
+// chain-name match first, OSM's wikipedia/wikidata tag presence second,
+// distance third: a well-known regional hospital 8km away is often more
+// useful than an unnamed clinic 0.3km away, and a chain match or wiki tag is
+// a real, independently-verified prominence signal rather than a guess.
+// These eight also search at 15km instead of the default 5km, every run —
+// prominence ranking needs a wide candidate pool to have anything
+// meaningful to rank.
 //
 // This is NOT called live per user search — it's meant to be re-run
 // periodically (e.g. monthly) since these facilities rarely change:
@@ -51,7 +53,7 @@ const NEIGHBOURHOODS = JSON.parse(
 
 const RADIUS_M = 5000;
 const MAX_CANDIDATES = 4;
-const USER_AGENT = "Verdex-NearbyPlaces/3.1 (periodic batch job; contact: bitopandas323@gmail.com)";
+const USER_AGENT = "Verdex-NearbyPlaces/3.2 (periodic batch job; contact: bitopandas323@gmail.com)";
 const REQUEST_DELAY_MS = 1500;
 const CANDIDATE_MIRRORS = [
   "https://overpass-api.de/api/interpreter",
@@ -186,7 +188,7 @@ function coordsOf(el) {
 // Ranked by prominence tier then distance instead of pure nearest — see
 // fetchPlaces below. Also the only categories that search 15km by default
 // (CATEGORY_RADIUS_OVERRIDES), every run, not just via --widen.
-const PROMINENCE_CATEGORIES = new Set(["hospital", "college", "school", "mall"]);
+const PROMINENCE_CATEGORIES = new Set(["hospital", "college", "school", "mall", "grocery", "pharmacy", "gym", "fuel"]);
 
 // A wiki tag alone missed real, major institutions: AIG Hospitals (Gachibowli)
 // has no wikipedia/wikidata/operator:wikidata tag on any element at all, and
@@ -197,17 +199,48 @@ const PROMINENCE_CATEGORIES = new Set(["hospital", "college", "school", "mall"])
 // data, not even in the "show more" expansion. This curated list is a
 // second, independent signal for exactly that blind spot — no entry for
 // college/school (none was asked for), so those two categories keep the
-// existing wiki-tag-then-distance behavior unchanged.
+// existing wiki-tag-then-distance behavior unchanged. Kokilaben/Medanta/
+// MIOT/Ruby Hall/AMRI/Sterling added after cross-city verification found
+// these real, major hospitals landing in the no-signal tier under the
+// original list — same blind spot class as AIG, just for different brands.
 const CHAIN_NAMES = {
-  hospital: ["apollo", "aig", "yashoda", "care", "continental", "kims", "sunshine", "rainbow", "fortis", "max", "manipal", "narayana"],
-  mall:     ["phoenix", "forum", "inorbit", "dlf", "nexus", "select citywalk", "lulu", "vr"]
+  hospital: ["apollo", "aig", "yashoda", "care hospital", "care hospitals", "continental", "kims", "sunshine", "rainbow", "fortis", "max", "manipal", "narayana", "kokilaben", "medanta", "miot", "ruby hall", "amri", "sterling"],
+  mall:     ["phoenix", "forum", "inorbit", "dlf", "nexus", "select citywalk", "lulu", "vr"],
+  grocery:  ["dmart", "d-mart", "reliance fresh", "reliance smart", "more", "spencer's", "spencers", "big bazaar"],
+  pharmacy: ["apollo pharmacy", "medplus", "netmeds"],
+  gym:      ["cult.fit", "cult fit", "gold's gym", "golds gym", "anytime fitness"],
+  fuel:     ["indian oil", "hp", "bharat petroleum", "shell"]
 };
 
+// Word-boundary, not plain substring — a bare substring check matched
+// "care" against "VCare"/"Ambicare" and "vr" against "PVR Icon", none of
+// which are the intended chains. Word-boundary matching fixes that whole
+// class (confirmed: those three no longer match). It does NOT fix a
+// generic word that genuinely stands alone in an unrelated name — "Lakshmi
+// Narayana Speciality Clinics" still matches "narayana", and bare "care"
+// was found matching "Arogyasree Health Care Trust" and "Eva Care The Every
+// Woman's Clinic" in real batch data, neither related to the Care Hospitals
+// chain. For "care" specifically, the entry was narrowed from the bare word
+// to the two-word phrases "care hospital"/"care hospitals" (both needed:
+// the real chain's OSM names are pluralized — "Care Hospitals" — which
+// fails a singular-only \bcare hospital\b boundary check on the trailing
+// "s"). This fixes the Health-Care-Trust/Eva-Care class entirely (neither
+// contains "hospital" at all) but — same inherent limit as "narayana" —
+// still can't distinguish the real chain from an unrelated hospital whose
+// name happens to contain the same two words together ("Fehmi Care
+// Hospital", "Nephroplus Kidney Care Hospitals"); no substring-based
+// approach can, short of a curated exclusion list, not attempted here.
+// "narayana" was left as a bare word (not narrowed the same way) since
+// "Narayana Health"/"Narayana Hrudayalaya" don't share a fixed two-word
+// pattern the way "Care Hospitals" does — known, accepted residual
+// imprecision for that one.
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 function matchesChain(key, name) {
   const chains = CHAIN_NAMES[key];
   if (!chains || !name) return false;
-  const lower = name.toLowerCase();
-  return chains.some(c => lower.includes(c));
+  return chains.some(c => new RegExp(`\\b${escapeRegExp(c)}\\b`, "i").test(name));
 }
 
 // Explicit tier number rather than sorting on chainMatch and wiki as two
@@ -300,7 +333,11 @@ const CATEGORY_RADIUS_OVERRIDES = {
   hospital: 15000,
   college: 15000,
   school: 15000,
-  mall: 15000
+  mall: 15000,
+  grocery: 15000,
+  pharmacy: 15000,
+  gym: 15000,
+  fuel: 15000
 };
 
 // Runs one combined query for the given category subset (all 18 for a full
@@ -407,6 +444,7 @@ function logFailures(name, city, places, radiusM) {
 async function runFull(limit) {
   const neighbourhoods = limit ? NEIGHBOURHOODS.slice(0, limit) : NEIGHBOURHOODS;
   console.log(`Fetching nearby places for ${neighbourhoods.length} neighbourhoods (${CATEGORY_DEFS.length} categories, 1 query each — ${RADIUS_M / 1000}km default, ${[...PROMINENCE_CATEGORIES].join("/")} at 15km)...\n`);
+  console.log(`Watch total query time this run — prominence radius now applies to 4 denser categories (grocery/pharmacy/gym/fuel) in addition to hospital/college/school/mall; flag if any neighbourhood approaches the ${OVERPASS_CLIENT_TIMEOUT_MS / 1000}s client timeout.\n`);
 
   const results = [];
   let totalFailed = 0, totalEmpty = 0;
