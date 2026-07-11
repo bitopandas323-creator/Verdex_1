@@ -932,11 +932,12 @@ let finalScore = parseFloat((
 
     // --- IMMERSIVE CARDS (score hero + 3 layer cards) ---
 
-    function buildParamRow(icon, label, valueHtml, infoType) {
+    function buildParamRow(icon, label, valueHtml, infoType, colorClass) {
+      colorClass = colorClass || "text-gray-400";
       return `
         <div class="flex justify-between items-start gap-2 border-t border-black/5 py-2.5 text-sm">
           <div class="flex items-center gap-2 text-gray-700 shrink-0">
-            <i class="ti ${icon} text-gray-400 shrink-0"></i>
+            <i class="ti ${icon} ${colorClass} text-lg shrink-0"></i>
             <span class="font-medium whitespace-nowrap">${label} ${infoBtn(infoType)}</span>
           </div>
           <div class="font-semibold text-gray-700 text-right min-w-0">${valueHtml}</div>
@@ -962,11 +963,11 @@ let finalScore = parseFloat((
     function buildEnvironmentalCard(d, chartId) {
       let envSubScore = avgScore(d.aqiScore, d.heatScore, d.ndviScore, d.noiseScore, d.waterScore);
       let rows = [
-        buildParamRow("ti-wind", "Air Quality", `${d.aqi} · ${getAQILabel(d.aqi)}`, "aqi"),
-        buildParamRow("ti-temperature", "Feels Like", `${d.feelsLike}°C · ${d.humidity}% humidity`, "heat"),
-        buildParamRow("ti-plant-2", "Green Cover", `${Math.round(d.ndvi * 100)}%`, "ndvi"),
-        buildParamRow("ti-volume", "Noise", `${d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet"} · ${d.noise}/10`, "noise"),
-        buildParamRow("ti-droplet", "Water Quality", `${getWaterLabel(d.water)} · ${d.water}ppm`, "water")
+        buildParamRow("ti-wind", "Air Quality", `${d.aqi} · ${getAQILabel(d.aqi)}`, "aqi", "text-green-500"),
+        buildParamRow("ti-temperature", "Feels Like", `${d.feelsLike}°C · ${d.humidity}% humidity`, "heat", "text-green-500"),
+        buildParamRow("ti-tree", "Green Cover", `${Math.round(d.ndvi * 100)}%`, "ndvi", "text-green-500"),
+        buildParamRow("ti-volume", "Noise", `${d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet"} · ${d.noise}/10`, "noise", "text-green-500"),
+        buildParamRow("ti-droplet", "Water Quality", `${getWaterLabel(d.water)} · ${d.water}ppm`, "water", "text-green-500")
       ].join("") + buildAqiTrendContainer(chartId);
       let summary = `Air quality ${getAQILabel(d.aqi).toLowerCase()}, ${getNDVILabel(d.ndvi).toLowerCase()}, water ${getWaterLabel(d.water).toLowerCase()}.`;
       return buildLayerCardShell("ti-leaf", "Environmental", envSubScore, summary, rows);
@@ -986,10 +987,10 @@ let finalScore = parseFloat((
     function buildLiveabilityCard(d) {
       let liveSubScore = avgScore(d.infraScore, d.walkScore, d.trafficScore, d.safetyScore);
       let rows = [
-        buildParamRow("ti-building", "Infrastructure", `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure"),
-        buildParamRow("ti-walk", "Walkability", `${Math.round(d.walkScore * 10)} · ${getWalkLabel(d.walkScore)}`, "walkability"),
-        buildParamRow("ti-car", "Traffic", `${Math.round(d.trafficScore * 10)} · ${getTrafficLabel(d.trafficScore)}`, "traffic"),
-        buildParamRow("ti-shield-check", "Safety", `${Math.round(d.safetyScore * 10)} · ${getSafetyLabel(d.safetyScore)}`, "safety")
+        buildParamRow("ti-building-hospital", "Infrastructure", `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure", "text-blue-500"),
+        buildParamRow("ti-walk", "Walkability", `${Math.round(d.walkScore * 10)} · ${getWalkLabel(d.walkScore)}`, "walkability", "text-blue-500"),
+        buildParamRow("ti-car", "Traffic", `${Math.round(d.trafficScore * 10)} · ${getTrafficLabel(d.trafficScore)}`, "traffic", "text-blue-500"),
+        buildParamRow("ti-shield", "Safety", `${Math.round(d.safetyScore * 10)} · ${getSafetyLabel(d.safetyScore)}`, "safety", "text-blue-500")
       ].join("");
       let summary = `${getWalkLabel(d.walkScore)}, ${getTrafficLabel(d.trafficScore).toLowerCase()}, ${getSafetyLabel(d.safetyScore).toLowerCase()}.`;
       return buildLayerCardShell("ti-walk", "Liveability", liveSubScore, summary, rows);
@@ -998,10 +999,10 @@ let finalScore = parseFloat((
     // Mirrors the CATEGORY_DEFS keys in scripts/fetch-nearby-places.mjs —
     // label/icon are display-only, not needed server-side.
     const NEARBY_PLACE_META = {
-      hospital:        { label: "Nearest hospital",             icon: "ti-first-aid-kit" },
+      hospital:        { label: "Nearest hospital",             icon: "ti-building-hospital" },
       clinic:          { label: "Nearest clinic",                icon: "ti-stethoscope" },
       school:          { label: "Nearest school",                icon: "ti-school" },
-      college:         { label: "Nearest college",                icon: "ti-book-2" },
+      college:         { label: "Nearest college",                icon: "ti-books" },
       police:          { label: "Nearest police station",         icon: "ti-shield" },
       fire_station:    { label: "Nearest fire station",           icon: "ti-flame" },
       grocery:         { label: "Nearest grocery store",          icon: "ti-shopping-cart" },
@@ -1054,7 +1055,7 @@ let finalScore = parseFloat((
         <div class="border-t border-black/5">
           <div ${rowAttrs}>
             <div class="flex items-center gap-2 text-gray-700 shrink-0">
-              <i class="ti ${meta.icon} text-gray-400 shrink-0"></i>
+              <i class="ti ${meta.icon} text-gray-400 text-lg shrink-0"></i>
               <span class="font-medium whitespace-nowrap">${meta.label}</span>
             </div>
             <div class="flex items-center gap-1 shrink-0">
