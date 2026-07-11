@@ -51,7 +51,7 @@ const NEIGHBOURHOODS = JSON.parse(
 
 const RADIUS_M = 5000;
 const MAX_CANDIDATES = 4;
-const USER_AGENT = "Verdex-NearbyPlaces/3.0 (periodic batch job; contact: bitopandas323@gmail.com)";
+const USER_AGENT = "Verdex-NearbyPlaces/3.1 (periodic batch job; contact: bitopandas323@gmail.com)";
 const REQUEST_DELAY_MS = 1500;
 const CANDIDATE_MIRRORS = [
   "https://overpass-api.de/api/interpreter",
@@ -156,15 +156,17 @@ function bboxAround(lat, lon, radiusM) {
 // Confirmed by direct testing: when an Overpass `out` statement requests
 // BOTH `center` and `geom` together (needed here since highway ways need
 // full geometry while every other category just needs a point), Overpass
-// omits `.center` for way/relation elements and returns only `.geometry` —
-// even though a `center`-only query for the exact same element returns it
-// fine. Without this fallback, every POI mapped as a way (e.g. a college
-// or hospital drawn as a building outline rather than a single node) was
-// silently skipped — not because it wasn't found, but because coordsOf()
-// had no way to place it. This surfaced as real, findable places incorrectly
-// showing as "no_match_found" (found via direct comparison: a college
-// 1.4km from Dwarka, tagged plainly as amenity=college, was missing from
-// every run including a same-radius recheck, until this fix).
+// omits `.center` for way/relation elements. Ways fall back to `.geometry`
+// (a flat vertex array) — but relations don't get `.geometry` at all in
+// that case, they get `.bounds` (a min/max lat/lon bounding box) instead.
+// Missed exactly this on AIG Hospitals (mapped as a multipolygon relation,
+// confirmed via direct query: `out center tags` gives it a `.center`,
+// `out geom tags` gives it `.bounds`, and combining both — what this script
+// actually sends — gives it neither) — silently dropped from every
+// category despite being 1.87km from Gachibowli, closer than every
+// candidate that WAS being shown. Same root cause as the `.geometry`
+// fallback below (a college 1.4km from Dwarka was missing the same way,
+// before that fix), just a different Overpass element type hitting it.
 function coordsOf(el) {
   if (el.lat !== undefined) return [el.lat, el.lon];
   if (el.center) return [el.center.lat, el.center.lon];
@@ -173,15 +175,53 @@ function coordsOf(el) {
     const lonSum = el.geometry.reduce((sum, p) => sum + p.lon, 0);
     return [latSum / el.geometry.length, lonSum / el.geometry.length];
   }
+  if (el.bounds) {
+    return [(el.bounds.minlat + el.bounds.maxlat) / 2, (el.bounds.minlon + el.bounds.maxlon) / 2];
+  }
   return null;
 }
 
 // --- Category definitions: drive both the query and the classification ---
 
-// Ranked by wiki tag presence then distance instead of pure nearest — see
+// Ranked by prominence tier then distance instead of pure nearest — see
 // fetchPlaces below. Also the only categories that search 15km by default
 // (CATEGORY_RADIUS_OVERRIDES), every run, not just via --widen.
 const PROMINENCE_CATEGORIES = new Set(["hospital", "college", "school", "mall"]);
+
+// A wiki tag alone missed real, major institutions: AIG Hospitals (Gachibowli)
+// has no wikipedia/wikidata/operator:wikidata tag on any element at all, and
+// Apollo Hospitals' flagship Jubilee Hills location only carries
+// operator:wikidata (the chain's own entry), not a tag on the hospital
+// itself — confirmed via direct Overpass query, both genuinely closer than
+// every candidate that WAS being shown, neither appearing anywhere in the
+// data, not even in the "show more" expansion. This curated list is a
+// second, independent signal for exactly that blind spot — no entry for
+// college/school (none was asked for), so those two categories keep the
+// existing wiki-tag-then-distance behavior unchanged.
+const CHAIN_NAMES = {
+  hospital: ["apollo", "aig", "yashoda", "care", "continental", "kims", "sunshine", "rainbow", "fortis", "max", "manipal", "narayana"],
+  mall:     ["phoenix", "forum", "inorbit", "dlf", "nexus", "select citywalk", "lulu", "vr"]
+};
+
+function matchesChain(key, name) {
+  const chains = CHAIN_NAMES[key];
+  if (!chains || !name) return false;
+  const lower = name.toLowerCase();
+  return chains.some(c => lower.includes(c));
+}
+
+// Explicit tier number rather than sorting on chainMatch and wiki as two
+// separate keys — combining them ad hoc (chainMatch desc, wiki desc,
+// distance asc) would quietly let a chain-matched-and-wiki-tagged candidate
+// edge out a chain-matched-but-not-wiki-tagged one even when the latter is
+// closer, which isn't what was asked for. Tier 0 (chain match) always beats
+// tier 1 (wiki tag) always beats tier 2 (neither); distance only breaks ties
+// within the same tier.
+function prominenceTier(c) {
+  if (c.chainMatch) return 0;
+  if (c.wiki) return 1;
+  return 2;
+}
 
 const CATEGORY_DEFS = [
   { key: "hospital",        clause: bbox => `nwr["amenity"="hospital"](${bbox});` },
@@ -308,7 +348,8 @@ async function fetchPlaces(lat, lon, defs, radiusOverrideM) {
       if (dist > radiusForKey(pointKey) / 1000) continue; // bbox is a square superset — enforce true circular radius
       const candidate = { distanceKm: dist, name: (el.tags && el.tags.name) || null };
       if (PROMINENCE_CATEGORIES.has(pointKey)) {
-        candidate.wiki = Boolean(el.tags.wikipedia || el.tags.wikidata);
+        candidate.wiki = Boolean(el.tags.wikipedia || el.tags.wikidata || el.tags["operator:wikidata"]);
+        candidate.chainMatch = matchesChain(pointKey, candidate.name);
       }
       candidatesByKey[pointKey].push(candidate);
       continue;
@@ -333,13 +374,14 @@ async function fetchPlaces(lat, lon, defs, radiusOverrideM) {
   defs.forEach(d => {
     const list = candidatesByKey[d.key];
     if (PROMINENCE_CATEGORIES.has(d.key)) {
-      list.sort((a, b) => (b.wiki - a.wiki) || (a.distanceKm - b.distanceKm));
+      list.sort((a, b) => (prominenceTier(a) - prominenceTier(b)) || (a.distanceKm - b.distanceKm));
     } else {
       list.sort((a, b) => a.distanceKm - b.distanceKm);
     }
     const candidates = list.slice(0, MAX_CANDIDATES).map(c => {
       const out = { distanceKm: Math.round(c.distanceKm * 10) / 10, name: c.name };
       if (c.wiki !== undefined) out.wiki = c.wiki;
+      if (c.chainMatch !== undefined) out.chainMatch = c.chainMatch;
       return out;
     });
 
