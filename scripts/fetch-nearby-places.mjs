@@ -1,7 +1,15 @@
 // Batch job: for each of the 80 neighbourhoods in data/neighbourhoods.json,
-// finds the nearest instance of ~17 place categories (hospital, school,
-// grocery, transit, etc.) plus major-highway access, via OpenStreetMap
-// (Overpass). Writes data/nearby-places.json.
+// finds up to 4 candidates per place category (hospital, school, grocery,
+// transit, etc.) plus major-highway access, via OpenStreetMap (Overpass).
+// Writes data/nearby-places.json.
+//
+// Most categories rank candidates by distance alone. Four — hospital,
+// college, school, mall — rank by OSM's wikipedia/wikidata tag presence
+// first, distance second: a well-known regional hospital 8km away is often
+// more useful than an unnamed clinic 0.3km away, and a wiki tag is a real,
+// independently-verified prominence signal rather than a guess. These four
+// also search at 15km instead of the default 5km, every run — prominence
+// ranking needs a wide candidate pool to have anything meaningful to rank.
 //
 // This is NOT called live per user search — it's meant to be re-run
 // periodically (e.g. monthly) since these facilities rarely change:
@@ -42,7 +50,8 @@ const NEIGHBOURHOODS = JSON.parse(
 );
 
 const RADIUS_M = 5000;
-const USER_AGENT = "Verdex-NearbyPlaces/2.0 (periodic batch job; contact: bitopandas323@gmail.com)";
+const MAX_CANDIDATES = 4;
+const USER_AGENT = "Verdex-NearbyPlaces/3.0 (periodic batch job; contact: bitopandas323@gmail.com)";
 const REQUEST_DELAY_MS = 1500;
 const CANDIDATE_MIRRORS = [
   "https://overpass-api.de/api/interpreter",
@@ -169,6 +178,11 @@ function coordsOf(el) {
 
 // --- Category definitions: drive both the query and the classification ---
 
+// Ranked by wiki tag presence then distance instead of pure nearest — see
+// fetchPlaces below. Also the only categories that search 15km by default
+// (CATEGORY_RADIUS_OVERRIDES), every run, not just via --widen.
+const PROMINENCE_CATEGORIES = new Set(["hospital", "college", "school", "mall"]);
+
 const CATEGORY_DEFS = [
   { key: "hospital",        clause: bbox => `nwr["amenity"="hospital"](${bbox});` },
   { key: "clinic",          clause: bbox => `nwr["amenity"~"^(clinic|doctors)$"](${bbox});` },
@@ -220,73 +234,118 @@ function matchPointCategory(tags) {
   return null;
 }
 
-function buildQuery(bbox, defs) {
-  const clauses = defs.map(d => d.clause(bbox)).join("\n  ");
+// Each category clause gets its OWN bbox, sized from radiusForKey(d.key) —
+// not one shared bbox for the whole query. This lets hospital/college/
+// school/mall search 15km while the other 14 categories stay at 5km, all
+// within a SINGLE combined Overpass request per neighbourhood (not two),
+// preserving the one-query-per-neighbourhood design.
+function buildQuery(lat, lon, defs, radiusForKey) {
+  const clauses = defs.map(d => {
+    const [s, w, n, e] = bboxAround(lat, lon, radiusForKey(d.key));
+    return d.clause(`${s},${w},${n},${e}`);
+  }).join("\n  ");
   return `[out:json][timeout:25];\n(\n  ${clauses}\n);\nout center geom tags;`;
 }
 
+// Fire stations are legitimately sparser than every other nearest-only
+// category (they serve a wide area by design, unlike a grocery store or
+// ATM) — confirmed by direct testing: multiple "no_match_found"
+// neighbourhoods had a real fire station just past 5km (5.1-5.6km). This
+// radius is only used when explicitly widened (--widen=fire_station), not
+// baked into every run — unlike PROMINENCE_CATEGORIES below, whose wide
+// radius applies unconditionally, every run (see radiusForKey in
+// fetchPlaces).
+const CATEGORY_RADIUS_OVERRIDES = {
+  fire_station: 15000,
+  hospital: 15000,
+  college: 15000,
+  school: 15000,
+  mall: 15000
+};
+
 // Runs one combined query for the given category subset (all 18 for a full
-// Fire stations are legitimately sparser than every other category (they
-// serve a wide area by design, unlike a grocery store or ATM), so the
-// default 5km radius that works fine for the other 17 categories is too
-// tight for this one specifically — confirmed by direct testing: multiple
-// "no_match_found" neighbourhoods had a real fire station just past 5km
-// (5.1-5.6km). This is a radius/category-density mismatch, not sparse OSM
-// tagging for India. See CHANGELOG note near --widen below.
-const CATEGORY_RADIUS_OVERRIDES = { fire_station: 15000 };
+// run, a smaller subset for --retry-failed/--widen) and returns
+// { key: { candidates, reason, radiusKm? } } for exactly those keys.
+// candidates is always an array (0-MAX_CANDIDATES items), already sorted in
+// display order:
+//   - PROMINENCE_CATEGORIES: wiki tag presence descending, then distance
+//     ascending — a farther candidate WITH a wikipedia/wikidata tag can
+//     outrank a closer one without.
+//   - every other category: distance ascending, unchanged from before.
+//
+// radiusOverrideM, when given, applies to EVERY def in this call regardless
+// of its own registered radius — used by --widen to test a single category
+// at a custom radius. When omitted (the normal full-run path), each
+// category looks up its own radius: PROMINENCE_CATEGORIES always use
+// CATEGORY_RADIUS_OVERRIDES, everything else (including fire_station)
+// defaults to RADIUS_M unless explicitly widened.
+async function fetchPlaces(lat, lon, defs, radiusOverrideM) {
+  function radiusForKey(key) {
+    if (radiusOverrideM) return radiusOverrideM;
+    if (PROMINENCE_CATEGORIES.has(key)) return CATEGORY_RADIUS_OVERRIDES[key] || RADIUS_M;
+    return RADIUS_M;
+  }
 
-// run, a smaller subset for --retry-failed) and returns { key: {value, reason} }
-// for exactly those keys. radiusM overrides RADIUS_M for this call only —
-// used by --widen to re-search a specific category at a larger radius
-// without touching every other category's default 5km.
-async function fetchPlaces(lat, lon, defs, radiusM) {
-  radiusM = radiusM || RADIUS_M;
-  const [s, w, n, e] = bboxAround(lat, lon, radiusM);
-  const bbox = `${s},${w},${n},${e}`;
-  const query = buildQuery(bbox, defs);
-
+  const query = buildQuery(lat, lon, defs, radiusForKey);
   const elements = await queryOverpassWithRetry(query);
 
   const result = {};
   if (!elements) {
-    defs.forEach(d => { result[d.key] = { value: null, reason: "retry_exhausted" }; });
+    defs.forEach(d => { result[d.key] = { candidates: [], reason: "retry_exhausted" }; });
     return result;
   }
 
   const wantHighway = defs.some(d => d.key === "highway");
-  const nearest = {};
-  defs.forEach(d => { nearest[d.key] = null; });
+  const candidatesByKey = {};
+  defs.forEach(d => { candidatesByKey[d.key] = []; });
 
   for (const el of elements) {
     const pointKey = matchPointCategory(el.tags);
-    if (pointKey && nearest.hasOwnProperty(pointKey)) {
+    if (pointKey && candidatesByKey.hasOwnProperty(pointKey)) {
       const c = coordsOf(el);
       if (!c) continue;
       const dist = haversineKm(lat, lon, c[0], c[1]);
-      if (dist > radiusM / 1000) continue; // bbox is a square superset — enforce true circular radius
-      if (!nearest[pointKey] || dist < nearest[pointKey].distanceKm) {
-        nearest[pointKey] = { distanceKm: dist, name: (el.tags && el.tags.name) || null };
+      if (dist > radiusForKey(pointKey) / 1000) continue; // bbox is a square superset — enforce true circular radius
+      const candidate = { distanceKm: dist, name: (el.tags && el.tags.name) || null };
+      if (PROMINENCE_CATEGORIES.has(pointKey)) {
+        candidate.wiki = Boolean(el.tags.wikipedia || el.tags.wikidata);
       }
+      candidatesByKey[pointKey].push(candidate);
       continue;
     }
+    // Each matching way contributes at most one candidate (its own nearest
+    // point) — otherwise "top 4 highway candidates" could secretly be 4
+    // different points on the same road instead of 4 distinct roads.
     if (wantHighway && el.type === "way" && el.tags && HIGHWAY_RE.test(el.tags.highway || "")) {
       if (!Array.isArray(el.geometry)) continue;
+      let nearestOnWay = null;
       for (const pt of el.geometry) {
         const dist = haversineKm(lat, lon, pt.lat, pt.lon);
-        if (dist > radiusM / 1000) continue;
-        if (!nearest.highway || dist < nearest.highway.distanceKm) {
-          nearest.highway = { distanceKm: dist, name: (el.tags.name || el.tags.ref) || null };
-        }
+        if (dist > radiusForKey("highway") / 1000) continue;
+        if (nearestOnWay === null || dist < nearestOnWay) nearestOnWay = dist;
+      }
+      if (nearestOnWay !== null) {
+        candidatesByKey.highway.push({ distanceKm: nearestOnWay, name: (el.tags.name || el.tags.ref) || null });
       }
     }
   }
 
   defs.forEach(d => {
-    if (nearest[d.key]) {
-      result[d.key] = { value: { distanceKm: Math.round(nearest[d.key].distanceKm * 10) / 10, name: nearest[d.key].name }, reason: null };
+    const list = candidatesByKey[d.key];
+    if (PROMINENCE_CATEGORIES.has(d.key)) {
+      list.sort((a, b) => (b.wiki - a.wiki) || (a.distanceKm - b.distanceKm));
     } else {
-      result[d.key] = { value: null, reason: "no_match_found" };
+      list.sort((a, b) => a.distanceKm - b.distanceKm);
     }
+    const candidates = list.slice(0, MAX_CANDIDATES).map(c => {
+      const out = { distanceKm: Math.round(c.distanceKm * 10) / 10, name: c.name };
+      if (c.wiki !== undefined) out.wiki = c.wiki;
+      return out;
+    });
+
+    result[d.key] = { candidates, reason: candidates.length > 0 ? null : "no_match_found" };
+    const usedRadius = radiusForKey(d.key);
+    if (usedRadius !== RADIUS_M) result[d.key].radiusKm = usedRadius / 1000;
   });
   return result;
 }
@@ -305,7 +364,7 @@ function logFailures(name, city, places, radiusM) {
 
 async function runFull(limit) {
   const neighbourhoods = limit ? NEIGHBOURHOODS.slice(0, limit) : NEIGHBOURHOODS;
-  console.log(`Fetching nearby places for ${neighbourhoods.length} neighbourhoods (radius ${RADIUS_M / 1000}km, ${CATEGORY_DEFS.length} categories, 1 query each)...\n`);
+  console.log(`Fetching nearby places for ${neighbourhoods.length} neighbourhoods (${CATEGORY_DEFS.length} categories, 1 query each — ${RADIUS_M / 1000}km default, ${[...PROMINENCE_CATEGORIES].join("/")} at 15km)...\n`);
 
   const results = [];
   let totalFailed = 0, totalEmpty = 0;
@@ -445,7 +504,7 @@ async function runWiden(keysArg) {
   for (const key of keys) {
     const radiusM = CATEGORY_RADIUS_OVERRIDES[key] || RADIUS_M;
     const def = CATEGORY_DEFS.find(d => d.key === key);
-    const toWiden = existing.filter(entry => !entry.places[key].value);
+    const toWiden = existing.filter(entry => entry.places[key].candidates.length === 0);
     if (toWiden.length === 0) continue;
 
     console.log(`\n=== Widening "${key}" to ${radiusM / 1000}km for ${toWiden.length}/${existing.length} neighbourhoods currently null ===\n`);
@@ -461,11 +520,10 @@ async function runWiden(keysArg) {
 
       const updated = await fetchPlaces(n.lat, n.lon, [def], radiusM);
       const widenedResult = updated[key];
-      if (widenedResult.value) widenedResult.radiusKm = radiusM / 1000;
       entry.places[key] = widenedResult;
 
       logFailures(entry.name, entry.city, { [key]: widenedResult }, radiusM);
-      if (widenedResult.value) console.log(`    found at ${widenedResult.value.distanceKm}km (within ${radiusM / 1000}km search)`);
+      if (widenedResult.candidates.length > 0) console.log(`    found at ${widenedResult.candidates[0].distanceKm}km (within ${radiusM / 1000}km search)`);
 
       writeFileSync(outPath, JSON.stringify(existing, null, 2));
       await sleep(REQUEST_DELAY_MS);

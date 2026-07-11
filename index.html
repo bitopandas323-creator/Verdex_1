@@ -485,8 +485,8 @@
       },
       nearbyPlaces: {
         title: "Nearby Places",
-        body: `Straight-line distance to the nearest hospital, school, grocery store and 14 other everyday categories (clinics, transit, parks, worship, fuel and more), sourced from OpenStreetMap within a 5km search radius. Fire stations are searched within a wider 15km radius, since they're naturally spaced much further apart than the other categories.<br><br>
-          Only categories where something was actually found are shown — nearest hospital, school, grocery store and highway access appear by default; tap "Show more" for everything else found nearby.<br><br>
+        body: `Straight-line distance to the nearest hospital, school, grocery store and 14 other everyday categories (clinics, transit, parks, worship, fuel and more), sourced from OpenStreetMap within a 5km search radius. Hospitals, schools, colleges, malls and fire stations are searched within a wider 15km radius, since they're naturally spaced further apart than the other categories.<br><br>
+          Only categories where something was actually found are shown — nearest hospital, school, grocery store and highway access appear by default; tap "Show more" for everything else found nearby. Any row with more than one nearby option can also be tapped to see a few more.<br><br>
           This is baseline data refreshed periodically (roughly monthly), not a live lookup. A category not appearing usually means OpenStreetMap has no matching location tagged within its search radius — not that nothing exists in that area.`
       },
       score: {
@@ -1023,16 +1023,55 @@ let finalScore = parseFloat((
       return place.name ? `${place.distanceKm} km (${place.name})` : `${place.distanceKm} km`;
     }
 
-    function buildNearbyPlaceRow(key, place) {
+    // candidates is always an array (1-4 items), already sorted in display
+    // order by the batch script — this function never re-sorts or explains
+    // why candidates[0] is featured, it just renders whatever order it's
+    // given. Rows with more than one candidate become tappable, revealing
+    // the rest as plain name+distance rows — same style as every other row,
+    // no label distinguishing "why" one ranks above another.
+    function buildNearbyPlaceRow(key, candidates, rowId) {
       let meta = NEARBY_PLACE_META[key];
+      let hasMore = candidates.length > 1;
+
+      let rowAttrs = hasMore
+        ? `class="flex justify-between items-start gap-2 py-2.5 text-sm cursor-pointer" onclick="toggleCandidateExpand('${rowId}')"`
+        : `class="flex justify-between items-start gap-2 py-2.5 text-sm"`;
+      let chevron = hasMore
+        ? `<i class="ti ti-chevron-down text-gray-400 text-xs shrink-0" id="chevron-${rowId}"></i>`
+        : "";
+
+      let expandPanel = "";
+      if (hasMore) {
+        let extraRows = candidates.slice(1).map(c => `
+          <div class="flex justify-between items-start gap-2 py-1 text-xs text-gray-400">
+            <span></span>
+            <span class="text-right min-w-0">${formatNearbyPlace(c)}</span>
+          </div>`).join("");
+        expandPanel = `<div class="hidden pb-1.5" id="candidates-${rowId}">${extraRows}</div>`;
+      }
+
       return `
-        <div class="flex justify-between items-start gap-2 border-t border-black/5 py-2.5 text-sm">
-          <div class="flex items-center gap-2 text-gray-700 shrink-0">
-            <i class="ti ${meta.icon} text-gray-400 shrink-0"></i>
-            <span class="font-medium whitespace-nowrap">${meta.label}</span>
+        <div class="border-t border-black/5">
+          <div ${rowAttrs}>
+            <div class="flex items-center gap-2 text-gray-700 shrink-0">
+              <i class="ti ${meta.icon} text-gray-400 shrink-0"></i>
+              <span class="font-medium whitespace-nowrap">${meta.label}</span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <div class="font-semibold text-gray-700 text-right min-w-0">${formatNearbyPlace(candidates[0])}</div>
+              ${chevron}
+            </div>
           </div>
-          <div class="font-semibold text-gray-700 text-right min-w-0">${formatNearbyPlace(place)}</div>
+          ${expandPanel}
         </div>`;
+    }
+
+    function toggleCandidateExpand(rowId) {
+      let panel = document.getElementById("candidates-" + rowId);
+      let chevron = document.getElementById("chevron-" + rowId);
+      panel.classList.toggle("hidden");
+      chevron.classList.toggle("ti-chevron-down");
+      chevron.classList.toggle("ti-chevron-up");
     }
 
     function toggleNearbyPlacesExpand(sectionId, extraCount) {
@@ -1043,7 +1082,7 @@ let finalScore = parseFloat((
       label.textContent = nowHidden ? `Show ${extraCount} more nearby places` : "Show less";
     }
 
-    // Only categories with an actual found value are ever shown — a missing
+    // Only categories with at least one candidate are ever shown — a missing
     // category (genuinely nothing tagged nearby, or a failed lookup) is
     // simply absent from the card, not rendered as a placeholder. If NO
     // category has data for this neighbourhood, the whole card is omitted
@@ -1051,16 +1090,16 @@ let finalScore = parseFloat((
     function buildNearbyPlacesSection(nearbyPlaces, sectionId) {
       sectionId = sectionId || "single";
       let places = (nearbyPlaces && nearbyPlaces.places) || {};
-      let available = Object.keys(NEARBY_PLACE_META).filter(k => places[k] && places[k].value);
+      let available = Object.keys(NEARBY_PLACE_META).filter(k => places[k] && places[k].candidates && places[k].candidates.length > 0);
       if (available.length === 0) return "";
 
       let primary = available.filter(k => NEARBY_PLACES_PRIMARY.includes(k));
       let extra   = available.filter(k => !NEARBY_PLACES_PRIMARY.includes(k));
 
-      let primaryRows = primary.map(k => buildNearbyPlaceRow(k, places[k].value)).join("");
+      let primaryRows = primary.map(k => buildNearbyPlaceRow(k, places[k].candidates, sectionId + "-" + k)).join("");
       let expandBlock = "";
       if (extra.length > 0) {
-        let extraRows = extra.map(k => buildNearbyPlaceRow(k, places[k].value)).join("");
+        let extraRows = extra.map(k => buildNearbyPlaceRow(k, places[k].candidates, sectionId + "-" + k)).join("");
         expandBlock = `
           <button onclick="toggleNearbyPlacesExpand('${sectionId}', ${extra.length})"
             class="w-full text-left text-xs text-blue-500 hover:underline pt-2.5 border-t border-black/5">
