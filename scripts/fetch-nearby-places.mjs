@@ -43,7 +43,7 @@
 // requests for a full run, even with more than 4x the categories.
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -138,6 +138,16 @@ async function benchmarkMirrors() {
   results.forEach(r => console.log(`  ${r.url}: ${r.ok ? r.ms + "ms" : "FAILED"}`));
   const usable = results.filter(r => r.ok).map(r => r.url);
   return usable.length > 0 ? usable : CANDIDATE_MIRRORS;
+}
+
+// Exported so callers like the Gowlidoddy pilot can opt into the same
+// fastest-mirror-first behavior the CLI entry point uses below —
+// OVERPASS_ENDPOINTS is a module-private `let`, so an importer can't just
+// reassign it directly; this runs the benchmark and applies the result to
+// this module's own binding, then returns it for logging.
+export async function initOverpassMirrors() {
+  OVERPASS_ENDPOINTS = await benchmarkMirrors();
+  return OVERPASS_ENDPOINTS;
 }
 
 function haversineKm(lat1, lon1, lat2, lon2) {
@@ -410,12 +420,32 @@ async function fetchPlaces(lat, lon, defs, radiusOverrideM) {
 
   defs.forEach(d => {
     const list = candidatesByKey[d.key];
+    let selected;
     if (PROMINENCE_CATEGORIES.has(d.key)) {
       list.sort((a, b) => (prominenceTier(a) - prominenceTier(b)) || (a.distanceKm - b.distanceKm));
+      selected = list.slice(0, MAX_CANDIDATES);
+      // Guarantee the single closest candidate overall always makes the
+      // cut, even if its tier is worse than every already-selected one.
+      // Confirmed live via the Gowlidoddy pilot: a real gym 0.24km away
+      // (no chain match) was silently excluded because 4+ chain-matched
+      // gyms existed within the search radius, all farther away but all
+      // tier 0 — tier always wins the sort, so a plain top-N slice can
+      // drop the nearest real place entirely, not just deprioritize it.
+      // Only swaps out the weakest (last) already-selected candidate if
+      // the true nearest isn't already present, then re-sorts so display
+      // order stays tier-then-distance rather than bolting it on at the end.
+      if (list.length > MAX_CANDIDATES) {
+        const nearestOverall = list.reduce((min, c) => c.distanceKm < min.distanceKm ? c : min, list[0]);
+        if (!selected.includes(nearestOverall)) {
+          selected = selected.slice(0, MAX_CANDIDATES - 1).concat(nearestOverall);
+          selected.sort((a, b) => (prominenceTier(a) - prominenceTier(b)) || (a.distanceKm - b.distanceKm));
+        }
+      }
     } else {
       list.sort((a, b) => a.distanceKm - b.distanceKm);
+      selected = list.slice(0, MAX_CANDIDATES);
     }
-    const candidates = list.slice(0, MAX_CANDIDATES).map(c => {
+    const candidates = selected.map(c => {
       const out = { distanceKm: Math.round(c.distanceKm * 10) / 10, name: c.name };
       if (c.wiki !== undefined) out.wiki = c.wiki;
       if (c.chainMatch !== undefined) out.chainMatch = c.chainMatch;
@@ -613,26 +643,44 @@ async function runWiden(keysArg) {
   console.log(`\nUpdated ${outPath}`);
 }
 
+// --- Reusable exports ---
+//
+// fetchPlaces + CATEGORY_DEFS are exported so other scripts (e.g. the
+// Gowlidoddy grid-caching pilot) can reuse the exact same Overpass query
+// construction, prominence ranking, chain-name matching, and wiki-tag
+// detection instead of reimplementing/copy-pasting it — one source of
+// truth, no drift risk. Importing this module does NOT run the CLI (see
+// the entry-point guard below), so this is safe to import with zero
+// side effects beyond module-level const/function declarations.
+export { fetchPlaces, CATEGORY_DEFS };
+
 // --- Entry point ---
+//
+// Guarded so `import`ing this module (see above) never also triggers the
+// CLI's default runFull() — only running it directly via
+// `node scripts/fetch-nearby-places.mjs` does. pathToFileURL (not a plain
+// string comparison) handles Windows path separators correctly.
+const isMainModule = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMainModule) {
+  (async () => {
+    OVERPASS_ENDPOINTS = await benchmarkMirrors();
+    console.log(`Using mirror order: ${OVERPASS_ENDPOINTS.join(", ")}\n`);
 
-(async () => {
-  OVERPASS_ENDPOINTS = await benchmarkMirrors();
-  console.log(`Using mirror order: ${OVERPASS_ENDPOINTS.join(", ")}\n`);
+    const args = process.argv.slice(2);
+    const retryFailed = args.includes("--retry-failed");
+    const widenArg = args.find(a => a.startsWith("--widen="));
+    const onlyArg = args.find(a => a.startsWith("--only="));
+    const limitArg = args.find(a => a.startsWith("--limit="));
+    const limit = limitArg ? parseInt(limitArg.split("=")[1], 10) : null;
 
-  const args = process.argv.slice(2);
-  const retryFailed = args.includes("--retry-failed");
-  const widenArg = args.find(a => a.startsWith("--widen="));
-  const onlyArg = args.find(a => a.startsWith("--only="));
-  const limitArg = args.find(a => a.startsWith("--limit="));
-  const limit = limitArg ? parseInt(limitArg.split("=")[1], 10) : null;
-
-  if (onlyArg) {
-    await runOnly(onlyArg.split("=")[1]);
-  } else if (widenArg) {
-    await runWiden(widenArg.split("=")[1]);
-  } else if (retryFailed) {
-    await runRetryFailed();
-  } else {
-    await runFull(limit);
-  }
-})();
+    if (onlyArg) {
+      await runOnly(onlyArg.split("=")[1]);
+    } else if (widenArg) {
+      await runWiden(widenArg.split("=")[1]);
+    } else if (retryFailed) {
+      await runRetryFailed();
+    } else {
+      await runFull(limit);
+    }
+  })();
+}
