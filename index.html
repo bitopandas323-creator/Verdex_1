@@ -33,30 +33,11 @@
       <p class="text-gray-500">Green scores for every neighbourhood in India — live data.</p>
     </div>
 
-    <!-- Smart Search -->
+    <!-- Real Address Search (Nominatim/OpenStreetMap geocoding) — sole
+         search entry point now that Smart Search has been removed; the
+         dropdown picker below is still separate and independent. -->
     <div class="mb-6 relative">
       <label class="block text-sm text-gray-500 mb-2">Search any area, landmark or city</label>
-      <input
-        id="search-input"
-        type="text"
-        placeholder="e.g. Koramangala, Banjara Hills, Powai..."
-        oninput="handleSearch()"
-        onkeydown="handleKeydown(event)"
-        class="w-full border border-gray-200 rounded-full px-5 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
-      />
-      <div id="search-spinner" class="hidden absolute right-3 top-10">
-        <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
-      </div>
-      <div id="suggestions-box"
-        class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
-      </div>
-    </div>
-
-    <!-- Real Address Search (Nominatim/OpenStreetMap geocoding) — a
-         separate, precise option alongside Smart Search above and the
-         dropdown picker below, not a replacement for either. -->
-    <div class="mb-6 relative">
-      <label class="block text-sm text-gray-500 mb-2">Or search a real address (exact lane/building)</label>
       <input
         id="address-search-input"
         type="text"
@@ -245,187 +226,11 @@
       cache[key] = { data, timestamp: Date.now() };
     }
 
-    // --- SEARCH ---
-    let searchTimeout = null;
-    let selectedIndex = -1;
-    let currentSuggestions = [];
-
-    async function handleSearch() {
-      const query = document.getElementById('search-input').value.trim();
-      const box   = document.getElementById('suggestions-box');
-      const spin  = document.getElementById('search-spinner');
-
-      if (query.length < 2) { box.classList.add('hidden'); return; }
-
-      // First search our local city data
-      const localResults = searchLocalData(query);
-
-      if (localResults.length > 0) {
-        showSuggestions(localResults);
-        return;
-      }
-
-      // If no local results, use geocoding API
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(async () => {
-        spin.classList.remove('hidden');
-        try {
-          let url = "https://geocoding-api.open-meteo.com/v1/search?name="
-            + encodeURIComponent(query)
-            + "&count=5&language=en&format=json&countryCode=IN";
-          let response = await fetch(url);
-          let data     = await response.json();
-
-          if (data.results && data.results.length > 0) {
-            let suggestions = data.results.map(r => ({
-              name: r.name,
-              detail: (r.admin2 || r.admin1 || '') + ', India',
-              lat: r.latitude,
-              lon: r.longitude,
-              city: detectCity(r.admin1 || ''),
-              ndvi: 0.25,
-              fromAPI: true
-            }));
-            showSuggestions(suggestions);
-          } else {
-            box.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">No results found</div>';
-            box.classList.remove('hidden');
-          }
-        } catch (e) {
-          box.classList.add('hidden');
-        }
-        spin.classList.add('hidden');
-      }, 400);
-    }
-
-    function searchLocalData(query) {
-      const q = query.toLowerCase();
-      const results = [];
-      Object.keys(cities).forEach(city => {
-        cities[city].forEach(n => {
-          if (n.name.toLowerCase().includes(q) || city.includes(q)) {
-            results.push({
-              name: n.name,
-              detail: city.charAt(0).toUpperCase() + city.slice(1),
-              lat: n.lat,
-              lon: n.lon,
-              city: city,
-              ndvi: n.ndvi,
-              fromAPI: false
-            });
-          }
-        });
-      });
-      return results.slice(0, 6);
-    }
-
-    function detectCity(admin1) {
-      const map = {
-        'telangana': 'hyderabad',
-        'maharashtra': 'mumbai',
-        'delhi': 'delhi',
-        'karnataka': 'bangalore',
-        'tamil nadu': 'chennai',
-        'gujarat': 'ahmedabad',
-        'west bengal': 'kolkata'
-      };
-      const key = admin1.toLowerCase();
-      for (const k in map) { if (key.includes(k)) return map[k]; }
-      return 'hyderabad';
-    }
-
-    function showSuggestions(suggestions) {
-      currentSuggestions = suggestions;
-      selectedIndex = -1;
-      const box = document.getElementById('suggestions-box');
-      box.innerHTML = suggestions.map((s, i) => `
-        <div class="suggestion-item px-4 py-3 cursor-pointer border-b border-gray-100 last:border-0 hover:bg-gray-50"
-          onclick="selectSuggestion(${i})">
-          <div class="text-sm font-medium text-gray-800">${s.name}</div>
-          <div class="text-xs text-gray-400 mt-0.5">${s.detail}</div>
-        </div>
-      `).join('');
-      box.classList.remove('hidden');
-    }
-
-    function handleKeydown(e) {
-      const box = document.getElementById('suggestions-box');
-      if (box.classList.contains('hidden')) return;
-      const items = box.querySelectorAll('.suggestion-item');
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-        items.forEach((el, i) => el.style.background = i === selectedIndex ? '#f9fafb' : '');
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectedIndex = Math.max(selectedIndex - 1, 0);
-        items.forEach((el, i) => el.style.background = i === selectedIndex ? '#f9fafb' : '');
-      } else if (e.key === 'Enter' && selectedIndex >= 0) {
-        selectSuggestion(selectedIndex);
-      } else if (e.key === 'Escape') {
-        box.classList.add('hidden');
-      }
-    }
-
-    function selectSuggestion(index) {
-      const s   = currentSuggestions[index];
-      const box = document.getElementById('suggestions-box');
-      document.getElementById('search-input').value = s.name + ', ' + s.detail;
-      box.classList.add('hidden');
-
-      // Switch to single mode and check score directly
-      setMode('single');
-      checkScoreFromSearch(s);
-    }
-
-    async function checkScoreFromSearch(s) {
-      clearUserLocationPin();
-      const statusEl = document.getElementById('single-status');
-      const resultEl = document.getElementById('single-result');
-
-      statusEl.innerHTML = getSpinner();
-      resultEl.classList.add('hidden');
-
-      try {
-        // Local matches (fromAPI: false) have full baseline data in `cities` —
-        // look it up so noise/water/traffic/safety/infra/walk aren't silently
-        // defaulted. Geocoding-API matches (fromAPI: true) have no baseline
-        // data to draw from, so they keep the shorter, default-backed string.
-        let neighbourhoodValue;
-        let entry = (!s.fromAPI && s.city && cities[s.city]) ? cities[s.city].find(n => n.name === s.name) : null;
-        if (entry) {
-          neighbourhoodValue = entry.lat + '|' + entry.lon + '|' + entry.name + '|' + entry.ndvi + '|' +
-            entry.noise + '|' + entry.water + '|' + entry.traffic + '|' + entry.safety + '|' + entry.infra + '|' + entry.walk;
-        } else {
-          neighbourhoodValue = s.lat + '|' + s.lon + '|' + s.name + '|' + s.ndvi;
-        }
-
-        const d = await fetchAreaData(s.city || 'hyderabad', neighbourhoodValue);
-        statusEl.innerHTML = '';
-        resultEl.innerHTML = buildScoreCard(d, false, 'single');
-        resultEl.classList.remove('hidden');
-        resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        loadAqiTrend(d.name, d.city, 'single');
-      } catch (err) {
-        statusEl.innerHTML = 'Could not load data. Check console (F12).';
-        console.error(err);
-      }
-    }
-
-    // Close suggestions when clicking outside
-    document.addEventListener('click', function(e) {
-      if (!e.target.closest('#search-input') && !e.target.closest('#suggestions-box')) {
-        document.getElementById('suggestions-box').classList.add('hidden');
-      }
-    });
-
     // --- REAL ADDRESS SEARCH (Nominatim, via server-side /api/geocode) ---
     //
-    // A separate flow from Smart Search above: that one matches the 80
-    // local neighbourhoods first and falls back to Open-Meteo's geocoder;
-    // this one is for an exact address/lane Nominatim can pinpoint. On
-    // selection it reuses findNearestNeighbourhood() and
+    // Sole search entry point (Smart Search's local-match + Open-Meteo
+    // geocoder fallback was removed). On selection it reuses
+    // findNearestNeighbourhood() and
     // loadExactLocationNdvi() — the same functions locateMe() already
     // uses — rather than duplicating that logic. Nearby Places
     // intentionally shows the MATCHED neighbourhood's pre-computed data
