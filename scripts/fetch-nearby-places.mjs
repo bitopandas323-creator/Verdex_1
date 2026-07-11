@@ -266,6 +266,36 @@ function prominenceTier(c) {
   return 2;
 }
 
+// Extracted out of fetchPlaces (pure function, no network) so it can be
+// exercised directly — e.g. to compare against the pre-fix behavior on
+// identical raw candidate data, rather than two independent live Overpass
+// snapshots that could differ from ordinary OSM data drift between fetches.
+function selectCandidates(list, key) {
+  if (!PROMINENCE_CATEGORIES.has(key)) {
+    return list.slice().sort((a, b) => a.distanceKm - b.distanceKm).slice(0, MAX_CANDIDATES);
+  }
+  list = list.slice().sort((a, b) => (prominenceTier(a) - prominenceTier(b)) || (a.distanceKm - b.distanceKm));
+  let selected = list.slice(0, MAX_CANDIDATES);
+  // Guarantee the single closest candidate overall always makes the cut,
+  // even if its tier is worse than every already-selected one. Confirmed
+  // live via the Gowlidoddy pilot: a real gym 0.24km away (no chain match)
+  // was silently excluded because 4+ chain-matched gyms existed within the
+  // search radius, all farther away but all tier 0 — tier always wins the
+  // sort, so a plain top-N slice can drop the nearest real place entirely,
+  // not just deprioritize it. Only swaps out the weakest (last)
+  // already-selected candidate if the true nearest isn't already present,
+  // then re-sorts so display order stays tier-then-distance rather than
+  // bolting it on at the end.
+  if (list.length > MAX_CANDIDATES) {
+    const nearestOverall = list.reduce((min, c) => c.distanceKm < min.distanceKm ? c : min, list[0]);
+    if (!selected.includes(nearestOverall)) {
+      selected = selected.slice(0, MAX_CANDIDATES - 1).concat(nearestOverall);
+      selected.sort((a, b) => (prominenceTier(a) - prominenceTier(b)) || (a.distanceKm - b.distanceKm));
+    }
+  }
+  return selected;
+}
+
 const CATEGORY_DEFS = [
   { key: "hospital",        clause: bbox => `nwr["amenity"="hospital"](${bbox});` },
   { key: "clinic",          clause: bbox => `nwr["amenity"~"^(clinic|doctors)$"](${bbox});` },
@@ -366,7 +396,11 @@ const CATEGORY_RADIUS_OVERRIDES = {
 // category looks up its own radius: PROMINENCE_CATEGORIES always use
 // CATEGORY_RADIUS_OVERRIDES, everything else (including fire_station)
 // defaults to RADIUS_M unless explicitly widened.
-async function fetchPlaces(lat, lon, defs, radiusOverrideM) {
+// options.includeRaw: when true, also returns the raw (unsorted,
+// unsliced) per-category candidate lists alongside the normal result —
+// used by diagnostics that need to compare selection algorithms against
+// identical underlying data instead of two separately-timed live fetches.
+async function fetchPlaces(lat, lon, defs, radiusOverrideM, options) {
   function radiusForKey(key) {
     if (radiusOverrideM) return radiusOverrideM;
     if (PROMINENCE_CATEGORIES.has(key)) return CATEGORY_RADIUS_OVERRIDES[key] || RADIUS_M;
@@ -419,32 +453,7 @@ async function fetchPlaces(lat, lon, defs, radiusOverrideM) {
   }
 
   defs.forEach(d => {
-    const list = candidatesByKey[d.key];
-    let selected;
-    if (PROMINENCE_CATEGORIES.has(d.key)) {
-      list.sort((a, b) => (prominenceTier(a) - prominenceTier(b)) || (a.distanceKm - b.distanceKm));
-      selected = list.slice(0, MAX_CANDIDATES);
-      // Guarantee the single closest candidate overall always makes the
-      // cut, even if its tier is worse than every already-selected one.
-      // Confirmed live via the Gowlidoddy pilot: a real gym 0.24km away
-      // (no chain match) was silently excluded because 4+ chain-matched
-      // gyms existed within the search radius, all farther away but all
-      // tier 0 — tier always wins the sort, so a plain top-N slice can
-      // drop the nearest real place entirely, not just deprioritize it.
-      // Only swaps out the weakest (last) already-selected candidate if
-      // the true nearest isn't already present, then re-sorts so display
-      // order stays tier-then-distance rather than bolting it on at the end.
-      if (list.length > MAX_CANDIDATES) {
-        const nearestOverall = list.reduce((min, c) => c.distanceKm < min.distanceKm ? c : min, list[0]);
-        if (!selected.includes(nearestOverall)) {
-          selected = selected.slice(0, MAX_CANDIDATES - 1).concat(nearestOverall);
-          selected.sort((a, b) => (prominenceTier(a) - prominenceTier(b)) || (a.distanceKm - b.distanceKm));
-        }
-      }
-    } else {
-      list.sort((a, b) => a.distanceKm - b.distanceKm);
-      selected = list.slice(0, MAX_CANDIDATES);
-    }
+    const selected = selectCandidates(candidatesByKey[d.key], d.key);
     const candidates = selected.map(c => {
       const out = { distanceKm: Math.round(c.distanceKm * 10) / 10, name: c.name };
       if (c.wiki !== undefined) out.wiki = c.wiki;
@@ -456,6 +465,7 @@ async function fetchPlaces(lat, lon, defs, radiusOverrideM) {
     const usedRadius = radiusForKey(d.key);
     if (usedRadius !== RADIUS_M) result[d.key].radiusKm = usedRadius / 1000;
   });
+  if (options && options.includeRaw) return { result, raw: candidatesByKey };
   return result;
 }
 
@@ -652,7 +662,7 @@ async function runWiden(keysArg) {
 // truth, no drift risk. Importing this module does NOT run the CLI (see
 // the entry-point guard below), so this is safe to import with zero
 // side effects beyond module-level const/function declarations.
-export { fetchPlaces, CATEGORY_DEFS };
+export { fetchPlaces, CATEGORY_DEFS, selectCandidates, PROMINENCE_CATEGORIES };
 
 // --- Entry point ---
 //
