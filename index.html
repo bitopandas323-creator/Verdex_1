@@ -466,7 +466,15 @@
         const requestId = ++addressSearchRequestId;
         spin.classList.remove('hidden');
         try {
-          const url = "/api/geocode?q=" + encodeURIComponent(query) + "&session=" + getAddressSearchSessionId();
+          // Bias/restrict to whichever city is currently selected in the
+          // dropdown picker — without this, a query like "Wipro Circle"
+          // with no city name in it ranks purely on Nominatim's own
+          // importance score, which can surface a same-named place in a
+          // totally different city ahead of the one actually being browsed.
+          const selectedCity = document.getElementById('city-select').value;
+          const url = "/api/geocode?q=" + encodeURIComponent(query)
+            + "&session=" + getAddressSearchSessionId()
+            + "&city=" + encodeURIComponent(selectedCity);
           const res  = await fetch(url);
           const data = await res.json();
 
