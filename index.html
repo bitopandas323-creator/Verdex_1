@@ -816,6 +816,27 @@
       return nearbyPlacesIndex;
     }
 
+    // Client-side counterpart to api/_lib/http.js's fetchJsonWithTimeout —
+    // same "clear the timer in finally, cover the full response read" shape,
+    // needed here specifically for the Open-Meteo weather call below, which
+    // (unlike /api/aqi and /api/ndvi) goes straight from the browser to a
+    // third party with no server proxy and, until now, no timeout at all —
+    // the same "hangs forever on a slow response" bug class fixed elsewhere
+    // tonight, just never covered because it isn't one of our own /api/*
+    // routes.
+    async function fetchJsonWithTimeoutClient(url, ms) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), ms);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        const data = await res.json();
+        return { ok: res.ok, status: res.status, data };
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+    const WEATHER_TIMEOUT_MS = 8000;
+
     async function fetchAreaData(city, neighbourhoodValue) {
       let parts = neighbourhoodValue.split("|");
       let lat   = parts[0];
@@ -840,6 +861,7 @@ let walk    = parseFloat(parts[9]) || 6.0;
       // path here logs which one happened, so this never fails silently
       // the way it used to (a 401 with a JSON body doesn't throw, so the
       // old code's try/catch never even saw it).
+      let ndviIsEstimated = true;
       try {
         const ndviRes  = await fetch("/api/ndvi?lat=" + lat + "&lon=" + lon);
         const ndviData = await ndviRes.json();
@@ -847,6 +869,7 @@ let walk    = parseFloat(parts[9]) || 6.0;
           console.warn(`Live NDVI request failed (HTTP ${ndviRes.status}) — using baseline value. Reason: ${ndviData.reason || ndviData.error || "unknown"}`);
         } else if (typeof ndviData.ndvi === "number") {
           ndvi = ndviData.ndvi;
+          ndviIsEstimated = false;
         } else {
           console.warn(`Live NDVI returned no usable reading — using baseline value. Reason: ${ndviData.reason || "unknown"}`);
         }
@@ -858,7 +881,14 @@ let walk    = parseFloat(parts[9]) || 6.0;
       let cached   = getCached(cacheKey);
       if (cached) return cached;
 
+      // temp/windSpeed/feelsLike/humidity have no per-neighbourhood or even
+      // per-city baseline anywhere in this app — unlike ndvi/aqi, these four
+      // constants are the ONLY fallback that has ever existed, applied
+      // identically regardless of neighbourhood or city. Worth knowing: the
+      // "(estimated)" label below is honest about live vs. not, but on a
+      // fallback it's a flat global guess, not a location-specific one.
       let temp = 30, windSpeed = 10, feelsLike = 32, humidity = 60;
+      let weatherIsEstimated = true;
       try {
         let weatherURL = "https://api.open-meteo.com/v1/forecast"
           + "?latitude="  + lat
@@ -867,26 +897,49 @@ let walk    = parseFloat(parts[9]) || 6.0;
           + "&hourly=relativehumidity_2m,apparent_temperature"
           + "&timezone=Asia/Kolkata"
           + "&forecast_days=1";
-        let weatherResponse = await fetch(weatherURL);
-        let weatherData     = await weatherResponse.json();
-        let currentHour     = new Date().getHours();
-        temp      = weatherData.current_weather.temperature;
-        windSpeed = weatherData.current_weather.windspeed;
-        feelsLike = weatherData.hourly.apparent_temperature[currentHour];
-        humidity  = weatherData.hourly.relativehumidity_2m[currentHour];
+        let { ok: weatherOk, status: weatherStatus, data: weatherData } = await fetchJsonWithTimeoutClient(weatherURL, WEATHER_TIMEOUT_MS);
+        if (!weatherOk) {
+          console.warn(`Live weather request failed (HTTP ${weatherStatus}) — using fallback estimate.`);
+        } else {
+          let currentHour = new Date().getHours();
+          temp      = weatherData.current_weather.temperature;
+          windSpeed = weatherData.current_weather.windspeed;
+          feelsLike = weatherData.hourly.apparent_temperature[currentHour];
+          humidity  = weatherData.hourly.relativehumidity_2m[currentHour];
+          weatherIsEstimated = false;
+        }
       } catch (e) {
-        console.warn("Weather fetch failed — using fallback");
+        if (e.name === "AbortError") {
+          console.warn("Live weather request timed out — using fallback estimate.");
+        } else {
+          console.warn("Live weather fetch threw an exception (network/parse error) — using fallback estimate.", e.message);
+        }
       }
 
       let aqi = null;
+      let aqiIsEstimated = true;
       try {
-        let aqiResponse = await fetch("/api/aqi?lat=" + lat + "&lon=" + lon + "&city=" + city);
-        let aqiData     = await aqiResponse.json();
-        if (typeof aqiData.aqi === "number") {
+        let { ok: aqiOk, status: aqiStatus, data: aqiData } = await fetchJsonWithTimeoutClient("/api/aqi?lat=" + lat + "&lon=" + lon + "&city=" + city, WEATHER_TIMEOUT_MS);
+        if (!aqiOk) {
+          console.warn(`Live AQI request failed (HTTP ${aqiStatus}) — using fallback estimate. Reason: ${(aqiData && (aqiData.error || aqiData.reason)) || "unknown"}`);
+        } else if (typeof aqiData.aqi === "number") {
           aqi = aqiData.aqi;
+          // api/aqi.js can itself fall back to a flat per-city guess
+          // (method: "fallback") when live station lookups complete but
+          // find nothing usable — still a 200 with a normal-looking number,
+          // so this has to be checked explicitly rather than inferred from
+          // the fetch succeeding.
+          aqiIsEstimated = aqiData.method === "fallback";
+          if (aqiIsEstimated) console.warn("Live AQI lookup found no usable station — using city-level estimate.");
+        } else {
+          console.warn("Live AQI response missing a usable value — using fallback estimate.");
         }
       } catch (e) {
-        console.warn("AQI fetch failed — using fallback");
+        if (e.name === "AbortError") {
+          console.warn("Live AQI request timed out — using fallback estimate.");
+        } else {
+          console.warn("Live AQI fetch threw an exception (network/parse error) — using fallback estimate.", e.message);
+        }
       }
 
       let aqiFallbacks = {
@@ -922,6 +975,11 @@ let finalScore = parseFloat((
         ndvi, ndviScore, noise, noiseScore, water, waterScore,
         infraScore, walkScore, traffic, trafficScore, safety, safetyScore,
         finalScore,
+        // Display-only — whether the corresponding value above came from a
+        // live fetch or fell back to a baseline/estimate. Never read by any
+        // scoring function; aqiScore/heatScore/ndviScore are computed from
+        // aqi/feelsLike/ndvi themselves regardless of source.
+        aqiIsEstimated, weatherIsEstimated, ndviIsEstimated,
         // Informational only — deliberately excluded from finalScore above.
         nearbyProjects,
         nearbyPlaces
@@ -931,6 +989,13 @@ let finalScore = parseFloat((
     }
 
     // --- IMMERSIVE CARDS (score hero + 3 layer cards) ---
+
+    // Same visual treatment as the footer's "researched baseline data" line
+    // (text-xs text-gray-400) — this reads as consistent with the app's
+    // existing honesty pattern rather than a new one-off style.
+    function estimatedTag(isEstimated) {
+      return isEstimated ? ' <span class="text-xs text-gray-400 font-normal">(estimated)</span>' : '';
+    }
 
     function buildParamRow(icon, label, valueHtml, infoType, colorClass) {
       colorClass = colorClass || "text-gray-400";
@@ -963,9 +1028,9 @@ let finalScore = parseFloat((
     function buildEnvironmentalCard(d, chartId) {
       let envSubScore = avgScore(d.aqiScore, d.heatScore, d.ndviScore, d.noiseScore, d.waterScore);
       let rows = [
-        buildParamRow("ti-wind", "Air Quality", `${d.aqi} · ${getAQILabel(d.aqi)}`, "aqi", "text-green-500"),
-        buildParamRow("ti-temperature", "Feels Like", `${d.feelsLike}°C · ${d.humidity}% humidity`, "heat", "text-green-500"),
-        buildParamRow("ti-tree", "Green Cover", `${Math.round(d.ndvi * 100)}%`, "ndvi", "text-green-500"),
+        buildParamRow("ti-wind", "Air Quality", `${d.aqi}${estimatedTag(d.aqiIsEstimated)} · ${getAQILabel(d.aqi)}`, "aqi", "text-green-500"),
+        buildParamRow("ti-temperature", "Feels Like", `${d.feelsLike}°C${estimatedTag(d.weatherIsEstimated)} · ${d.humidity}% humidity`, "heat", "text-green-500"),
+        buildParamRow("ti-tree", "Green Cover", `${Math.round(d.ndvi * 100)}%${estimatedTag(d.ndviIsEstimated)}`, "ndvi", "text-green-500"),
         buildParamRow("ti-volume", "Noise", `${d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet"} · ${d.noise}/10`, "noise", "text-green-500"),
         buildParamRow("ti-droplet", "Water Quality", `${getWaterLabel(d.water)} · ${d.water}ppm`, "water", "text-green-500")
       ].join("") + buildAqiTrendContainer(chartId);

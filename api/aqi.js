@@ -102,6 +102,9 @@ export default async function handler(req, res) {
     const result = await getAqi(lat, lon, city);
     return res.status(200).json(result);
   } catch (err) {
+    if (err.name === "AbortError") {
+      return res.status(504).json({ error: "WAQI request timed out", detail: err.message });
+    }
     return res.status(500).json({ error: err.message });
   }
 }
