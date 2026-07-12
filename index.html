@@ -421,11 +421,11 @@
         const ndviContainerId = "exact-ndvi-address";
         const exactNdviBlock = `
           <div class="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-sm" id="${ndviContainerId}">
-            <div class="text-xs text-gray-500 mb-1">Green cover at your exact address</div>
+            <div class="text-xs text-gray-500 mb-1">Green cover${precisionTag("exact for this point")}</div>
             <div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>
           </div>`;
 
-        resultEl.innerHTML = distanceNote + buildScoreCard(d, false, 'single') + exactNdviBlock;
+        resultEl.innerHTML = distanceNote + buildScoreCard(d, false, 'single', true) + exactNdviBlock;
         resultEl.classList.remove('hidden');
         resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         loadAqiTrend(d.name, d.city, 'single');
@@ -1041,6 +1041,17 @@ let finalScore = parseFloat((
       return isEstimated ? ' <span class="text-xs text-gray-400 font-normal">(estimated)</span>' : '';
     }
 
+    // Distinct from estimatedTag above — that one flags a per-request
+    // fallback (did THIS number come from a live fetch or not), this one
+    // flags a structural property of the parameter itself (is it EVER
+    // computed for the exact searched point, or always tied to the matched
+    // neighbourhood's own coordinate/baseline, regardless of live/fallback
+    // status). The two are orthogonal and can co-occur, so this lives on
+    // the label rather than sharing the value string with estimatedTag.
+    function precisionTag(label) {
+      return ` <span class="text-xs text-gray-400 font-normal">(${label})</span>`;
+    }
+
     function buildParamRow(icon, label, valueHtml, infoType, colorClass) {
       colorClass = colorClass || "text-gray-400";
       return `
@@ -1069,14 +1080,24 @@ let finalScore = parseFloat((
         </div>`;
     }
 
-    function buildEnvironmentalCard(d, chartId) {
+    // isAreaEstimate: true only for locateMe/address-search results, where
+    // a genuinely different "exact searched point" exists to contrast
+    // against — every value here is actually computed from the MATCHED
+    // NEIGHBOURHOOD's own coordinate/baseline (confirmed: fetchAreaData is
+    // always called with entry.lat/entry.lon, never the exact searched
+    // lat/lon), so labeling that plainly is honest, not a formality. Plain
+    // dropdown/compare/map searches leave this false — there the
+    // neighbourhood IS the search target, so the tag would be trivially
+    // true with nothing to contrast against.
+    function buildEnvironmentalCard(d, chartId, isAreaEstimate) {
+      let areaTag = isAreaEstimate ? precisionTag("area estimate") : "";
       let envSubScore = avgScore(d.aqiScore, d.heatScore, d.ndviScore, d.noiseScore, d.waterScore);
       let rows = [
-        buildParamRow("ti-wind", "Air Quality", `${d.aqi}${estimatedTag(d.aqiIsEstimated)} · ${getAQILabel(d.aqi)}`, "aqi", "text-green-500"),
-        buildParamRow("ti-temperature", "Feels Like", `${d.feelsLike}°C${estimatedTag(d.weatherIsEstimated)} · ${d.humidity}% humidity`, "heat", "text-green-500"),
-        buildParamRow("ti-tree", "Green Cover", `${Math.round(d.ndvi * 100)}%${estimatedTag(d.ndviIsEstimated)}`, "ndvi", "text-green-500"),
-        buildParamRow("ti-volume", "Noise", `${d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet"} · ${d.noise}/10`, "noise", "text-green-500"),
-        buildParamRow("ti-droplet", "Water Quality", `${getWaterLabel(d.water)} · ${d.water}ppm`, "water", "text-green-500")
+        buildParamRow("ti-wind", "Air Quality" + areaTag, `${d.aqi}${estimatedTag(d.aqiIsEstimated)} · ${getAQILabel(d.aqi)}`, "aqi", "text-green-500"),
+        buildParamRow("ti-temperature", "Feels Like" + areaTag, `${d.feelsLike}°C${estimatedTag(d.weatherIsEstimated)} · ${d.humidity}% humidity`, "heat", "text-green-500"),
+        buildParamRow("ti-tree", "Green Cover" + areaTag, `${Math.round(d.ndvi * 100)}%${estimatedTag(d.ndviIsEstimated)}`, "ndvi", "text-green-500"),
+        buildParamRow("ti-volume", "Noise" + areaTag, `${d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet"} · ${d.noise}/10`, "noise", "text-green-500"),
+        buildParamRow("ti-droplet", "Water Quality" + areaTag, `${getWaterLabel(d.water)} · ${d.water}ppm`, "water", "text-green-500")
       ].join("") + buildAqiTrendContainer(chartId);
       let summary = `Air quality ${getAQILabel(d.aqi).toLowerCase()}, ${getNDVILabel(d.ndvi).toLowerCase()}, water ${getWaterLabel(d.water).toLowerCase()}.`;
       return buildLayerCardShell("ti-leaf", "Environmental", envSubScore, summary, rows);
@@ -1093,13 +1114,14 @@ let finalScore = parseFloat((
         </div>`;
     }
 
-    function buildLiveabilityCard(d) {
+    function buildLiveabilityCard(d, isAreaEstimate) {
+      let areaTag = isAreaEstimate ? precisionTag("area estimate") : "";
       let liveSubScore = avgScore(d.infraScore, d.walkScore, d.trafficScore, d.safetyScore);
       let rows = [
-        buildParamRow("ti-building-hospital", "Infrastructure", `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure", "text-blue-500"),
-        buildParamRow("ti-walk", "Walkability", `${Math.round(d.walkScore * 10)} · ${getWalkLabel(d.walkScore)}`, "walkability", "text-blue-500"),
-        buildParamRow("ti-car", "Traffic", `${Math.round(d.trafficScore * 10)} · ${getTrafficLabel(d.trafficScore)}`, "traffic", "text-blue-500"),
-        buildParamRow("ti-shield", "Safety", `${Math.round(d.safetyScore * 10)} · ${getSafetyLabel(d.safetyScore)}`, "safety", "text-blue-500")
+        buildParamRow("ti-building-hospital", "Infrastructure" + areaTag, `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure", "text-blue-500"),
+        buildParamRow("ti-walk", "Walkability" + areaTag, `${Math.round(d.walkScore * 10)} · ${getWalkLabel(d.walkScore)}`, "walkability", "text-blue-500"),
+        buildParamRow("ti-car", "Traffic" + areaTag, `${Math.round(d.trafficScore * 10)} · ${getTrafficLabel(d.trafficScore)}`, "traffic", "text-blue-500"),
+        buildParamRow("ti-shield", "Safety" + areaTag, `${Math.round(d.safetyScore * 10)} · ${getSafetyLabel(d.safetyScore)}`, "safety", "text-blue-500")
       ].join("");
       let summary = `${getWalkLabel(d.walkScore)}, ${getTrafficLabel(d.trafficScore).toLowerCase()}, ${getSafetyLabel(d.safetyScore).toLowerCase()}.`;
       return buildLayerCardShell("ti-walk", "Liveability", liveSubScore, summary, rows);
@@ -1277,7 +1299,7 @@ let finalScore = parseFloat((
       return Math.round((betterCount / (neighbourhoods.length - 1)) * 100);
     }
 
-    function buildScoreCard(d, highlight, chartId) {
+    function buildScoreCard(d, highlight, chartId, isAreaEstimate) {
       chartId = chartId || "single";
       let ringClass    = highlight ? "ring-2 ring-green-400 ring-offset-2" : "";
       let badge        = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Better area</span>' : "";
@@ -1299,8 +1321,8 @@ let finalScore = parseFloat((
             <div class="text-xs text-gray-400 mt-2">Better than ${benchmarkPct}% of neighbourhoods in ${cityName}</div>
           </div>
           <div class="space-y-4">
-            ${buildEnvironmentalCard(d, chartId)}
-            ${buildLiveabilityCard(d)}
+            ${buildEnvironmentalCard(d, chartId, isAreaEstimate)}
+            ${buildLiveabilityCard(d, isAreaEstimate)}
             ${buildNearbyPlacesSection(d.nearbyPlaces, chartId)}
             ${buildRealEstateSection(d.nearbyProjects)}
           </div>
@@ -1705,11 +1727,11 @@ let finalScore = parseFloat((
             const ndviContainerId = "exact-ndvi-single";
             const exactNdviBlock = `
               <div class="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-sm" id="${ndviContainerId}">
-                <div class="text-xs text-gray-500 mb-1">Green cover at your exact location</div>
+                <div class="text-xs text-gray-500 mb-1">Green cover${precisionTag("exact for this point")}</div>
                 <div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>
               </div>`;
 
-            resultEl.innerHTML = distanceNote + buildScoreCard(d, false, "single") + exactNdviBlock;
+            resultEl.innerHTML = distanceNote + buildScoreCard(d, false, "single", true) + exactNdviBlock;
             resultEl.classList.remove("hidden");
             loadAqiTrend(d.name, d.city, "single");
             loadExactLocationNdvi(latitude, longitude, ndviContainerId);
