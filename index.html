@@ -257,18 +257,67 @@
       return addressSearchSessionId;
     }
 
+    // Reused verbatim from the old Smart Search (removed along with that
+    // box, restored here): matches when a KNOWN neighbourhood/city NAME
+    // contains the typed text, not the reverse. That direction is what
+    // makes this safe to auto-fire on every keystroke with zero
+    // ambiguity — "Banjara Hills" matches the name directly, but "Road 12,
+    // Banjara Hills" can never match (a 13-char name can't contain a
+    // 22-char query), so specific addresses fall through to Nominatim
+    // below untouched, without needing any separate heuristic.
+    function searchLocalData(query) {
+      const q = query.toLowerCase();
+      const results = [];
+      Object.keys(cities).forEach(city => {
+        cities[city].forEach(n => {
+          if (n.name.toLowerCase().includes(q) || city.includes(q)) {
+            results.push({
+              name: n.name,
+              detail: city.charAt(0).toUpperCase() + city.slice(1),
+              lat: n.lat,
+              lon: n.lon
+            });
+          }
+        });
+      });
+      return results.slice(0, 6);
+    }
+
     async function handleAddressSearch() {
       const query = document.getElementById('address-search-input').value.trim();
       const box   = document.getElementById('address-suggestions-box');
       const spin  = document.getElementById('address-search-spinner');
 
+      // Bumped on every keystroke (not just when a Nominatim call fires)
+      // so an in-flight Nominatim response from an earlier keystroke
+      // recognizes itself as stale the moment ANYTHING newer is shown —
+      // local suggestions included — and can't clobber them when it
+      // finally resolves. Without this, typing "Road" (no local match,
+      // schedules Nominatim) then backspacing to "Banjara Hills" (local
+      // match, instant render) could still get overwritten a second later
+      // when the first request comes back.
+      const requestId = ++addressSearchRequestId;
+      clearTimeout(addressSearchTimeout);
+
       if (query.length < 3) { box.classList.add('hidden'); return; }
 
-      clearTimeout(addressSearchTimeout);
+      // Instant, zero-network check against the 80 known neighbourhoods
+      // first — same local-array-filter approach the old Smart Search
+      // used. Short-circuits entirely on a match: no debounce, no
+      // Nominatim call, matching the old box's exact behavior.
+      const localResults = searchLocalData(query);
+      if (localResults.length > 0) {
+        showAddressSuggestions(localResults.map(r => ({
+          displayName: `${r.name}, ${r.detail}`,
+          lat: r.lat,
+          lon: r.lon
+        })));
+        return;
+      }
+
       // Nominatim's usage policy requires >=1 request/second spacing —
-      // longer than Smart Search's 400ms debounce further up, deliberately.
+      // longer than the old Smart Search's 400ms debounce, deliberately.
       addressSearchTimeout = setTimeout(async () => {
-        const requestId = ++addressSearchRequestId;
         spin.classList.remove('hidden');
         try {
           // Bias/restrict to whichever city is currently selected in the
