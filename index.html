@@ -207,6 +207,13 @@
     // replaced (avoids leaking Chart.js instances over a session).
     const aqiTrendCharts = {};
 
+    // Same registry pattern for the daily-history view, plus a separate
+    // flag tracking whether it's been fetched yet for the current card
+    // render (it loads lazily on first "History" tab click, unlike the
+    // hourly chart above which loads eagerly) — see loadDailyTrend.
+    const dailyTrendCharts = {};
+    const dailyTrendLoadedFor = {};
+
     // Map view state — one Leaflet map instance reused across city switches.
     // userLocation/userMarker/userLine are session-only, in-memory state for
     // the "you are here" marker — never sent anywhere, cleared on any new
@@ -1098,18 +1105,41 @@ let finalScore = parseFloat((
         buildParamRow("ti-tree", "Green Cover" + areaTag, `${Math.round(d.ndvi * 100)}%${estimatedTag(d.ndviIsEstimated)}`, "ndvi", "text-green-500"),
         buildParamRow("ti-volume", "Noise" + areaTag, `${d.noise <= 4 ? "High traffic area" : d.noise <= 6 ? "Moderate noise" : "Relatively quiet"} · ${d.noise}/10`, "noise", "text-green-500"),
         buildParamRow("ti-droplet", "Water Quality" + areaTag, `${getWaterLabel(d.water)} · ${d.water}ppm`, "water", "text-green-500")
-      ].join("") + buildAqiTrendContainer(chartId);
+      ].join("") + buildAqiTrendContainer(chartId, d.name, d.city);
       let summary = `Air quality ${getAQILabel(d.aqi).toLowerCase()}, ${getNDVILabel(d.ndvi).toLowerCase()}, water ${getWaterLabel(d.water).toLowerCase()}.`;
       return buildLayerCardShell("ti-leaf", "Environmental", envSubScore, summary, rows);
     }
 
-    function buildAqiTrendContainer(chartId) {
+    // Two tabs sharing one chart area: "Today" (existing hourly view,
+    // unchanged, loads eagerly) and "History" (new daily-average view,
+    // loads lazily — only fetched the first time someone actually clicks
+    // it, see switchTrendView — since most card views may never open a
+    // secondary trend, and eagerly fetching ~90 days of rows on every
+    // single/compare/map render would double Supabase read load for a
+    // view most people won't look at).
+    function buildAqiTrendContainer(chartId, name, city) {
+      const activeTab   = "text-xs font-medium px-2 py-1 rounded-full bg-gray-800 text-white";
+      const inactiveTab = "text-xs font-medium px-2 py-1 rounded-full text-gray-500 hover:bg-gray-100";
       return `
         <div class="mt-3 pt-3 border-t border-black/5">
-          <div class="text-xs text-gray-500 mb-2">Today's AQI trend</div>
-          <div id="aqi-trend-${chartId}-status" class="text-xs text-gray-400">Loading trend…</div>
-          <div class="hidden" id="aqi-trend-${chartId}-chart-wrap" style="height:110px">
-            <canvas id="aqi-trend-${chartId}-canvas"></canvas>
+          <div class="flex items-center gap-2 mb-2">
+            <button id="trend-tab-hourly-${chartId}" class="${activeTab}"
+              onclick="switchTrendView('${chartId}','hourly','${name}','${city}')">Today</button>
+            <button id="trend-tab-daily-${chartId}" class="${inactiveTab}"
+              onclick="switchTrendView('${chartId}','daily','${name}','${city}')">History</button>
+          </div>
+          <div id="trend-view-hourly-${chartId}">
+            <div id="aqi-trend-${chartId}-status" class="text-xs text-gray-400">Loading trend…</div>
+            <div class="hidden" id="aqi-trend-${chartId}-chart-wrap" style="height:110px">
+              <canvas id="aqi-trend-${chartId}-canvas"></canvas>
+            </div>
+          </div>
+          <div class="hidden" id="trend-view-daily-${chartId}">
+            <div class="text-xs text-gray-500 mb-1" id="daily-trend-${chartId}-label"></div>
+            <div id="daily-trend-${chartId}-status" class="text-xs text-gray-400">Loading trend…</div>
+            <div class="hidden" id="daily-trend-${chartId}-chart-wrap" style="height:110px">
+              <canvas id="daily-trend-${chartId}-canvas"></canvas>
+            </div>
           </div>
         </div>`;
     }
@@ -1349,6 +1379,25 @@ let finalScore = parseFloat((
         aqiTrendCharts[chartId].destroy();
         delete aqiTrendCharts[chartId];
       }
+      // loadAqiTrend runs exactly once per fresh card render (unlike the
+      // daily view, which loads lazily on tab click) — piggybacking the
+      // daily chart/lazy-load-flag reset here guarantees a new render
+      // always starts clean, even if "History" was left open on a
+      // previous card reusing the same chartId (e.g. repeated single-mode
+      // searches). Without this, switching neighbourhoods while History
+      // was active would show the PREVIOUS neighbourhood's stale chart
+      // under the new one's data until manually re-clicked.
+      if (dailyTrendCharts[chartId]) {
+        dailyTrendCharts[chartId].destroy();
+        delete dailyTrendCharts[chartId];
+      }
+      delete dailyTrendLoadedFor[chartId];
+      document.getElementById(`trend-view-hourly-${chartId}`)?.classList.remove("hidden");
+      document.getElementById(`trend-view-daily-${chartId}`)?.classList.add("hidden");
+      const hourlyTabReset = document.getElementById(`trend-tab-hourly-${chartId}`);
+      const dailyTabReset  = document.getElementById(`trend-tab-daily-${chartId}`);
+      if (hourlyTabReset) hourlyTabReset.className = "text-xs font-medium px-2 py-1 rounded-full bg-gray-800 text-white";
+      if (dailyTabReset)  dailyTabReset.className  = "text-xs font-medium px-2 py-1 rounded-full text-gray-500 hover:bg-gray-100";
 
       const showNotEnoughData = () => {
         statusEl.textContent = "Building up today's trend — check back soon";
@@ -1414,6 +1463,171 @@ let finalScore = parseFloat((
         });
       } catch (err) {
         console.warn("AQI trend fetch failed — showing fallback message", err);
+        showNotEnoughData();
+      }
+    }
+
+    function switchTrendView(chartId, view, name, city) {
+      const hourlyView = document.getElementById(`trend-view-hourly-${chartId}`);
+      const dailyView  = document.getElementById(`trend-view-daily-${chartId}`);
+      const hourlyTab  = document.getElementById(`trend-tab-hourly-${chartId}`);
+      const dailyTab   = document.getElementById(`trend-tab-daily-${chartId}`);
+      if (!hourlyView || !dailyView || !hourlyTab || !dailyTab) return;
+
+      const activeTab   = "text-xs font-medium px-2 py-1 rounded-full bg-gray-800 text-white";
+      const inactiveTab = "text-xs font-medium px-2 py-1 rounded-full text-gray-500 hover:bg-gray-100";
+
+      if (view === "hourly") {
+        hourlyView.classList.remove("hidden");
+        dailyView.classList.add("hidden");
+        hourlyTab.className = activeTab;
+        dailyTab.className  = inactiveTab;
+      } else {
+        hourlyView.classList.add("hidden");
+        dailyView.classList.remove("hidden");
+        hourlyTab.className = inactiveTab;
+        dailyTab.className  = activeTab;
+        // Fetch only the first time this tab is opened for the current
+        // card render — loadAqiTrend clears this flag on every fresh
+        // render, so a new search still gets a fresh fetch even if
+        // History was left open on a previous card reusing this chartId.
+        if (!dailyTrendLoadedFor[chartId]) {
+          dailyTrendLoadedFor[chartId] = true;
+          loadDailyTrend(name, city, chartId);
+        }
+      }
+    }
+
+    const DAILY_TREND_MIN_DAYS = 3;
+    const DAILY_TREND_WINDOW_DAYS = 90;
+
+    // Daily-average companion to loadAqiTrend above: same Supabase table,
+    // same read-only anon-key REST pattern, but grouped into one point per
+    // calendar day (AQI + Green Score) instead of raw hourly points — 90
+    // days of hourly data would be too dense to read as a chart. Requested
+    // window is 90 days, but the label always reflects how many distinct
+    // days actually came back (see below), not the requested window — so
+    // this reads honestly today (currently ~8 real days exist, per direct
+    // Supabase query) and keeps extending on its own as more real days
+    // accumulate, with no code change ever needed here again.
+    //
+    // KNOWN DATA DISCONTINUITY — not a bug if you see a "jump": Howrah,
+    // Hadapsar, and Magarpatta had their stored coordinates corrected in
+    // commit 6fe9b36 (2026-07-10 00:10 IST — Howrah was 6.8km off; Hadapsar
+    // and Magarpatta shared one identical coordinate). Rajarhat, Dumdum,
+    // Prahlad Nagar, and SG Highway were corrected in commit a249428
+    // (2026-07-10 21:59 IST — see that commit message for per-neighbourhood
+    // detail, e.g. Dumdum's point had reverse-geocoded into Baranagar).
+    // score_snapshots' earliest row predates both (2026-07-05), so for
+    // these 7 specifically, rows before their correction timestamp reflect
+    // live AQI/weather at the OLD (wrong) point, blended here into the same
+    // daily-average line as rows after using the corrected point — a real,
+    // physical discontinuity in the underlying data, not a rendering bug.
+    // No special handling is applied for it yet (per explicit decision —
+    // too few days of history overall right now to be worth building UI
+    // around), but worth knowing before treating a visible jump in one of
+    // these 7 neighbourhoods' history as something to debug.
+    async function loadDailyTrend(name, city, chartId) {
+      const statusEl = document.getElementById(`daily-trend-${chartId}-status`);
+      const wrapEl   = document.getElementById(`daily-trend-${chartId}-chart-wrap`);
+      const canvasEl = document.getElementById(`daily-trend-${chartId}-canvas`);
+      const labelEl  = document.getElementById(`daily-trend-${chartId}-label`);
+      if (!statusEl || !wrapEl || !canvasEl || !labelEl) return;
+
+      if (dailyTrendCharts[chartId]) {
+        dailyTrendCharts[chartId].destroy();
+        delete dailyTrendCharts[chartId];
+      }
+
+      const showNotEnoughData = () => {
+        labelEl.textContent = "";
+        statusEl.textContent = "Building up the daily trend — check back in a few days";
+        statusEl.classList.remove("hidden");
+        wrapEl.classList.add("hidden");
+      };
+
+      try {
+        const since = new Date(Date.now() - DAILY_TREND_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+        const url = SUPABASE_URL + "/rest/v1/score_snapshots"
+          + "?select=aqi,overall_score,created_at"
+          + "&neighbourhood=eq." + encodeURIComponent(name)
+          + "&city=eq." + encodeURIComponent(city)
+          + "&created_at=gte." + encodeURIComponent(since)
+          + "&order=created_at.asc";
+
+        const res = await fetch(url, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: "Bearer " + SUPABASE_ANON_KEY
+          }
+        });
+
+        if (!res.ok) throw new Error("Supabase request failed: " + res.status);
+        const rows = await res.json();
+
+        // Group by LOCAL (Asia/Kolkata) calendar date — same timezone
+        // convention loadAqiTrend's own hourly labels already use. Rows
+        // arrive created_at-ascending, and a Map preserves insertion
+        // order, so the grouped days come out chronologically sorted with
+        // no separate sort step needed.
+        const byDay = new Map();
+        for (const r of rows) {
+          const dayKey = new Date(r.created_at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+          if (!byDay.has(dayKey)) byDay.set(dayKey, { aqiSum: 0, scoreSum: 0, count: 0 });
+          const g = byDay.get(dayKey);
+          g.aqiSum += r.aqi;
+          g.scoreSum += r.overall_score;
+          g.count++;
+        }
+
+        const dayKeys = [...byDay.keys()];
+        if (dayKeys.length < DAILY_TREND_MIN_DAYS) {
+          showNotEnoughData();
+          return;
+        }
+
+        const labels = dayKeys.map(k => new Date(k + "T00:00:00").toLocaleDateString("en-IN", {
+          timeZone: "Asia/Kolkata", month: "short", day: "numeric"
+        }));
+        const aqiValues   = dayKeys.map(k => Math.round(byDay.get(k).aqiSum / byDay.get(k).count));
+        // overall_score is stored 0-10 (see calculateFinalScore) — x10 to
+        // match how the score is displayed everywhere else in this app.
+        const scoreValues = dayKeys.map(k => Math.round((byDay.get(k).scoreSum / byDay.get(k).count) * 10));
+
+        labelEl.textContent = `Last ${dayKeys.length} day${dayKeys.length === 1 ? "" : "s"}`;
+        statusEl.classList.add("hidden");
+        wrapEl.classList.remove("hidden");
+
+        dailyTrendCharts[chartId] = new Chart(canvasEl, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "AQI", data: aqiValues, yAxisID: "y",
+                borderColor: "#2563eb", backgroundColor: "rgba(37, 99, 235, 0.08)",
+                fill: true, tension: 0.3, pointRadius: 2
+              },
+              {
+                label: "Green Score", data: scoreValues, yAxisID: "y1",
+                borderColor: "#16a34a", backgroundColor: "transparent",
+                fill: false, tension: 0.3, pointRadius: 2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
+            scales: {
+              x:  { ticks: { maxTicksLimit: 6, font: { size: 10 } }, grid: { display: false } },
+              y:  { position: "left",  beginAtZero: true, ticks: { font: { size: 10 } }, title: { display: true, text: "AQI", font: { size: 9 } } },
+              y1: { position: "right", beginAtZero: true, max: 100, ticks: { font: { size: 10 } }, grid: { drawOnChartArea: false }, title: { display: true, text: "Score", font: { size: 9 } } }
+            }
+          }
+        });
+      } catch (err) {
+        console.warn("Daily trend fetch failed — showing fallback message", err);
         showNotEnoughData();
       }
     }
