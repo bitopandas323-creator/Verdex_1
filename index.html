@@ -417,8 +417,20 @@
         entry.noise + '|' + entry.water + '|' + entry.traffic + '|' + entry.safety + '|' + entry.infra + '|' + entry.walk;
 
       try {
-        const d = await fetchAreaData(city, value);
+        // Run in parallel, not sequentially after fetchAreaData — the
+        // grid lookup is a small, independent request and shouldn't add
+        // latency on top of the existing search.
+        const [d, gridResult] = await Promise.all([
+          fetchAreaData(city, value),
+          getHyderabadGridPlaces(s.lat, s.lon)
+        ]);
         statusEl.innerHTML = '';
+
+        let nearbyPlacesSource = "area";
+        if (gridResult.inGrid) {
+          d.nearbyPlaces = { places: gridResult.places };
+          nearbyPlacesSource = "exact";
+        }
 
         const distanceNote = `
           <div class="text-center text-sm text-gray-500 mb-3">
@@ -432,7 +444,7 @@
             <div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>
           </div>`;
 
-        resultEl.innerHTML = distanceNote + buildScoreCard(d, false, 'single', true) + exactNdviBlock;
+        resultEl.innerHTML = distanceNote + buildScoreCard(d, false, 'single', true, nearbyPlacesSource) + exactNdviBlock;
         resultEl.classList.remove('hidden');
         resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         loadAqiTrend(d.name, d.city, 'single');
@@ -1243,7 +1255,13 @@ let finalScore = parseFloat((
     // simply absent from the card, not rendered as a placeholder. If NO
     // category has data for this neighbourhood, the whole card is omitted
     // by the caller (see buildScoreCard) rather than showing an empty shell.
-    function buildNearbyPlacesSection(nearbyPlaces, sectionId) {
+    // nearbyPlacesSource: unset (plain dropdown/compare/map — no tag,
+    // unchanged), "area" (locateMe/address-search, matched-neighbourhood
+    // fallback), "exact" (locateMe/address-search, Hyderabad-core grid
+    // cell hit — see getHyderabadGridPlaces). Nearby Places had no
+    // precision tag at all before this — the earlier dual-precision work
+    // was scoped to the 9 main-card rows only.
+    function buildNearbyPlacesSection(nearbyPlaces, sectionId, nearbyPlacesSource) {
       sectionId = sectionId || "single";
       let places = (nearbyPlaces && nearbyPlaces.places) || {};
       let available = Object.keys(NEARBY_PLACE_META).filter(k => places[k] && places[k].candidates && places[k].candidates.length > 0);
@@ -1251,12 +1269,15 @@ let finalScore = parseFloat((
 
       let tiles  = available.map(k => buildNearbyTile(k, sectionId)).join("");
       let panels = available.map(k => buildNearbyPanel(k, places[k].candidates, sectionId)).join("");
+      let precisionLabel = nearbyPlacesSource === "exact" ? precisionTag("exact for this point")
+        : nearbyPlacesSource === "area" ? precisionTag("area estimate")
+        : "";
 
       return `
         <div class="bg-white rounded-2xl p-6">
           <div class="flex items-center gap-2 mb-3">
             <i class="ti ti-map-pin text-gray-500 text-lg"></i>
-            <span class="font-semibold text-gray-800">Nearby Places</span>
+            <span class="font-semibold text-gray-800">Nearby Places${precisionLabel}</span>
             ${infoBtn('nearbyPlaces')}
           </div>
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-1" id="nearby-grid-${sectionId}">${tiles}</div>
@@ -1329,7 +1350,7 @@ let finalScore = parseFloat((
       return Math.round((betterCount / (neighbourhoods.length - 1)) * 100);
     }
 
-    function buildScoreCard(d, highlight, chartId, isAreaEstimate) {
+    function buildScoreCard(d, highlight, chartId, isAreaEstimate, nearbyPlacesSource) {
       chartId = chartId || "single";
       let ringClass    = highlight ? "ring-2 ring-green-400 ring-offset-2" : "";
       let badge        = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Better area</span>' : "";
@@ -1353,7 +1374,7 @@ let finalScore = parseFloat((
           <div class="space-y-4">
             ${buildEnvironmentalCard(d, chartId, isAreaEstimate)}
             ${buildLiveabilityCard(d, isAreaEstimate)}
-            ${buildNearbyPlacesSection(d.nearbyPlaces, chartId)}
+            ${buildNearbyPlacesSection(d.nearbyPlaces, chartId, nearbyPlacesSource)}
             ${buildRealEstateSection(d.nearbyProjects)}
           </div>
           <div class="pt-4 text-center text-xs text-gray-400">
@@ -1860,6 +1881,39 @@ let finalScore = parseFloat((
       return nearest;
     }
 
+    const GRID_LOOKUP_TIMEOUT_MS = 8000;
+
+    // Checks whether an exact searched point (typed address or GPS) falls
+    // within the validated Hyderabad-core grid (2200 cells, 500m spacing)
+    // and, if so, returns that cell's own Nearby Places instead of the
+    // matched neighbourhood's pre-computed list. Completely orthogonal to
+    // findNearestNeighbourhood() above — that one still always drives the
+    // whole score card (AQI/weather/NDVI/baseline fields); this only ever
+    // affects which Nearby Places list gets shown, and only for Hyderabad.
+    //
+    // The grid data itself (23.35MB) stays server-side — api/
+    // hyderabad-grid-lookup.js reads it once at module load and returns
+    // just the matched cell (a few KB), not the whole file. On any
+    // failure (timeout, non-2xx, network error, or a genuine miss outside
+    // the grid's bounding box) this returns { inGrid: false }, and callers
+    // fall back to the existing matched-neighbourhood behavior unchanged —
+    // never blocks or breaks the rest of the result.
+    async function getHyderabadGridPlaces(lat, lon) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), GRID_LOOKUP_TIMEOUT_MS);
+      try {
+        const res = await fetch(`/api/hyderabad-grid-lookup?lat=${lat}&lon=${lon}`, { signal: controller.signal });
+        const data = await res.json();
+        if (!res.ok || !data.inGrid) return { inGrid: false };
+        return { inGrid: true, places: data.places };
+      } catch (err) {
+        console.warn("Hyderabad grid lookup failed — using matched-neighbourhood Nearby Places instead.", err.message);
+        return { inGrid: false };
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
     async function loadExactLocationNdvi(lat, lon, containerId) {
       const statusEl = document.getElementById(containerId + "-status");
       if (!statusEl) return;
@@ -1925,8 +1979,19 @@ let finalScore = parseFloat((
             entry.noise + "|" + entry.water + "|" + entry.traffic + "|" + entry.safety + "|" + entry.infra + "|" + entry.walk;
 
           try {
-            const d = await fetchAreaData(city, value);
+            // Run in parallel, not sequentially after fetchAreaData — same
+            // reasoning as selectAddressSuggestion's identical wiring.
+            const [d, gridResult] = await Promise.all([
+              fetchAreaData(city, value),
+              getHyderabadGridPlaces(latitude, longitude)
+            ]);
             singleStatusEl.innerHTML = "";
+
+            let nearbyPlacesSource = "area";
+            if (gridResult.inGrid) {
+              d.nearbyPlaces = { places: gridResult.places };
+              nearbyPlacesSource = "exact";
+            }
 
             // Available for Map view to render the "you are here" marker if
             // the person switches there — see clearUserLocationPin() for
@@ -1945,7 +2010,7 @@ let finalScore = parseFloat((
                 <div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>
               </div>`;
 
-            resultEl.innerHTML = distanceNote + buildScoreCard(d, false, "single", true) + exactNdviBlock;
+            resultEl.innerHTML = distanceNote + buildScoreCard(d, false, "single", true, nearbyPlacesSource) + exactNdviBlock;
             resultEl.classList.remove("hidden");
             loadAqiTrend(d.name, d.city, "single");
             loadExactLocationNdvi(latitude, longitude, ndviContainerId);

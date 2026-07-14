@@ -11,6 +11,9 @@
     },
     "api/geocode.js": {
       "maxDuration": 15
+    },
+    "api/hyderabad-grid-lookup.js": {
+      "maxDuration": 15
     }
   }
 }
