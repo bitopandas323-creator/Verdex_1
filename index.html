@@ -584,17 +584,17 @@
     // --- CITY DATA ---
     const cities = {
   hyderabad: [
-    { name: "Banjara Hills",   lat: 17.4156, lon: 78.4347, ndvi: 0.38, noise: 6.5, water: 320, traffic: 5, safety: 7.5, infra: 8, walk: 7,
+    { name: "Banjara Hills",   lat: 17.4156, lon: 78.4347, ndvi: 0.38, noise: 6.5, water: 320, traffic: 5, safety: 7.5, infra: 6.8, walk: 3.9,
       nearbyProjects: [
         { name: "Suvidha Projects", builder: "Suvidha Projects Pvt Ltd", type: "residential", status: "under construction",
           expectedPossession: "February 2027",
           verifyUrl: "https://rerait.telangana.gov.in/SearchList/Search",
           verifyNote: "Search \"Suvidha Projects\" to confirm current status and registration number." }
       ] },
-    { name: "Jubilee Hills",   lat: 17.4325, lon: 78.4071, ndvi: 0.40, noise: 7.0, water: 300, traffic: 5.5, safety: 8, infra: 8, walk: 7, nearbyProjects: [] },
-    { name: "Secunderabad",    lat: 17.4399, lon: 78.4983, ndvi: 0.28, noise: 5.0, water: 420, traffic: 4.5, safety: 6.5, infra: 8.5, walk: 7.5, nearbyProjects: [] },
-    { name: "Hitech City",     lat: 17.4474, lon: 78.3762, ndvi: 0.22, noise: 4.5, water: 380, traffic: 3, safety: 7, infra: 9, walk: 5.5, nearbyProjects: [] },
-    { name: "Gachibowli",      lat: 17.4401, lon: 78.3489, ndvi: 0.25, noise: 5.0, water: 360, traffic: 3, safety: 6.5, infra: 7.5, walk: 5,
+    { name: "Jubilee Hills",   lat: 17.4325, lon: 78.4071, ndvi: 0.40, noise: 7.0, water: 300, traffic: 5.5, safety: 8, infra: 6.7, walk: 9.2, nearbyProjects: [] },
+    { name: "Secunderabad",    lat: 17.4399, lon: 78.4983, ndvi: 0.28, noise: 5.0, water: 420, traffic: 4.5, safety: 6.5, infra: 7.6, walk: 9.2, nearbyProjects: [] },
+    { name: "Hitech City",     lat: 17.4474, lon: 78.3762, ndvi: 0.22, noise: 4.5, water: 380, traffic: 3, safety: 7, infra: 7.5, walk: 8.6, nearbyProjects: [] },
+    { name: "Gachibowli",      lat: 17.4401, lon: 78.3489, ndvi: 0.25, noise: 5.0, water: 360, traffic: 3, safety: 6.5, infra: 6.7, walk: 3.8,
       nearbyProjects: [
         { name: "Pacifica Hillcrest", builder: "Pacifica Companies", type: "residential", status: "under construction",
           locationNote: "Multi-tower residential development in Puppalguda, near Financial District and ORR.",
@@ -605,79 +605,92 @@
           verifyUrl: "https://rerait.telangana.gov.in/SearchList/Search",
           verifyNote: "Search \"ASBL Broadway\" to confirm current status and registration number." }
       ] },
-    { name: "Old City",        lat: 17.3616, lon: 78.4747, ndvi: 0.18, noise: 3.5, water: 520, traffic: 3.5, safety: 6, infra: 8.5, walk: 8, nearbyProjects: [] },
-    { name: "Kukatpally",      lat: 17.4849, lon: 78.3996, ndvi: 0.20, noise: 4.0, water: 440, traffic: 4, safety: 6.5, infra: 8, walk: 7, nearbyProjects: [] },
-    { name: "Madhapur",        lat: 17.4504, lon: 78.3912, ndvi: 0.24, noise: 5.0, water: 370, traffic: 3.5, safety: 7, infra: 8, walk: 6, nearbyProjects: [] },
-    { name: "LB Nagar",        lat: 17.3483, lon: 78.5503, ndvi: 0.19, noise: 4.5, water: 460, traffic: 4.5, safety: 6, infra: 7, walk: 6.5, nearbyProjects: [] },
-    { name: "Uppal",           lat: 17.4054, lon: 78.5593, ndvi: 0.21, noise: 4.5, water: 480, traffic: 5, safety: 5.5, infra: 5.5, walk: 5, nearbyProjects: [] }
+    { name: "Old City",        lat: 17.3616, lon: 78.4747, ndvi: 0.18, noise: 3.5, water: 520, traffic: 3.5, safety: 6, infra: 6.5, walk: 8.3, nearbyProjects: [] },
+    { name: "Kukatpally",      lat: 17.4849, lon: 78.3996, ndvi: 0.20, noise: 4.0, water: 440, traffic: 4, safety: 6.5, infra: 8.3, walk: 5, nearbyProjects: [] },
+    { name: "Madhapur",        lat: 17.4504, lon: 78.3912, ndvi: 0.24, noise: 5.0, water: 370, traffic: 3.5, safety: 7, infra: 7.7, walk: 6.8, nearbyProjects: [] },
+    { name: "LB Nagar",        lat: 17.3483, lon: 78.5503, ndvi: 0.19, noise: 4.5, water: 460, traffic: 4.5, safety: 6, infra: 7.1, walk: 9, nearbyProjects: [] },
+    { name: "Uppal",           lat: 17.4054, lon: 78.5593, ndvi: 0.21, noise: 4.5, water: 480, traffic: 5, safety: 5.5, infra: 6.8, walk: 7.6, nearbyProjects: [] }
   ],
   mumbai: [
-    { name: "Bandra",          lat: 19.0596, lon: 72.8295, ndvi: 0.21, noise: 5.0, water: 210, traffic: 3, safety: 7.5, infra: 9, walk: 8.5 },
-    { name: "Andheri",         lat: 19.1136, lon: 72.8697, ndvi: 0.18, noise: 4.0, water: 240, traffic: 2.5, safety: 7, infra: 9, walk: 8 },
-    { name: "Worli",           lat: 19.0176, lon: 72.8178, ndvi: 0.15, noise: 4.5, water: 260, traffic: 3.5, safety: 7.5, infra: 8, walk: 7 },
-    { name: "Powai",           lat: 19.1197, lon: 72.9051, ndvi: 0.35, noise: 6.5, water: 190, traffic: 4.5, safety: 7.5, infra: 7.5, walk: 6.5 },
-    { name: "Dharavi",         lat: 19.0422, lon: 72.8538, ndvi: 0.10, noise: 3.5, water: 380, traffic: 3, safety: 5.5, infra: 7, walk: 8.5 },
-    { name: "Juhu",            lat: 19.1075, lon: 72.8263, ndvi: 0.22, noise: 5.5, water: 230, traffic: 4.5, safety: 7, infra: 7, walk: 6.5 },
-    { name: "Malad",           lat: 19.1874, lon: 72.8484, ndvi: 0.20, noise: 4.5, water: 250, traffic: 4, safety: 6.5, infra: 7.5, walk: 7 },
-    { name: "Thane",           lat: 19.2183, lon: 72.9781, ndvi: 0.32, noise: 4.0, water: 220, traffic: 4.5, safety: 6.5, infra: 7, walk: 6 },
-    { name: "Kurla",           lat: 19.0726, lon: 72.8793, ndvi: 0.13, noise: 3.5, water: 350, traffic: 3, safety: 5.5, infra: 8, walk: 7.5 },
-    { name: "Borivali",        lat: 19.2307, lon: 72.8567, ndvi: 0.38, noise: 5.0, water: 200, traffic: 5, safety: 7, infra: 7.5, walk: 7 }
+    { name: "Bandra",          lat: 19.0596, lon: 72.8295, ndvi: 0.21, noise: 5.0, water: 210, traffic: 3, safety: 7.5, infra: 8.1, walk: 8.4 },
+    { name: "Andheri",         lat: 19.1136, lon: 72.8697, ndvi: 0.18, noise: 4.0, water: 240, traffic: 2.5, safety: 7, infra: 6.8, walk: 8.4 },
+    { name: "Worli",           lat: 19.0176, lon: 72.8178, ndvi: 0.15, noise: 4.5, water: 260, traffic: 3.5, safety: 7.5, infra: 4.1, walk: 6.1 },
+    { name: "Powai",           lat: 19.1197, lon: 72.9051, ndvi: 0.35, noise: 6.5, water: 190, traffic: 4.5, safety: 7.5, infra: 5.2, walk: 6.9 },
+    { name: "Dharavi",         lat: 19.0422, lon: 72.8538, ndvi: 0.10, noise: 3.5, water: 380, traffic: 3, safety: 5.5, infra: 7.4, walk: 6.1 },
+    { name: "Juhu",            lat: 19.1075, lon: 72.8263, ndvi: 0.22, noise: 5.5, water: 230, traffic: 4.5, safety: 7, infra: 7.1, walk: 7.6 },
+    { name: "Malad",           lat: 19.1874, lon: 72.8484, ndvi: 0.20, noise: 4.5, water: 250, traffic: 4, safety: 6.5, infra: 6, walk: 5.5 },
+    { name: "Thane",           lat: 19.2183, lon: 72.9781, ndvi: 0.32, noise: 4.0, water: 220, traffic: 4.5, safety: 6.5, infra: 6.8, walk: 5.9 },
+    { name: "Kurla",           lat: 19.0726, lon: 72.8793, ndvi: 0.13, noise: 3.5, water: 350, traffic: 3, safety: 5.5, infra: 8, walk: 6.1 },
+    { name: "Borivali",        lat: 19.2307, lon: 72.8567, ndvi: 0.38, noise: 5.0, water: 200, traffic: 5, safety: 7, infra: 6.7, walk: 7.2 }
   ],
   delhi: [
-    { name: "Connaught Place", lat: 28.6315, lon: 77.2167, ndvi: 0.15, noise: 3.0, water: 320, traffic: 3, safety: 7, infra: 9, walk: 8 },
-    { name: "Hauz Khas",       lat: 28.5494, lon: 77.2001, ndvi: 0.42, noise: 6.0, water: 380, traffic: 4.5, safety: 7, infra: 8, walk: 7.5 },
-    { name: "Dwarka",          lat: 28.5921, lon: 77.0460, ndvi: 0.20, noise: 5.5, water: 520, traffic: 6, safety: 7, infra: 7, walk: 5.5 },
-    { name: "Rohini",          lat: 28.7041, lon: 77.1025, ndvi: 0.18, noise: 5.0, water: 480, traffic: 5.5, safety: 6.5, infra: 6.5, walk: 5.5 },
-    { name: "Lajpat Nagar",    lat: 28.5677, lon: 77.2433, ndvi: 0.22, noise: 4.5, water: 400, traffic: 3, safety: 6.5, infra: 8.5, walk: 8 },
-    { name: "Vasant Kunj",     lat: 28.5200, lon: 77.1577, ndvi: 0.35, noise: 6.5, water: 440, traffic: 6.5, safety: 7.5, infra: 7, walk: 5 },
-    { name: "Saket",           lat: 28.5244, lon: 77.2090, ndvi: 0.28, noise: 6.0, water: 400, traffic: 5, safety: 7, infra: 8, walk: 6 },
-    { name: "Noida Sector 18", lat: 28.5672, lon: 77.3211, ndvi: 0.19, noise: 4.0, water: 420, traffic: 4, safety: 6.5, infra: 8, walk: 6 },
-    { name: "Janakpuri",       lat: 28.6219, lon: 77.0828, ndvi: 0.21, noise: 5.5, water: 500, traffic: 5, safety: 6.5, infra: 7.5, walk: 6.5 },
-    { name: "Greater Kailash", lat: 28.5382, lon: 77.2410, ndvi: 0.30, noise: 6.0, water: 380, traffic: 6, safety: 7.5, infra: 7.5, walk: 6.5 }
+    { name: "Connaught Place", lat: 28.6315, lon: 77.2167, ndvi: 0.15, noise: 3.0, water: 320, traffic: 3, safety: 7, infra: 8.2, walk: 9.4 },
+    { name: "Hauz Khas",       lat: 28.5494, lon: 77.2001, ndvi: 0.42, noise: 6.0, water: 380, traffic: 4.5, safety: 7, infra: 7.1, walk: 7.5 },
+    { name: "Dwarka",          lat: 28.5921, lon: 77.0460, ndvi: 0.20, noise: 5.5, water: 520, traffic: 6, safety: 7, infra: 8.4, walk: 8.2 },
+    { name: "Rohini",          lat: 28.7041, lon: 77.1025, ndvi: 0.18, noise: 5.0, water: 480, traffic: 5.5, safety: 6.5, infra: 6.9, walk: 2.3 },
+    { name: "Lajpat Nagar",    lat: 28.5677, lon: 77.2433, ndvi: 0.22, noise: 4.5, water: 400, traffic: 3, safety: 6.5, infra: 8.9, walk: 8.2 },
+    { name: "Vasant Kunj",     lat: 28.5200, lon: 77.1577, ndvi: 0.35, noise: 6.5, water: 440, traffic: 6.5, safety: 7.5, infra: 5.6, walk: 3.5 },
+    { name: "Saket",           lat: 28.5244, lon: 77.2090, ndvi: 0.28, noise: 6.0, water: 400, traffic: 5, safety: 7, infra: 9.3, walk: 8.2 },
+    { name: "Noida Sector 18", lat: 28.5672, lon: 77.3211, ndvi: 0.19, noise: 4.0, water: 420, traffic: 4, safety: 6.5, infra: 6.9, walk: 9.2 },
+    { name: "Janakpuri",       lat: 28.6219, lon: 77.0828, ndvi: 0.21, noise: 5.5, water: 500, traffic: 5, safety: 6.5, infra: 6.5, walk: 5.2 },
+    { name: "Greater Kailash", lat: 28.5382, lon: 77.2410, ndvi: 0.30, noise: 6.0, water: 380, traffic: 6, safety: 7.5, infra: 7, walk: 8.6 }
   ],
   bangalore: [
-    { name: "Koramangala",     lat: 12.9352, lon: 77.6245, ndvi: 0.35, noise: 5.5, water: 420, traffic: 2.5, safety: 7, infra: 9, walk: 8 },
-    { name: "Indiranagar",     lat: 12.9784, lon: 77.6408, ndvi: 0.38, noise: 5.5, water: 400, traffic: 3, safety: 7, infra: 8.5, walk: 8 },
-    { name: "Whitefield",      lat: 12.9698, lon: 77.7499, ndvi: 0.30, noise: 4.5, water: 480, traffic: 2.5, safety: 6.5, infra: 6.5, walk: 5 },
-    { name: "Jayanagar",       lat: 12.9308, lon: 77.5834, ndvi: 0.45, noise: 7.0, water: 380, traffic: 4.5, safety: 7.5, infra: 8, walk: 7.5 },
-    { name: "Hebbal",          lat: 13.0358, lon: 77.5970, ndvi: 0.32, noise: 4.0, water: 460, traffic: 3, safety: 6.5, infra: 6.5, walk: 5 },
-    { name: "Electronic City", lat: 12.8399, lon: 77.6770, ndvi: 0.28, noise: 4.5, water: 520, traffic: 2.5, safety: 6.5, infra: 5.5, walk: 4 },
-    { name: "Marathahalli",    lat: 12.9591, lon: 77.6974, ndvi: 0.25, noise: 4.0, water: 500, traffic: 2.5, safety: 6.5, infra: 7, walk: 5 },
-    { name: "Malleshwaram",    lat: 13.0033, lon: 77.5700, ndvi: 0.40, noise: 6.0, water: 360, traffic: 5, safety: 7.5, infra: 8.5, walk: 8 },
-    { name: "HSR Layout",      lat: 12.9116, lon: 77.6474, ndvi: 0.33, noise: 6.0, water: 460, traffic: 3.5, safety: 7, infra: 7.5, walk: 6.5 },
-    { name: "Yelahanka",       lat: 13.1007, lon: 77.5963, ndvi: 0.36, noise: 6.5, water: 490, traffic: 5.5, safety: 6.5, infra: 5.5, walk: 5 }
+    { name: "Koramangala",     lat: 12.9352, lon: 77.6245, ndvi: 0.35, noise: 5.5, water: 420, traffic: 2.5, safety: 7, infra: 8.9, walk: 7.2 },
+    { name: "Indiranagar",     lat: 12.9784, lon: 77.6408, ndvi: 0.38, noise: 5.5, water: 400, traffic: 3, safety: 7, infra: 8.2, walk: 10 },
+    { name: "Whitefield",      lat: 12.9698, lon: 77.7499, ndvi: 0.30, noise: 4.5, water: 480, traffic: 2.5, safety: 6.5, infra: 7.8, walk: 7.6 },
+    { name: "Jayanagar",       lat: 12.9308, lon: 77.5834, ndvi: 0.45, noise: 7.0, water: 380, traffic: 4.5, safety: 7.5, infra: 9.1, walk: 9.4 },
+    { name: "Hebbal",          lat: 13.0358, lon: 77.5970, ndvi: 0.32, noise: 4.0, water: 460, traffic: 3, safety: 6.5, infra: 7.6, walk: 6.4 },
+    { name: "Electronic City", lat: 12.8399, lon: 77.6770, ndvi: 0.28, noise: 4.5, water: 520, traffic: 2.5, safety: 6.5, infra: 7.1, walk: 8.9 },
+    { name: "Marathahalli",    lat: 12.9591, lon: 77.6974, ndvi: 0.25, noise: 4.0, water: 500, traffic: 2.5, safety: 6.5, infra: 6.6, walk: 5.5 },
+    { name: "Malleshwaram",    lat: 13.0033, lon: 77.5700, ndvi: 0.40, noise: 6.0, water: 360, traffic: 5, safety: 7.5, infra: 9, walk: 8.6 },
+    { name: "HSR Layout",      lat: 12.9116, lon: 77.6474, ndvi: 0.33, noise: 6.0, water: 460, traffic: 3.5, safety: 7, infra: 8.2, walk: 7 },
+    { name: "Yelahanka",       lat: 13.1007, lon: 77.5963, ndvi: 0.36, noise: 6.5, water: 490, traffic: 5.5, safety: 6.5, infra: 8, walk: 7.9 }
   ],
   chennai: [
-    { name: "Anna Nagar",      lat: 13.0850, lon: 80.2101, ndvi: 0.25, noise: 5.5, water: 420, traffic: 5, safety: 7.5, infra: 7.5, walk: 7 },
-    { name: "Adyar",           lat: 13.0012, lon: 80.2565, ndvi: 0.30, noise: 6.0, water: 460, traffic: 5, safety: 7.5, infra: 7.5, walk: 6.5 },
-    { name: "T Nagar",         lat: 13.0418, lon: 80.2341, ndvi: 0.18, noise: 3.5, water: 500, traffic: 2, safety: 6.5, infra: 9, walk: 8.5 },
-    { name: "Velachery",       lat: 12.9815, lon: 80.2180, ndvi: 0.22, noise: 5.0, water: 480, traffic: 3.5, safety: 6.5, infra: 7, walk: 6 },
-    { name: "Porur",           lat: 13.0389, lon: 80.1567, ndvi: 0.28, noise: 5.5, water: 520, traffic: 3, safety: 6, infra: 6, walk: 5 },
-    { name: "OMR",             lat: 12.9010, lon: 80.2279, ndvi: 0.24, noise: 4.5, water: 560, traffic: 2.5, safety: 6, infra: 6, walk: 4.5 },
-    { name: "Perambur",        lat: 13.1177, lon: 80.2339, ndvi: 0.19, noise: 4.0, water: 500, traffic: 4, safety: 6, infra: 7, walk: 6.5 },
-    { name: "Mylapore",        lat: 13.0335, lon: 80.2685, ndvi: 0.20, noise: 5.0, water: 470, traffic: 3.5, safety: 7, infra: 8, walk: 7.5 },
-    { name: "Tambaram",        lat: 12.9249, lon: 80.1000, ndvi: 0.26, noise: 4.5, water: 490, traffic: 4.5, safety: 6, infra: 6.5, walk: 5.5 },
-    { name: "Nungambakkam",    lat: 13.0569, lon: 80.2425, ndvi: 0.22, noise: 5.0, water: 440, traffic: 3.5, safety: 7, infra: 8, walk: 7 }
+    { name: "Anna Nagar",      lat: 13.0850, lon: 80.2101, ndvi: 0.25, noise: 5.5, water: 420, traffic: 5, safety: 7.5, infra: 7, walk: 8.3 },
+    { name: "Adyar",           lat: 13.0012, lon: 80.2565, ndvi: 0.30, noise: 6.0, water: 460, traffic: 5, safety: 7.5, infra: 8.3, walk: 7.9 },
+    { name: "T Nagar",         lat: 13.0418, lon: 80.2341, ndvi: 0.18, noise: 3.5, water: 500, traffic: 2, safety: 6.5, infra: 8.5, walk: 8.3 },
+    { name: "Velachery",       lat: 12.9815, lon: 80.2180, ndvi: 0.22, noise: 5.0, water: 480, traffic: 3.5, safety: 6.5, infra: 9.1, walk: 6.7 },
+    { name: "Porur",           lat: 13.0389, lon: 80.1567, ndvi: 0.28, noise: 5.5, water: 520, traffic: 3, safety: 6, infra: 4.3, walk: 5.9 },
+    { name: "OMR",             lat: 12.9010, lon: 80.2279, ndvi: 0.24, noise: 4.5, water: 560, traffic: 2.5, safety: 6, infra: 6, walk: 9.7 },
+    { name: "Perambur",        lat: 13.1177, lon: 80.2339, ndvi: 0.19, noise: 4.0, water: 500, traffic: 4, safety: 6, infra: 4.8, walk: 4.3 },
+    { name: "Mylapore",        lat: 13.0335, lon: 80.2685, ndvi: 0.20, noise: 5.0, water: 470, traffic: 3.5, safety: 7, infra: 8.2, walk: 9.7 },
+    { name: "Tambaram",        lat: 12.9249, lon: 80.1000, ndvi: 0.26, noise: 4.5, water: 490, traffic: 4.5, safety: 6, infra: 6.3, walk: 4.6 },
+    { name: "Nungambakkam",    lat: 13.0569, lon: 80.2425, ndvi: 0.22, noise: 5.0, water: 440, traffic: 3.5, safety: 7, infra: 9.2, walk: 7.3 }
   ],
   pune: [
-    { name: "Koregaon Park",   lat: 18.5362, lon: 73.8938, ndvi: 0.38, noise: 6.0, water: 260, traffic: 5, safety: 7.5, infra: 7.5, walk: 7 },
-    { name: "Hinjewadi",       lat: 18.5912, lon: 73.7389, ndvi: 0.28, noise: 5.0, water: 380, traffic: 2, safety: 6, infra: 5, walk: 3.5 },
-    { name: "Kothrud",         lat: 18.5074, lon: 73.8077, ndvi: 0.32, noise: 6.0, water: 300, traffic: 4.5, safety: 7, infra: 7.5, walk: 6.5 },
-    { name: "Viman Nagar",     lat: 18.5679, lon: 73.9143, ndvi: 0.25, noise: 5.5, water: 320, traffic: 4, safety: 6.5, infra: 7, walk: 6 },
-    { name: "Hadapsar",        lat: 18.5008, lon: 73.9379, ndvi: 0.22, noise: 4.5, water: 380, traffic: 3.5, safety: 6, infra: 6, walk: 5 },
-    { name: "Aundh",           lat: 18.5590, lon: 73.8080, ndvi: 0.35, noise: 6.0, water: 290, traffic: 5, safety: 7.5, infra: 7.5, walk: 6.5 },
-    { name: "Baner",           lat: 18.5590, lon: 73.7868, ndvi: 0.30, noise: 5.5, water: 340, traffic: 3, safety: 6.5, infra: 6, walk: 5 },
-    { name: "Wakad",           lat: 18.5985, lon: 73.7611, ndvi: 0.26, noise: 5.0, water: 370, traffic: 3, safety: 6.5, infra: 6, walk: 5 },
-    { name: "Magarpatta",      lat: 18.5147, lon: 73.9307, ndvi: 0.29, noise: 5.5, water: 310, traffic: 5, safety: 7.5, infra: 8, walk: 8 },
-    { name: "Kharadi",         lat: 18.5512, lon: 73.9442, ndvi: 0.23, noise: 5.0, water: 350, traffic: 3, safety: 6.5, infra: 6, walk: 5 }
+    { name: "Koregaon Park",   lat: 18.5362, lon: 73.8938, ndvi: 0.38, noise: 6.0, water: 260, traffic: 5, safety: 7.5, infra: 6.6, walk: 5.7 },
+    // KNOWN COORDINATE-REPRESENTATIVENESS CAVEAT (found during the infra/
+    // walk recompute, 2026-07-14): this point sits at Shivaji Chowk, a
+    // genuinely dense junction with a bus stop, the Hinjawadi metro
+    // station, and several restaurants all within ~0.3km — real, correctly
+    // -tagged OSM data. But Hinjewadi as commonly understood spans several
+    // km of IT campuses (Phases 1-3) that are widely known for being car-
+    // dependent and poorly walkable. The recomputed walkability score
+    // (~9.3) reflects this one specific junction, not the area's broader
+    // reputation — a known limitation of any single-point-per-neighbourhood
+    // scoring, not something fixed here. Not swapping the anchor point
+    // itself, since Shivaji Chowk is still a legitimate, unambiguous
+    // landmark for "Hinjewadi" — just flagging the gap between this point
+    // and the area's average character.
+    { name: "Hinjewadi",       lat: 18.5912, lon: 73.7389, ndvi: 0.28, noise: 5.0, water: 380, traffic: 2, safety: 6, infra: 8.5, walk: 9.4 },
+    { name: "Kothrud",         lat: 18.5074, lon: 73.8077, ndvi: 0.32, noise: 6.0, water: 300, traffic: 4.5, safety: 7, infra: 7.8, walk: 8.6 },
+    { name: "Viman Nagar",     lat: 18.5679, lon: 73.9143, ndvi: 0.25, noise: 5.5, water: 320, traffic: 4, safety: 6.5, infra: 5.3, walk: 5.7 },
+    { name: "Hadapsar",        lat: 18.5008, lon: 73.9379, ndvi: 0.22, noise: 4.5, water: 380, traffic: 3.5, safety: 6, infra: 4.8, walk: 6.1 },
+    { name: "Aundh",           lat: 18.5590, lon: 73.8080, ndvi: 0.35, noise: 6.0, water: 290, traffic: 5, safety: 7.5, infra: 7.1, walk: 8.4 },
+    { name: "Baner",           lat: 18.5590, lon: 73.7868, ndvi: 0.30, noise: 5.5, water: 340, traffic: 3, safety: 6.5, infra: 6.7, walk: 8.3 },
+    { name: "Wakad",           lat: 18.5985, lon: 73.7611, ndvi: 0.26, noise: 5.0, water: 370, traffic: 3, safety: 6.5, infra: 7.5, walk: 6.4 },
+    { name: "Magarpatta",      lat: 18.5147, lon: 73.9307, ndvi: 0.29, noise: 5.5, water: 310, traffic: 5, safety: 7.5, infra: 4.3, walk: 5.6 },
+    { name: "Kharadi",         lat: 18.5512, lon: 73.9442, ndvi: 0.23, noise: 5.0, water: 350, traffic: 3, safety: 6.5, infra: 5.8, walk: 4.3 }
   ],
   kolkata: [
-    { name: "Salt Lake",       lat: 22.5958, lon: 88.4147, ndvi: 0.32, noise: 6.5, water: 260, traffic: 6, safety: 7.5, infra: 7, walk: 6 },
-    { name: "Park Street",     lat: 22.5520, lon: 88.3529, ndvi: 0.18, noise: 3.5, water: 240, traffic: 3, safety: 7, infra: 8.5, walk: 8 },
-    { name: "Howrah",          lat: 22.5829, lon: 88.3428, ndvi: 0.15, noise: 3.0, water: 380, traffic: 2.5, safety: 6, infra: 7.5, walk: 7 },
-    { name: "New Town",        lat: 22.6275, lon: 88.4625, ndvi: 0.35, noise: 7.0, water: 250, traffic: 6.5, safety: 7, infra: 5.5, walk: 5 },
-    { name: "Ballygunge",      lat: 22.5263, lon: 88.3676, ndvi: 0.28, noise: 5.5, water: 260, traffic: 5, safety: 7.5, infra: 7.5, walk: 7 },
-    { name: "Alipore",         lat: 22.5355, lon: 88.3353, ndvi: 0.30, noise: 6.0, water: 250, traffic: 5.5, safety: 8, infra: 7, walk: 6 },
+    { name: "Salt Lake",       lat: 22.5958, lon: 88.4147, ndvi: 0.32, noise: 6.5, water: 260, traffic: 6, safety: 7.5, infra: 7.9, walk: 6.6 },
+    { name: "Park Street",     lat: 22.5520, lon: 88.3529, ndvi: 0.18, noise: 3.5, water: 240, traffic: 3, safety: 7, infra: 8.5, walk: 8.6 },
+    { name: "Howrah",          lat: 22.5829, lon: 88.3428, ndvi: 0.15, noise: 3.0, water: 380, traffic: 2.5, safety: 6, infra: 5.2, walk: 6.3 },
+    { name: "New Town",        lat: 22.6275, lon: 88.4625, ndvi: 0.35, noise: 7.0, water: 250, traffic: 6.5, safety: 7, infra: 2.9, walk: 1.5 },
+    { name: "Ballygunge",      lat: 22.5263, lon: 88.3676, ndvi: 0.28, noise: 5.5, water: 260, traffic: 5, safety: 7.5, infra: 5.9, walk: 8.2 },
+    { name: "Alipore",         lat: 22.5355, lon: 88.3353, ndvi: 0.30, noise: 6.0, water: 250, traffic: 5.5, safety: 8, infra: 5.7, walk: 2.8 },
     // Dumdum/North Dumdum/South Dumdum are three separate, adjacent
     // municipalities all derived from the same historical name — every
     // specific landmark tested (the railway junction, Nagerbazar) resolved
@@ -685,22 +698,22 @@
     // This coordinate is OSM's own place=town node explicitly named "Dum
     // Dum" — the best available anchor, not a fully unambiguous landmark
     // like Howrah Junction or Magarpatta Circle.
-    { name: "Dumdum",          lat: 22.6521, lon: 88.4360, ndvi: 0.22, noise: 4.0, water: 340, traffic: 4, safety: 6, infra: 7, walk: 6.5 },
-    { name: "Rajarhat",        lat: 22.6215, lon: 88.4357, ndvi: 0.33, noise: 6.5, water: 280, traffic: 6, safety: 6.5, infra: 5.5, walk: 5 },
-    { name: "Behala",          lat: 22.4996, lon: 88.3130, ndvi: 0.20, noise: 5.0, water: 350, traffic: 4, safety: 6, infra: 7, walk: 6.5 },
-    { name: "Tollygunge",      lat: 22.4996, lon: 88.3476, ndvi: 0.24, noise: 5.0, water: 320, traffic: 4.5, safety: 6.5, infra: 7, walk: 6.5 }
+    { name: "Dumdum",          lat: 22.6521, lon: 88.4360, ndvi: 0.22, noise: 4.0, water: 340, traffic: 4, safety: 6, infra: 3.9, walk: 4.8 },
+    { name: "Rajarhat",        lat: 22.6215, lon: 88.4357, ndvi: 0.33, noise: 6.5, water: 280, traffic: 6, safety: 6.5, infra: 6, walk: 3.2 },
+    { name: "Behala",          lat: 22.4996, lon: 88.3130, ndvi: 0.20, noise: 5.0, water: 350, traffic: 4, safety: 6, infra: 4.3, walk: 5.5 },
+    { name: "Tollygunge",      lat: 22.4996, lon: 88.3476, ndvi: 0.24, noise: 5.0, water: 320, traffic: 4.5, safety: 6.5, infra: 5.6, walk: 6.9 }
   ],
   ahmedabad: [
-    { name: "Navrangpura",     lat: 23.0395, lon: 72.5603, ndvi: 0.18, noise: 5.0, water: 420, traffic: 3.5, safety: 7, infra: 8, walk: 7 },
-    { name: "Satellite",       lat: 23.0245, lon: 72.5155, ndvi: 0.22, noise: 6.0, water: 460, traffic: 4.5, safety: 7.5, infra: 7.5, walk: 6.5 },
-    { name: "Bopal",           lat: 23.0311, lon: 72.4673, ndvi: 0.30, noise: 6.5, water: 520, traffic: 5.5, safety: 6.5, infra: 5.5, walk: 5 },
-    { name: "Maninagar",       lat: 22.9942, lon: 72.6054, ndvi: 0.15, noise: 4.0, water: 480, traffic: 3.5, safety: 6, infra: 7.5, walk: 7 },
-    { name: "Prahlad Nagar",   lat: 23.0130, lon: 72.5061, ndvi: 0.20, noise: 6.0, water: 440, traffic: 4.5, safety: 7.5, infra: 7, walk: 6 },
-    { name: "Vastrapur",       lat: 23.0300, lon: 72.5300, ndvi: 0.24, noise: 5.5, water: 420, traffic: 5, safety: 7.5, infra: 7, walk: 6.5 },
-    { name: "Chandkheda",      lat: 23.1100, lon: 72.5800, ndvi: 0.19, noise: 5.0, water: 500, traffic: 5.5, safety: 6, infra: 5, walk: 4.5 },
-    { name: "Gota",            lat: 23.0900, lon: 72.5400, ndvi: 0.21, noise: 5.5, water: 510, traffic: 5.5, safety: 6, infra: 5, walk: 4.5 },
-    { name: "SG Highway",      lat: 23.0284, lon: 72.5069, ndvi: 0.17, noise: 3.5, water: 460, traffic: 3, safety: 6.5, infra: 7.5, walk: 4.5 },
-    { name: "Thaltej",         lat: 23.0450, lon: 72.5100, ndvi: 0.23, noise: 5.5, water: 430, traffic: 5, safety: 7.5, infra: 6.5, walk: 5.5 }
+    { name: "Navrangpura",     lat: 23.0395, lon: 72.5603, ndvi: 0.18, noise: 5.0, water: 420, traffic: 3.5, safety: 7, infra: 7.5, walk: 7.2 },
+    { name: "Satellite",       lat: 23.0245, lon: 72.5155, ndvi: 0.22, noise: 6.0, water: 460, traffic: 4.5, safety: 7.5, infra: 6.6, walk: 4 },
+    { name: "Bopal",           lat: 23.0311, lon: 72.4673, ndvi: 0.30, noise: 6.5, water: 520, traffic: 5.5, safety: 6.5, infra: 3.9, walk: 4.5 },
+    { name: "Maninagar",       lat: 22.9942, lon: 72.6054, ndvi: 0.15, noise: 4.0, water: 480, traffic: 3.5, safety: 6, infra: 5.6, walk: 5.5 },
+    { name: "Prahlad Nagar",   lat: 23.0130, lon: 72.5061, ndvi: 0.20, noise: 6.0, water: 440, traffic: 4.5, safety: 7.5, infra: 4.3, walk: 5.4 },
+    { name: "Vastrapur",       lat: 23.0300, lon: 72.5300, ndvi: 0.24, noise: 5.5, water: 420, traffic: 5, safety: 7.5, infra: 7.2, walk: 3.9 },
+    { name: "Chandkheda",      lat: 23.1100, lon: 72.5800, ndvi: 0.19, noise: 5.0, water: 500, traffic: 5.5, safety: 6, infra: 2.8, walk: 4 },
+    { name: "Gota",            lat: 23.0900, lon: 72.5400, ndvi: 0.21, noise: 5.5, water: 510, traffic: 5.5, safety: 6, infra: 2.6, walk: 3 },
+    { name: "SG Highway",      lat: 23.0284, lon: 72.5069, ndvi: 0.17, noise: 3.5, water: 460, traffic: 3, safety: 6.5, infra: 6.6, walk: 5.8 },
+    { name: "Thaltej",         lat: 23.0450, lon: 72.5100, ndvi: 0.23, noise: 5.5, water: 430, traffic: 5, safety: 7.5, infra: 5.2, walk: 4.5 }
   ]
 };
     function updateNeighbourhoods(selectId, citySelectId) {

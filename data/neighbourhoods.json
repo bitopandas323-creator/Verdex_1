@@ -9,8 +9,8 @@
     "water": 320,
     "traffic": 5,
     "safety": 7.5,
-    "infra": 8,
-    "walk": 7
+    "infra": 6.8,
+    "walk": 3.9
   },
   {
     "name": "Jubilee Hills",
@@ -22,8 +22,8 @@
     "water": 300,
     "traffic": 5.5,
     "safety": 8,
-    "infra": 8,
-    "walk": 7
+    "infra": 6.7,
+    "walk": 9.2
   },
   {
     "name": "Secunderabad",
@@ -35,8 +35,8 @@
     "water": 420,
     "traffic": 4.5,
     "safety": 6.5,
-    "infra": 8.5,
-    "walk": 7.5
+    "infra": 7.6,
+    "walk": 9.2
   },
   {
     "name": "Hitech City",
@@ -48,8 +48,8 @@
     "water": 380,
     "traffic": 3,
     "safety": 7,
-    "infra": 9,
-    "walk": 5.5
+    "infra": 7.5,
+    "walk": 8.6
   },
   {
     "name": "Gachibowli",
@@ -61,8 +61,8 @@
     "water": 360,
     "traffic": 3,
     "safety": 6.5,
-    "infra": 7.5,
-    "walk": 5
+    "infra": 6.7,
+    "walk": 3.8
   },
   {
     "name": "Old City",
@@ -74,8 +74,8 @@
     "water": 520,
     "traffic": 3.5,
     "safety": 6,
-    "infra": 8.5,
-    "walk": 8
+    "infra": 6.5,
+    "walk": 8.3
   },
   {
     "name": "Kukatpally",
@@ -87,8 +87,8 @@
     "water": 440,
     "traffic": 4,
     "safety": 6.5,
-    "infra": 8,
-    "walk": 7
+    "infra": 8.3,
+    "walk": 5
   },
   {
     "name": "Madhapur",
@@ -100,8 +100,8 @@
     "water": 370,
     "traffic": 3.5,
     "safety": 7,
-    "infra": 8,
-    "walk": 6
+    "infra": 7.7,
+    "walk": 6.8
   },
   {
     "name": "LB Nagar",
@@ -113,8 +113,8 @@
     "water": 460,
     "traffic": 4.5,
     "safety": 6,
-    "infra": 7,
-    "walk": 6.5
+    "infra": 7.1,
+    "walk": 9
   },
   {
     "name": "Uppal",
@@ -126,8 +126,8 @@
     "water": 480,
     "traffic": 5,
     "safety": 5.5,
-    "infra": 5.5,
-    "walk": 5
+    "infra": 6.8,
+    "walk": 7.6
   },
   {
     "name": "Bandra",
@@ -139,8 +139,8 @@
     "water": 210,
     "traffic": 3,
     "safety": 7.5,
-    "infra": 9,
-    "walk": 8.5
+    "infra": 8.1,
+    "walk": 8.4
   },
   {
     "name": "Andheri",
@@ -152,8 +152,8 @@
     "water": 240,
     "traffic": 2.5,
     "safety": 7,
-    "infra": 9,
-    "walk": 8
+    "infra": 6.8,
+    "walk": 8.4
   },
   {
     "name": "Worli",
@@ -165,8 +165,8 @@
     "water": 260,
     "traffic": 3.5,
     "safety": 7.5,
-    "infra": 8,
-    "walk": 7
+    "infra": 4.1,
+    "walk": 6.1
   },
   {
     "name": "Powai",
@@ -178,8 +178,8 @@
     "water": 190,
     "traffic": 4.5,
     "safety": 7.5,
-    "infra": 7.5,
-    "walk": 6.5
+    "infra": 5.2,
+    "walk": 6.9
   },
   {
     "name": "Dharavi",
@@ -191,8 +191,8 @@
     "water": 380,
     "traffic": 3,
     "safety": 5.5,
-    "infra": 7,
-    "walk": 8.5
+    "infra": 7.4,
+    "walk": 6.1
   },
   {
     "name": "Juhu",
@@ -204,8 +204,8 @@
     "water": 230,
     "traffic": 4.5,
     "safety": 7,
-    "infra": 7,
-    "walk": 6.5
+    "infra": 7.1,
+    "walk": 7.6
   },
   {
     "name": "Malad",
@@ -217,8 +217,8 @@
     "water": 250,
     "traffic": 4,
     "safety": 6.5,
-    "infra": 7.5,
-    "walk": 7
+    "infra": 6,
+    "walk": 5.5
   },
   {
     "name": "Thane",
@@ -230,8 +230,8 @@
     "water": 220,
     "traffic": 4.5,
     "safety": 6.5,
-    "infra": 7,
-    "walk": 6
+    "infra": 6.8,
+    "walk": 5.9
   },
   {
     "name": "Kurla",
@@ -244,7 +244,7 @@
     "traffic": 3,
     "safety": 5.5,
     "infra": 8,
-    "walk": 7.5
+    "walk": 6.1
   },
   {
     "name": "Borivali",
@@ -256,8 +256,8 @@
     "water": 200,
     "traffic": 5,
     "safety": 7,
-    "infra": 7.5,
-    "walk": 7
+    "infra": 6.7,
+    "walk": 7.2
   },
   {
     "name": "Connaught Place",
@@ -269,8 +269,8 @@
     "water": 320,
     "traffic": 3,
     "safety": 7,
-    "infra": 9,
-    "walk": 8
+    "infra": 8.2,
+    "walk": 9.4
   },
   {
     "name": "Hauz Khas",
@@ -282,7 +282,7 @@
     "water": 380,
     "traffic": 4.5,
     "safety": 7,
-    "infra": 8,
+    "infra": 7.1,
     "walk": 7.5
   },
   {
@@ -295,8 +295,8 @@
     "water": 520,
     "traffic": 6,
     "safety": 7,
-    "infra": 7,
-    "walk": 5.5
+    "infra": 8.4,
+    "walk": 8.2
   },
   {
     "name": "Rohini",
@@ -308,8 +308,8 @@
     "water": 480,
     "traffic": 5.5,
     "safety": 6.5,
-    "infra": 6.5,
-    "walk": 5.5
+    "infra": 6.9,
+    "walk": 2.3
   },
   {
     "name": "Lajpat Nagar",
@@ -321,8 +321,8 @@
     "water": 400,
     "traffic": 3,
     "safety": 6.5,
-    "infra": 8.5,
-    "walk": 8
+    "infra": 8.9,
+    "walk": 8.2
   },
   {
     "name": "Vasant Kunj",
@@ -334,8 +334,8 @@
     "water": 440,
     "traffic": 6.5,
     "safety": 7.5,
-    "infra": 7,
-    "walk": 5
+    "infra": 5.6,
+    "walk": 3.5
   },
   {
     "name": "Saket",
@@ -347,8 +347,8 @@
     "water": 400,
     "traffic": 5,
     "safety": 7,
-    "infra": 8,
-    "walk": 6
+    "infra": 9.3,
+    "walk": 8.2
   },
   {
     "name": "Noida Sector 18",
@@ -360,8 +360,8 @@
     "water": 420,
     "traffic": 4,
     "safety": 6.5,
-    "infra": 8,
-    "walk": 6
+    "infra": 6.9,
+    "walk": 9.2
   },
   {
     "name": "Janakpuri",
@@ -373,8 +373,8 @@
     "water": 500,
     "traffic": 5,
     "safety": 6.5,
-    "infra": 7.5,
-    "walk": 6.5
+    "infra": 6.5,
+    "walk": 5.2
   },
   {
     "name": "Greater Kailash",
@@ -386,8 +386,8 @@
     "water": 380,
     "traffic": 6,
     "safety": 7.5,
-    "infra": 7.5,
-    "walk": 6.5
+    "infra": 7,
+    "walk": 8.6
   },
   {
     "name": "Koramangala",
@@ -399,8 +399,8 @@
     "water": 420,
     "traffic": 2.5,
     "safety": 7,
-    "infra": 9,
-    "walk": 8
+    "infra": 8.9,
+    "walk": 7.2
   },
   {
     "name": "Indiranagar",
@@ -412,8 +412,8 @@
     "water": 400,
     "traffic": 3,
     "safety": 7,
-    "infra": 8.5,
-    "walk": 8
+    "infra": 8.2,
+    "walk": 10
   },
   {
     "name": "Whitefield",
@@ -425,8 +425,8 @@
     "water": 480,
     "traffic": 2.5,
     "safety": 6.5,
-    "infra": 6.5,
-    "walk": 5
+    "infra": 7.8,
+    "walk": 7.6
   },
   {
     "name": "Jayanagar",
@@ -438,8 +438,8 @@
     "water": 380,
     "traffic": 4.5,
     "safety": 7.5,
-    "infra": 8,
-    "walk": 7.5
+    "infra": 9.1,
+    "walk": 9.4
   },
   {
     "name": "Hebbal",
@@ -451,8 +451,8 @@
     "water": 460,
     "traffic": 3,
     "safety": 6.5,
-    "infra": 6.5,
-    "walk": 5
+    "infra": 7.6,
+    "walk": 6.4
   },
   {
     "name": "Electronic City",
@@ -464,8 +464,8 @@
     "water": 520,
     "traffic": 2.5,
     "safety": 6.5,
-    "infra": 5.5,
-    "walk": 4
+    "infra": 7.1,
+    "walk": 8.9
   },
   {
     "name": "Marathahalli",
@@ -477,8 +477,8 @@
     "water": 500,
     "traffic": 2.5,
     "safety": 6.5,
-    "infra": 7,
-    "walk": 5
+    "infra": 6.6,
+    "walk": 5.5
   },
   {
     "name": "Malleshwaram",
@@ -490,8 +490,8 @@
     "water": 360,
     "traffic": 5,
     "safety": 7.5,
-    "infra": 8.5,
-    "walk": 8
+    "infra": 9,
+    "walk": 8.6
   },
   {
     "name": "HSR Layout",
@@ -503,8 +503,8 @@
     "water": 460,
     "traffic": 3.5,
     "safety": 7,
-    "infra": 7.5,
-    "walk": 6.5
+    "infra": 8.2,
+    "walk": 7
   },
   {
     "name": "Yelahanka",
@@ -516,8 +516,8 @@
     "water": 490,
     "traffic": 5.5,
     "safety": 6.5,
-    "infra": 5.5,
-    "walk": 5
+    "infra": 8,
+    "walk": 7.9
   },
   {
     "name": "Anna Nagar",
@@ -529,8 +529,8 @@
     "water": 420,
     "traffic": 5,
     "safety": 7.5,
-    "infra": 7.5,
-    "walk": 7
+    "infra": 7,
+    "walk": 8.3
   },
   {
     "name": "Adyar",
@@ -542,8 +542,8 @@
     "water": 460,
     "traffic": 5,
     "safety": 7.5,
-    "infra": 7.5,
-    "walk": 6.5
+    "infra": 8.3,
+    "walk": 7.9
   },
   {
     "name": "T Nagar",
@@ -555,8 +555,8 @@
     "water": 500,
     "traffic": 2,
     "safety": 6.5,
-    "infra": 9,
-    "walk": 8.5
+    "infra": 8.5,
+    "walk": 8.3
   },
   {
     "name": "Velachery",
@@ -568,8 +568,8 @@
     "water": 480,
     "traffic": 3.5,
     "safety": 6.5,
-    "infra": 7,
-    "walk": 6
+    "infra": 9.1,
+    "walk": 6.7
   },
   {
     "name": "Porur",
@@ -581,8 +581,8 @@
     "water": 520,
     "traffic": 3,
     "safety": 6,
-    "infra": 6,
-    "walk": 5
+    "infra": 4.3,
+    "walk": 5.9
   },
   {
     "name": "OMR",
@@ -595,7 +595,7 @@
     "traffic": 2.5,
     "safety": 6,
     "infra": 6,
-    "walk": 4.5
+    "walk": 9.7
   },
   {
     "name": "Perambur",
@@ -607,8 +607,8 @@
     "water": 500,
     "traffic": 4,
     "safety": 6,
-    "infra": 7,
-    "walk": 6.5
+    "infra": 4.8,
+    "walk": 4.3
   },
   {
     "name": "Mylapore",
@@ -620,8 +620,8 @@
     "water": 470,
     "traffic": 3.5,
     "safety": 7,
-    "infra": 8,
-    "walk": 7.5
+    "infra": 8.2,
+    "walk": 9.7
   },
   {
     "name": "Tambaram",
@@ -633,8 +633,8 @@
     "water": 490,
     "traffic": 4.5,
     "safety": 6,
-    "infra": 6.5,
-    "walk": 5.5
+    "infra": 6.3,
+    "walk": 4.6
   },
   {
     "name": "Nungambakkam",
@@ -646,8 +646,8 @@
     "water": 440,
     "traffic": 3.5,
     "safety": 7,
-    "infra": 8,
-    "walk": 7
+    "infra": 9.2,
+    "walk": 7.3
   },
   {
     "name": "Koregaon Park",
@@ -659,8 +659,8 @@
     "water": 260,
     "traffic": 5,
     "safety": 7.5,
-    "infra": 7.5,
-    "walk": 7
+    "infra": 6.6,
+    "walk": 5.7
   },
   {
     "name": "Hinjewadi",
@@ -672,8 +672,8 @@
     "water": 380,
     "traffic": 2,
     "safety": 6,
-    "infra": 5,
-    "walk": 3.5
+    "infra": 8.5,
+    "walk": 9.4
   },
   {
     "name": "Kothrud",
@@ -685,8 +685,8 @@
     "water": 300,
     "traffic": 4.5,
     "safety": 7,
-    "infra": 7.5,
-    "walk": 6.5
+    "infra": 7.8,
+    "walk": 8.6
   },
   {
     "name": "Viman Nagar",
@@ -698,8 +698,8 @@
     "water": 320,
     "traffic": 4,
     "safety": 6.5,
-    "infra": 7,
-    "walk": 6
+    "infra": 5.3,
+    "walk": 5.7
   },
   {
     "name": "Hadapsar",
@@ -711,8 +711,8 @@
     "water": 380,
     "traffic": 3.5,
     "safety": 6,
-    "infra": 6,
-    "walk": 5
+    "infra": 4.8,
+    "walk": 6.1
   },
   {
     "name": "Aundh",
@@ -724,8 +724,8 @@
     "water": 290,
     "traffic": 5,
     "safety": 7.5,
-    "infra": 7.5,
-    "walk": 6.5
+    "infra": 7.1,
+    "walk": 8.4
   },
   {
     "name": "Baner",
@@ -737,8 +737,8 @@
     "water": 340,
     "traffic": 3,
     "safety": 6.5,
-    "infra": 6,
-    "walk": 5
+    "infra": 6.7,
+    "walk": 8.3
   },
   {
     "name": "Wakad",
@@ -750,8 +750,8 @@
     "water": 370,
     "traffic": 3,
     "safety": 6.5,
-    "infra": 6,
-    "walk": 5
+    "infra": 7.5,
+    "walk": 6.4
   },
   {
     "name": "Magarpatta",
@@ -763,8 +763,8 @@
     "water": 310,
     "traffic": 5,
     "safety": 7.5,
-    "infra": 8,
-    "walk": 8
+    "infra": 4.3,
+    "walk": 5.6
   },
   {
     "name": "Kharadi",
@@ -776,8 +776,8 @@
     "water": 350,
     "traffic": 3,
     "safety": 6.5,
-    "infra": 6,
-    "walk": 5
+    "infra": 5.8,
+    "walk": 4.3
   },
   {
     "name": "Salt Lake",
@@ -789,8 +789,8 @@
     "water": 260,
     "traffic": 6,
     "safety": 7.5,
-    "infra": 7,
-    "walk": 6
+    "infra": 7.9,
+    "walk": 6.6
   },
   {
     "name": "Park Street",
@@ -803,7 +803,7 @@
     "traffic": 3,
     "safety": 7,
     "infra": 8.5,
-    "walk": 8
+    "walk": 8.6
   },
   {
     "name": "Howrah",
@@ -815,8 +815,8 @@
     "water": 380,
     "traffic": 2.5,
     "safety": 6,
-    "infra": 7.5,
-    "walk": 7
+    "infra": 5.2,
+    "walk": 6.3
   },
   {
     "name": "New Town",
@@ -828,8 +828,8 @@
     "water": 250,
     "traffic": 6.5,
     "safety": 7,
-    "infra": 5.5,
-    "walk": 5
+    "infra": 2.9,
+    "walk": 1.5
   },
   {
     "name": "Ballygunge",
@@ -841,8 +841,8 @@
     "water": 260,
     "traffic": 5,
     "safety": 7.5,
-    "infra": 7.5,
-    "walk": 7
+    "infra": 5.9,
+    "walk": 8.2
   },
   {
     "name": "Alipore",
@@ -854,8 +854,8 @@
     "water": 250,
     "traffic": 5.5,
     "safety": 8,
-    "infra": 7,
-    "walk": 6
+    "infra": 5.7,
+    "walk": 2.8
   },
   {
     "name": "Dumdum",
@@ -867,8 +867,8 @@
     "water": 340,
     "traffic": 4,
     "safety": 6,
-    "infra": 7,
-    "walk": 6.5
+    "infra": 3.9,
+    "walk": 4.8
   },
   {
     "name": "Rajarhat",
@@ -880,8 +880,8 @@
     "water": 280,
     "traffic": 6,
     "safety": 6.5,
-    "infra": 5.5,
-    "walk": 5
+    "infra": 6,
+    "walk": 3.2
   },
   {
     "name": "Behala",
@@ -893,8 +893,8 @@
     "water": 350,
     "traffic": 4,
     "safety": 6,
-    "infra": 7,
-    "walk": 6.5
+    "infra": 4.3,
+    "walk": 5.5
   },
   {
     "name": "Tollygunge",
@@ -906,8 +906,8 @@
     "water": 320,
     "traffic": 4.5,
     "safety": 6.5,
-    "infra": 7,
-    "walk": 6.5
+    "infra": 5.6,
+    "walk": 6.9
   },
   {
     "name": "Navrangpura",
@@ -919,8 +919,8 @@
     "water": 420,
     "traffic": 3.5,
     "safety": 7,
-    "infra": 8,
-    "walk": 7
+    "infra": 7.5,
+    "walk": 7.2
   },
   {
     "name": "Satellite",
@@ -932,8 +932,8 @@
     "water": 460,
     "traffic": 4.5,
     "safety": 7.5,
-    "infra": 7.5,
-    "walk": 6.5
+    "infra": 6.6,
+    "walk": 4
   },
   {
     "name": "Bopal",
@@ -945,8 +945,8 @@
     "water": 520,
     "traffic": 5.5,
     "safety": 6.5,
-    "infra": 5.5,
-    "walk": 5
+    "infra": 3.9,
+    "walk": 4.5
   },
   {
     "name": "Maninagar",
@@ -958,8 +958,8 @@
     "water": 480,
     "traffic": 3.5,
     "safety": 6,
-    "infra": 7.5,
-    "walk": 7
+    "infra": 5.6,
+    "walk": 5.5
   },
   {
     "name": "Prahlad Nagar",
@@ -971,8 +971,8 @@
     "water": 440,
     "traffic": 4.5,
     "safety": 7.5,
-    "infra": 7,
-    "walk": 6
+    "infra": 4.3,
+    "walk": 5.4
   },
   {
     "name": "Vastrapur",
@@ -984,8 +984,8 @@
     "water": 420,
     "traffic": 5,
     "safety": 7.5,
-    "infra": 7,
-    "walk": 6.5
+    "infra": 7.2,
+    "walk": 3.9
   },
   {
     "name": "Chandkheda",
@@ -997,8 +997,8 @@
     "water": 500,
     "traffic": 5.5,
     "safety": 6,
-    "infra": 5,
-    "walk": 4.5
+    "infra": 2.8,
+    "walk": 4
   },
   {
     "name": "Gota",
@@ -1010,8 +1010,8 @@
     "water": 510,
     "traffic": 5.5,
     "safety": 6,
-    "infra": 5,
-    "walk": 4.5
+    "infra": 2.6,
+    "walk": 3
   },
   {
     "name": "SG Highway",
@@ -1023,8 +1023,8 @@
     "water": 460,
     "traffic": 3,
     "safety": 6.5,
-    "infra": 7.5,
-    "walk": 4.5
+    "infra": 6.6,
+    "walk": 5.8
   },
   {
     "name": "Thaltej",
@@ -1036,7 +1036,7 @@
     "water": 430,
     "traffic": 5,
     "safety": 7.5,
-    "infra": 6.5,
-    "walk": 5.5
+    "infra": 5.2,
+    "walk": 4.5
   }
 ]
