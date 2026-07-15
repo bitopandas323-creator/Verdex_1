@@ -513,12 +513,12 @@
       },
       infrastructure: {
         title: "Infrastructure",
-        body: `Measures access to essential civic amenities — hospitals, schools, pharmacies and markets — within 2km.<br><br>
-          <b>80–100</b> → Well served. Multiple amenities of each type nearby.<br>
+        body: `Measures real distances to the nearest hospital, clinic, school, college, police station, fire station, grocery store, pharmacy and ATM/bank — sourced from OpenStreetMap via the same Nearby Places data.<br><br>
+          <b>80–100</b> → Well served. Most essential amenities close by.<br>
           <b>60–80</b> → Adequately served.<br>
           <b>40–60</b> → Limited amenities nearby.<br>
-          <b>Below 40</b> → Sparse amenities.<br><br>
-          Based on researched baseline data for each neighbourhood.`
+          <b>Below 40</b> → Sparse amenities, longer trips required.<br><br>
+          Based on real OpenStreetMap distances, refreshed periodically — not a live per-request lookup.`
       },
       walkability: {
         title: "Transit & Amenity Access",
@@ -1391,7 +1391,7 @@ let finalScore = parseFloat((
             ${buildRealEstateSection(d.nearbyProjects)}
           </div>
           <div class="pt-4 text-center text-xs text-gray-400">
-            AQI and weather are live. Green cover from ESA satellites. Noise, water, infrastructure, transit & amenity access, traffic and safety are from researched baseline data. Nearby places from OpenStreetMap, refreshed periodically.
+            AQI and weather are live. Green cover from ESA satellites. Infrastructure and transit & amenity access are computed from real OpenStreetMap distances, refreshed periodically. Noise, water, traffic and safety are from researched baseline data. Nearby places from OpenStreetMap, refreshed periodically.
           </div>
         </div>`;
     }
