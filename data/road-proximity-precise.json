@@ -1,0 +1,589 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-15T20:08:53.998Z",
+    "method": "Full-precision re-fetch of the same highway query already used in fetch-nearby-places.mjs (motorway/trunk/primary/secondary, 5km radius, nearest-vertex geometry walk) - deliberately NOT rounded to 1 decimal like data/nearby-places.json's highway category, which collapsed genuinely-different close distances (e.g. 0.008km vs 0.04km) into an identical stored 0.0km. Feeds only scripts/recompute-noise.mjs's road component - does not replace or get synced back into data/nearby-places.json, whose rounded values remain correct for their existing Nearby Places display purpose.",
+    "unresolved": [
+      "Uppal",
+      "Bandra",
+      "Dharavi",
+      "Connaught Place",
+      "Vasant Kunj",
+      "Noida Sector 18",
+      "Hebbal",
+      "Malleshwaram",
+      "HSR Layout",
+      "Velachery",
+      "Porur",
+      "Tambaram",
+      "Viman Nagar",
+      "Aundh",
+      "New Town",
+      "Alipore",
+      "Rajarhat",
+      "SG Highway"
+    ],
+    "unresolvedNote": "Fetch failures (Overpass rate-limiting/timeouts after heavy sequential use tonight), not genuine absence of a nearby road. scripts/recompute-noise.mjs falls back to the rounded data/nearby-places.json highway value for these specific neighbourhoods."
+  },
+  "results": [
+    {
+      "name": "Banjara Hills",
+      "city": "hyderabad",
+      "distanceKm": 0.06697402254824728,
+      "roadName": "Banjara Hills Road Number 10",
+      "reason": null
+    },
+    {
+      "name": "Jubilee Hills",
+      "city": "hyderabad",
+      "distanceKm": 0.0025823461953147263,
+      "roadName": "Jubilee Hills Road No 36",
+      "reason": null
+    },
+    {
+      "name": "Secunderabad",
+      "city": "hyderabad",
+      "distanceKm": 0.0649399309771707,
+      "roadName": "Regimental Bazar Main Road",
+      "reason": null
+    },
+    {
+      "name": "Hitech City",
+      "city": "hyderabad",
+      "distanceKm": 0.17140136758061772,
+      "roadName": "HITEC City–Madhapur Road",
+      "reason": null
+    },
+    {
+      "name": "Gachibowli",
+      "city": "hyderabad",
+      "distanceKm": 0.011868686312868476,
+      "roadName": "ISB Road",
+      "reason": null
+    },
+    {
+      "name": "Old City",
+      "city": "hyderabad",
+      "distanceKm": 0.026223636222833822,
+      "roadName": "Charminar Circle",
+      "reason": null
+    },
+    {
+      "name": "Kukatpally",
+      "city": "hyderabad",
+      "distanceKm": 0.053875247702284815,
+      "roadName": "KPHB Road No 1 Road",
+      "reason": null
+    },
+    {
+      "name": "Madhapur",
+      "city": "hyderabad",
+      "distanceKm": 0.17133247993281747,
+      "roadName": "100 Feet Road",
+      "reason": null
+    },
+    {
+      "name": "LB Nagar",
+      "city": "hyderabad",
+      "distanceKm": 0.08606427274978491,
+      "roadName": "Vijayavada Highway Flyover",
+      "reason": null
+    },
+    {
+      "name": "Uppal",
+      "city": "hyderabad",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Bandra",
+      "city": "mumbai",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Andheri",
+      "city": "mumbai",
+      "distanceKm": 0.2192767431765202,
+      "roadName": "Mathuradas Vasanji Road (Andheri Kurla Road)",
+      "reason": null
+    },
+    {
+      "name": "Worli",
+      "city": "mumbai",
+      "distanceKm": 0.15685368714419265,
+      "roadName": "Khan Abdul Gaffar Khan Marg",
+      "reason": null
+    },
+    {
+      "name": "Powai",
+      "city": "mumbai",
+      "distanceKm": 0.008969755463271384,
+      "roadName": "Adi Sankaracharya Marg",
+      "reason": null
+    },
+    {
+      "name": "Dharavi",
+      "city": "mumbai",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Juhu",
+      "city": "mumbai",
+      "distanceKm": 0.28673847395270535,
+      "roadName": "Vaikunthlal Mehta Road",
+      "reason": null
+    },
+    {
+      "name": "Malad",
+      "city": "mumbai",
+      "distanceKm": 0.16834534628496314,
+      "roadName": null,
+      "reason": null
+    },
+    {
+      "name": "Thane",
+      "city": "mumbai",
+      "distanceKm": 0.10078108388871751,
+      "roadName": "Kapurbawdi Flyover",
+      "reason": null
+    },
+    {
+      "name": "Kurla",
+      "city": "mumbai",
+      "distanceKm": 0.2025630630989069,
+      "roadName": "Santa Cruz – Chembur Link Road",
+      "reason": null
+    },
+    {
+      "name": "Borivali",
+      "city": "mumbai",
+      "distanceKm": 0.007941139258135733,
+      "roadName": "Swami Vivekanand Road",
+      "reason": null
+    },
+    {
+      "name": "Connaught Place",
+      "city": "delhi",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Hauz Khas",
+      "city": "delhi",
+      "distanceKm": 0.3258178677896161,
+      "roadName": "Aurobindo Marg",
+      "reason": null
+    },
+    {
+      "name": "Dwarka",
+      "city": "delhi",
+      "distanceKm": 0.607700740782585,
+      "roadName": "Road 205",
+      "reason": null
+    },
+    {
+      "name": "Rohini",
+      "city": "delhi",
+      "distanceKm": 0.82127467557619,
+      "roadName": "Kanjhawala road",
+      "reason": null
+    },
+    {
+      "name": "Lajpat Nagar",
+      "city": "delhi",
+      "distanceKm": 0.28859759878546054,
+      "roadName": "Lajpat Nagar Flyover",
+      "reason": null
+    },
+    {
+      "name": "Vasant Kunj",
+      "city": "delhi",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Saket",
+      "city": "delhi",
+      "distanceKm": 0.39986037664038093,
+      "roadName": "Pandit Trilok Chandra Sharma Marg",
+      "reason": null
+    },
+    {
+      "name": "Noida Sector 18",
+      "city": "delhi",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Janakpuri",
+      "city": "delhi",
+      "distanceKm": 0.6434250229363246,
+      "roadName": "Bhagwan Mahavir Marg",
+      "reason": null
+    },
+    {
+      "name": "Greater Kailash",
+      "city": "delhi",
+      "distanceKm": 0.4505132843770145,
+      "roadName": "Ho Chi Minh Marg",
+      "reason": null
+    },
+    {
+      "name": "Koramangala",
+      "city": "bangalore",
+      "distanceKm": 0.006452298033265982,
+      "roadName": "Mahayogi Vemana Road",
+      "reason": null
+    },
+    {
+      "name": "Indiranagar",
+      "city": "bangalore",
+      "distanceKm": 0.002762723993829885,
+      "roadName": "100 Feet Road",
+      "reason": null
+    },
+    {
+      "name": "Whitefield",
+      "city": "bangalore",
+      "distanceKm": 0.003803966386882387,
+      "roadName": "Whitefield Main Road",
+      "reason": null
+    },
+    {
+      "name": "Jayanagar",
+      "city": "bangalore",
+      "distanceKm": 0.05056585557502587,
+      "roadName": "9th Main Road",
+      "reason": null
+    },
+    {
+      "name": "Hebbal",
+      "city": "bangalore",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Electronic City",
+      "city": "bangalore",
+      "distanceKm": 0.007636283664911129,
+      "roadName": "Hosur Road",
+      "reason": null
+    },
+    {
+      "name": "Marathahalli",
+      "city": "bangalore",
+      "distanceKm": 0.248624997260679,
+      "roadName": "Varthur Road",
+      "reason": null
+    },
+    {
+      "name": "Malleshwaram",
+      "city": "bangalore",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "HSR Layout",
+      "city": "bangalore",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Yelahanka",
+      "city": "bangalore",
+      "distanceKm": 0.1841027827809404,
+      "roadName": "Bhagyada Bagilu Road",
+      "reason": null
+    },
+    {
+      "name": "Anna Nagar",
+      "city": "chennai",
+      "distanceKm": 0.006753747585342374,
+      "roadName": "2nd Avenue, Anna Nagar West",
+      "reason": null
+    },
+    {
+      "name": "Adyar",
+      "city": "chennai",
+      "distanceKm": 0.005405452750158804,
+      "roadName": "Dr Muthulakshmi Salai",
+      "reason": null
+    },
+    {
+      "name": "T Nagar",
+      "city": "chennai",
+      "distanceKm": 0.004315255312858225,
+      "roadName": "Gopathi Narayanaswami Road",
+      "reason": null
+    },
+    {
+      "name": "Velachery",
+      "city": "chennai",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Porur",
+      "city": "chennai",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "OMR",
+      "city": "chennai",
+      "distanceKm": 0.0010289612906434322,
+      "roadName": "Semmozhi Salai",
+      "reason": null
+    },
+    {
+      "name": "Perambur",
+      "city": "chennai",
+      "distanceKm": 0.280005368551148,
+      "roadName": "Paper Mills Road",
+      "reason": null
+    },
+    {
+      "name": "Mylapore",
+      "city": "chennai",
+      "distanceKm": 0.07599347432806793,
+      "roadName": "RK Mutt Road",
+      "reason": null
+    },
+    {
+      "name": "Tambaram",
+      "city": "chennai",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Nungambakkam",
+      "city": "chennai",
+      "distanceKm": 0.004643665709385714,
+      "roadName": "Tank Bund Road",
+      "reason": null
+    },
+    {
+      "name": "Koregaon Park",
+      "city": "pune",
+      "distanceKm": 0.34500520504477383,
+      "roadName": "South Main Road",
+      "reason": null
+    },
+    {
+      "name": "Hinjewadi",
+      "city": "pune",
+      "distanceKm": 0.005295950965146983,
+      "roadName": "Hinjawadi Road",
+      "reason": null
+    },
+    {
+      "name": "Kothrud",
+      "city": "pune",
+      "distanceKm": 0.003446072563737347,
+      "roadName": "Paud Road",
+      "reason": null
+    },
+    {
+      "name": "Viman Nagar",
+      "city": "pune",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Hadapsar",
+      "city": "pune",
+      "distanceKm": 0.003265624451499566,
+      "roadName": "Solapur Road",
+      "reason": null
+    },
+    {
+      "name": "Aundh",
+      "city": "pune",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Baner",
+      "city": "pune",
+      "distanceKm": 0.1361419772208767,
+      "roadName": "Pancard Club Road",
+      "reason": null
+    },
+    {
+      "name": "Wakad",
+      "city": "pune",
+      "distanceKm": 0.26778876083010333,
+      "roadName": "Datta Mandir Road",
+      "reason": null
+    },
+    {
+      "name": "Magarpatta",
+      "city": "pune",
+      "distanceKm": 0.18885895390395066,
+      "roadName": "Mundhwa Road",
+      "reason": null
+    },
+    {
+      "name": "Kharadi",
+      "city": "pune",
+      "distanceKm": 0.2597897546465885,
+      "roadName": "Kharadi South Main Road",
+      "reason": null
+    },
+    {
+      "name": "Salt Lake",
+      "city": "kolkata",
+      "distanceKm": 0.2999281221128765,
+      "roadName": null,
+      "reason": null
+    },
+    {
+      "name": "Park Street",
+      "city": "kolkata",
+      "distanceKm": 0.05046488404209671,
+      "roadName": "Park Street",
+      "reason": null
+    },
+    {
+      "name": "Howrah",
+      "city": "kolkata",
+      "distanceKm": 0.05794886871964482,
+      "roadName": "RBC Road",
+      "reason": null
+    },
+    {
+      "name": "New Town",
+      "city": "kolkata",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Ballygunge",
+      "city": "kolkata",
+      "distanceKm": 0.15042494705895618,
+      "roadName": "Gariahat Road",
+      "reason": null
+    },
+    {
+      "name": "Alipore",
+      "city": "kolkata",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Dumdum",
+      "city": "kolkata",
+      "distanceKm": 0.1642037585976895,
+      "roadName": "Jessore Road",
+      "reason": null
+    },
+    {
+      "name": "Rajarhat",
+      "city": "kolkata",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Behala",
+      "city": "kolkata",
+      "distanceKm": 0.44638512732322044,
+      "roadName": "Diamond Harbour Road",
+      "reason": null
+    },
+    {
+      "name": "Tollygunge",
+      "city": "kolkata",
+      "distanceKm": 0.18639853057587943,
+      "roadName": "Prince Anwar Shah Road",
+      "reason": null
+    },
+    {
+      "name": "Navrangpura",
+      "city": "ahmedabad",
+      "distanceKm": 0.045617507174095705,
+      "roadName": null,
+      "reason": null
+    },
+    {
+      "name": "Satellite",
+      "city": "ahmedabad",
+      "distanceKm": 0.35699230852384356,
+      "roadName": "Satellite Road",
+      "reason": null
+    },
+    {
+      "name": "Bopal",
+      "city": "ahmedabad",
+      "distanceKm": 1.0530160654363916,
+      "roadName": "Vakil Saheb Flyover",
+      "reason": null
+    },
+    {
+      "name": "Maninagar",
+      "city": "ahmedabad",
+      "distanceKm": 0.09942983459602632,
+      "roadName": null,
+      "reason": null
+    },
+    {
+      "name": "Prahlad Nagar",
+      "city": "ahmedabad",
+      "distanceKm": 0.1209760812170762,
+      "roadName": "100 Ft. Road",
+      "reason": null
+    },
+    {
+      "name": "Vastrapur",
+      "city": "ahmedabad",
+      "distanceKm": 0.09874895510945966,
+      "roadName": "Judges Bunglow Road",
+      "reason": null
+    },
+    {
+      "name": "Chandkheda",
+      "city": "ahmedabad",
+      "distanceKm": 0.44560635851875985,
+      "roadName": "SH41",
+      "reason": null
+    },
+    {
+      "name": "Gota",
+      "city": "ahmedabad",
+      "distanceKm": 0.06321780362493681,
+      "roadName": "Sundersingh Bhandari Flyover",
+      "reason": null
+    },
+    {
+      "name": "SG Highway",
+      "city": "ahmedabad",
+      "distanceKm": null,
+      "roadName": null,
+      "reason": "fetch_failed"
+    },
+    {
+      "name": "Thaltej",
+      "city": "ahmedabad",
+      "distanceKm": 0.4455017895611786,
+      "roadName": null,
+      "reason": null
+    }
+  ]
+}

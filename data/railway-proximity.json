@@ -1,0 +1,574 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-15T19:22:34.889Z",
+    "method": "Overpass query for way[railway~\"^(rail|subway|light_rail|monorail|narrow_gauge)$\"] within 5km of each neighbourhood's stored coordinate, nearest-vertex geometry walk (same technique as fetch-nearby-places.mjs highway category). Deliberately excludes railway=construction/abandoned/disused/station/halt/platform - only active track counts as a noise source.",
+    "knownGaps": [
+      "Prahlad Nagar (ahmedabad): unresolved fetch failure after 4 attempts across 2 Overpass mirrors - not evidence of no railway nearby, genuinely unknown. Left on old static Noise baseline."
+    ],
+    "knownCaveats": [
+      "Aundh, Baner, Hinjewadi (pune) and Old City (hyderabad): nearest metro infrastructure is still under construction (railway=construction, tagged opening_date 2026) and correctly excluded here - their real noise exposure will change once those lines open and this data will need a refresh sooner than other categories."
+    ]
+  },
+  "results": [
+    {
+      "name": "Banjara Hills",
+      "city": "hyderabad",
+      "distanceKm": 1.8853948623259786,
+      "railName": "Hyderabad Metro Line 3 (blue)",
+      "reason": null
+    },
+    {
+      "name": "Jubilee Hills",
+      "city": "hyderabad",
+      "distanceKm": 0.016085873377823145,
+      "railName": "Hyderabad Metro Line 3 (blue)",
+      "reason": null
+    },
+    {
+      "name": "Secunderabad",
+      "city": "hyderabad",
+      "distanceKm": 0.06972613035801029,
+      "railName": "Hyderabad Metro Line 2 (green)",
+      "reason": null
+    },
+    {
+      "name": "Hitech City",
+      "city": "hyderabad",
+      "distanceKm": 0.1773868640424483,
+      "railName": "Hyderabad Metro Line 3 (blue)",
+      "reason": null
+    },
+    {
+      "name": "Gachibowli",
+      "city": "hyderabad",
+      "distanceKm": 3.002959701968554,
+      "railName": "Hyderabad Metro Line 3 (blue)",
+      "reason": null
+    },
+    {
+      "name": "Old City",
+      "city": "hyderabad",
+      "distanceKm": 1.740905560890071,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Kukatpally",
+      "city": "hyderabad",
+      "distanceKm": 0.9903599193891856,
+      "railName": "Hyderabad Metro Line 1 (red)",
+      "reason": null
+    },
+    {
+      "name": "Madhapur",
+      "city": "hyderabad",
+      "distanceKm": 0.788346005437847,
+      "railName": "Hyderabad Metro Line 3 (blue)",
+      "reason": null
+    },
+    {
+      "name": "LB Nagar",
+      "city": "hyderabad",
+      "distanceKm": 0.10785506547441776,
+      "railName": "Hyderabad Metro Line 1 (red)",
+      "reason": null
+    },
+    {
+      "name": "Uppal",
+      "city": "hyderabad",
+      "distanceKm": 0.27300484285267895,
+      "railName": "Hyderabad Metro Line 3 (blue)",
+      "reason": null
+    },
+    {
+      "name": "Bandra",
+      "city": "mumbai",
+      "distanceKm": 1.0075866319085152,
+      "railName": "Western Railway (Slow)",
+      "reason": null
+    },
+    {
+      "name": "Andheri",
+      "city": "mumbai",
+      "distanceKm": 0.22259248747103022,
+      "railName": "Mumbai Metro Line 1",
+      "reason": null
+    },
+    {
+      "name": "Worli",
+      "city": "mumbai",
+      "distanceKm": 0.7454951911066664,
+      "railName": "Worli to SEEPZ (Line-3)",
+      "reason": null
+    },
+    {
+      "name": "Powai",
+      "city": "mumbai",
+      "distanceKm": 2.290277678189883,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Dharavi",
+      "city": "mumbai",
+      "distanceKm": 0.5540817375599906,
+      "railName": "Worli to SEEPZ (Line-3)",
+      "reason": null
+    },
+    {
+      "name": "Juhu",
+      "city": "mumbai",
+      "distanceKm": 1.6617342240930844,
+      "railName": "Dahisar (W) to Mandale Metro (Line-2)",
+      "reason": null
+    },
+    {
+      "name": "Malad",
+      "city": "mumbai",
+      "distanceKm": 0.05374257891582212,
+      "railName": "Western Railway (Slow)",
+      "reason": null
+    },
+    {
+      "name": "Thane",
+      "city": "mumbai",
+      "distanceKm": 1.0327582426072868,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Kurla",
+      "city": "mumbai",
+      "distanceKm": 0.594783909241053,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Borivali",
+      "city": "mumbai",
+      "distanceKm": 0.027635853214699663,
+      "railName": "Western Railway Virar to Borivali",
+      "reason": null
+    },
+    {
+      "name": "Connaught Place",
+      "city": "delhi",
+      "distanceKm": 0.07788326601188988,
+      "railName": "Airport Express Line",
+      "reason": null
+    },
+    {
+      "name": "Hauz Khas",
+      "city": "delhi",
+      "distanceKm": 0.44375240516335185,
+      "railName": "Delhi Metro Magenta Line",
+      "reason": null
+    },
+    {
+      "name": "Dwarka",
+      "city": "delhi",
+      "distanceKm": 0.34132115141972863,
+      "railName": "Blue Line",
+      "reason": null
+    },
+    {
+      "name": "Rohini",
+      "city": "delhi",
+      "distanceKm": 1.4319002737227748,
+      "railName": "R K Ashram Marg to Krishna Park Extension (Phase-4)",
+      "reason": null
+    },
+    {
+      "name": "Lajpat Nagar",
+      "city": "delhi",
+      "distanceKm": 0.2797586747910555,
+      "railName": "Delhi Metro Pink Line (underground)",
+      "reason": null
+    },
+    {
+      "name": "Vasant Kunj",
+      "city": "delhi",
+      "distanceKm": 2.222725276817601,
+      "railName": "Delhi Metro Yellow Line",
+      "reason": null
+    },
+    {
+      "name": "Saket",
+      "city": "delhi",
+      "distanceKm": 0.570751343474159,
+      "railName": "Delhi Metro Yellow Line",
+      "reason": null
+    },
+    {
+      "name": "Noida Sector 18",
+      "city": "delhi",
+      "distanceKm": 0.6341854842197886,
+      "railName": "Blue Line",
+      "reason": null
+    },
+    {
+      "name": "Janakpuri",
+      "city": "delhi",
+      "distanceKm": 0.027379176025975966,
+      "railName": "Delhi Metro Magenta Line",
+      "reason": null
+    },
+    {
+      "name": "Greater Kailash",
+      "city": "delhi",
+      "distanceKm": 0.47760249803312127,
+      "railName": "Delhi Metro Magenta Line",
+      "reason": null
+    },
+    {
+      "name": "Koramangala",
+      "city": "bangalore",
+      "distanceKm": 1.9464759808152334,
+      "railName": "Namma Metro - Phase 2A",
+      "reason": null
+    },
+    {
+      "name": "Indiranagar",
+      "city": "bangalore",
+      "distanceKm": 0.04382231877010304,
+      "railName": "Namma Metro - Reach 1",
+      "reason": null
+    },
+    {
+      "name": "Whitefield",
+      "city": "bangalore",
+      "distanceKm": 1.605284939466859,
+      "railName": "Namma Metro - Reach 1A",
+      "reason": null
+    },
+    {
+      "name": "Jayanagar",
+      "city": "bangalore",
+      "distanceKm": 0.3557851373532311,
+      "railName": "Namma Metro - Reach 4",
+      "reason": null
+    },
+    {
+      "name": "Hebbal",
+      "city": "bangalore",
+      "distanceKm": 0.6012798681887149,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Electronic City",
+      "city": "bangalore",
+      "distanceKm": 0.054090642939567724,
+      "railName": "Yellow Line (RV Road - Bommasandra)",
+      "reason": null
+    },
+    {
+      "name": "Marathahalli",
+      "city": "bangalore",
+      "distanceKm": 0.4415489974752254,
+      "railName": "Namma Metro - Phase 2A",
+      "reason": null
+    },
+    {
+      "name": "Malleshwaram",
+      "city": "bangalore",
+      "distanceKm": 0.7520249249461727,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "HSR Layout",
+      "city": "bangalore",
+      "distanceKm": 0.9436418933713998,
+      "railName": "Namma Metro - Phase 2A",
+      "reason": null
+    },
+    {
+      "name": "Yelahanka",
+      "city": "bangalore",
+      "distanceKm": 0.2790806525806825,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Anna Nagar",
+      "city": "chennai",
+      "distanceKm": 0.006040763838588502,
+      "railName": "Chennai Metro Line 2",
+      "reason": null
+    },
+    {
+      "name": "Adyar",
+      "city": "chennai",
+      "distanceKm": 0.39350609302573475,
+      "railName": "Line 3: Madhavaram → SIPCOT (u/c)",
+      "reason": null
+    },
+    {
+      "name": "T Nagar",
+      "city": "chennai",
+      "distanceKm": 0.5412688872256352,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Velachery",
+      "city": "chennai",
+      "distanceKm": 1.2242015910671538,
+      "railName": "MRTS",
+      "reason": null
+    },
+    {
+      "name": "Porur",
+      "city": "chennai",
+      "distanceKm": 0.26879315829081685,
+      "railName": "Yellow Line (Elevated): Poonamallee → Light House",
+      "reason": null
+    },
+    {
+      "name": "OMR",
+      "city": "chennai",
+      "distanceKm": 0.008662816658145962,
+      "railName": "Line 3: SIPCOT → Madhavaram (u/c)",
+      "reason": null
+    },
+    {
+      "name": "Perambur",
+      "city": "chennai",
+      "distanceKm": 0.9160293575117797,
+      "railName": "Line 3: SIPCOT → Madhavaram (u/c)",
+      "reason": null
+    },
+    {
+      "name": "Mylapore",
+      "city": "chennai",
+      "distanceKm": 0.16001730845387543,
+      "railName": "Line 3: Madhavaram → SIPCOT (u/c)",
+      "reason": null
+    },
+    {
+      "name": "Tambaram",
+      "city": "chennai",
+      "distanceKm": 1.2028799827427192,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Nungambakkam",
+      "city": "chennai",
+      "distanceKm": 0.6400250157775557,
+      "railName": "Line 3: SIPCOT → Madhavaram (u/c)",
+      "reason": null
+    },
+    {
+      "name": "Koregaon Park",
+      "city": "pune",
+      "distanceKm": 0.588345870290264,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Hinjewadi",
+      "city": "pune",
+      "distanceKm": 2.011463092662382,
+      "railName": "Pune Metro Line 3 (Pink Line)",
+      "reason": null
+    },
+    {
+      "name": "Kothrud",
+      "city": "pune",
+      "distanceKm": 0.008003440350557715,
+      "railName": "Pune Metro Line 2: Aqua Line",
+      "reason": null
+    },
+    {
+      "name": "Viman Nagar",
+      "city": "pune",
+      "distanceKm": 0.9934786455909409,
+      "railName": "Pune Metro Line 2: Aqua Line",
+      "reason": null
+    },
+    {
+      "name": "Hadapsar",
+      "city": "pune",
+      "distanceKm": 1.3556252851034667,
+      "railName": "Pune - Miraj Railway Line",
+      "reason": null
+    },
+    {
+      "name": "Aundh",
+      "city": "pune",
+      "distanceKm": 3.000929374997401,
+      "railName": "Pune Metro Line 3 (Pink Line)",
+      "reason": null
+    },
+    {
+      "name": "Baner",
+      "city": "pune",
+      "distanceKm": 4.481081159545269,
+      "railName": "Pune Metro Line 3 (Pink Line)",
+      "reason": null
+    },
+    {
+      "name": "Wakad",
+      "city": "pune",
+      "distanceKm": 1.0575341982335003,
+      "railName": "Pune Metro Line 3 (Pink Line)",
+      "reason": null
+    },
+    {
+      "name": "Magarpatta",
+      "city": "pune",
+      "distanceKm": 1.3048130754305083,
+      "railName": "Pune - Daund Railway Line",
+      "reason": null
+    },
+    {
+      "name": "Kharadi",
+      "city": "pune",
+      "distanceKm": 2.9717098053159168,
+      "railName": "Pune - Daund Railway Line",
+      "reason": null
+    },
+    {
+      "name": "Salt Lake",
+      "city": "kolkata",
+      "distanceKm": 0.5766905792156996,
+      "railName": "East-West Metro Corridor (Line-2)",
+      "reason": null
+    },
+    {
+      "name": "Park Street",
+      "city": "kolkata",
+      "distanceKm": 0.3617000343201081,
+      "railName": "North-South Metro Corridor (Line-1)",
+      "reason": null
+    },
+    {
+      "name": "Howrah",
+      "city": "kolkata",
+      "distanceKm": 0.06705572455708797,
+      "railName": "Howrah - Chennai Main Line",
+      "reason": null
+    },
+    {
+      "name": "New Town",
+      "city": "kolkata",
+      "distanceKm": 3.217714455716427,
+      "railName": "Noapara-Barasat Metro (Line-4)",
+      "reason": null
+    },
+    {
+      "name": "Ballygunge",
+      "city": "kolkata",
+      "distanceKm": 0.504771650769618,
+      "railName": "Kolkata Circular Railway",
+      "reason": null
+    },
+    {
+      "name": "Alipore",
+      "city": "kolkata",
+      "distanceKm": 1.1070630215883384,
+      "railName": "Blue Line (North-South Metro Corridor)",
+      "reason": null
+    },
+    {
+      "name": "Dumdum",
+      "city": "kolkata",
+      "distanceKm": 0.5402395446250791,
+      "railName": "Noapara-Barasat Metro (Line-4)",
+      "reason": null
+    },
+    {
+      "name": "Rajarhat",
+      "city": "kolkata",
+      "distanceKm": 1.8477127291004878,
+      "railName": "Noapara-Barasat Metro (Line-4)",
+      "reason": null
+    },
+    {
+      "name": "Behala",
+      "city": "kolkata",
+      "distanceKm": 0.4517104163111512,
+      "railName": "Joka-Esplanade Metro (Line-3)",
+      "reason": null
+    },
+    {
+      "name": "Tollygunge",
+      "city": "kolkata",
+      "distanceKm": 0.25384341034132696,
+      "railName": "North-South Metro Corridor (Line-1)",
+      "reason": null
+    },
+    {
+      "name": "Navrangpura",
+      "city": "ahmedabad",
+      "distanceKm": 0.04829221546769181,
+      "railName": "Blue Line, Ahmedabad Metro",
+      "reason": null
+    },
+    {
+      "name": "Satellite",
+      "city": "ahmedabad",
+      "distanceKm": 1.848995097694519,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Bopal",
+      "city": "ahmedabad",
+      "distanceKm": 1.273083030561686,
+      "railName": "Western Railway Line",
+      "reason": null
+    },
+    {
+      "name": "Maninagar",
+      "city": "ahmedabad",
+      "distanceKm": 0.7843255881000395,
+      "railName": "Western Railway Line",
+      "reason": null
+    },
+    {
+      "name": "Prahlad Nagar",
+      "city": "ahmedabad",
+      "distanceKm": null,
+      "railName": null,
+      "reason": "retry_exhausted"
+    },
+    {
+      "name": "Vastrapur",
+      "city": "ahmedabad",
+      "distanceKm": 1.7841164889219825,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Chandkheda",
+      "city": "ahmedabad",
+      "distanceKm": 1.1725978558694277,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Gota",
+      "city": "ahmedabad",
+      "distanceKm": 0.37841611711873213,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "SG Highway",
+      "city": "ahmedabad",
+      "distanceKm": 2.393074712334922,
+      "railName": "Blue Line, Ahmedabad Metro",
+      "reason": null
+    },
+    {
+      "name": "Thaltej",
+      "city": "ahmedabad",
+      "distanceKm": 0.5757703258813985,
+      "railName": "Blue Line, Ahmedabad Metro",
+      "reason": null
+    }
+  ]
+}
