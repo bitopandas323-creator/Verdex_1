@@ -521,13 +521,13 @@
           Based on researched baseline data for each neighbourhood.`
       },
       walkability: {
-        title: "Walkability",
-        body: `Measures how easy it is to get around on foot — parks, grocery stores, cafes and bus stops within 500m.<br><br>
-          <b>80–100</b> → Very walkable. Daily needs reachable on foot.<br>
-          <b>60–80</b> → Walkable.<br>
-          <b>40–60</b> → Car-dependent for most errands.<br>
-          <b>Below 40</b> → Not walkable.<br><br>
-          Based on researched baseline data for each neighbourhood.`
+        title: "Transit & Amenity Access",
+        body: `Measures proximity to transit (bus stops and metro stations) and density of nearby restaurants/cafes — not general street walkability or pedestrian comfort.<br><br>
+          <b>80–100</b> → Excellent access. Transit and food/amenities close by.<br>
+          <b>60–80</b> → Good access.<br>
+          <b>40–60</b> → Limited access.<br>
+          <b>Below 40</b> → Poor access. Car-dependent for transit and errands.<br><br>
+          Based on real distances to the nearest bus stops, metro stations and restaurants/cafes (OpenStreetMap).`
       },
       traffic: {
         title: "Traffic Congestion",
@@ -560,7 +560,7 @@
           <b>Water Quality → 15% weight</b><br>
           <b>Infrastructure → 10% weight</b><br>
           <b>Heat & Humidity → 10% weight</b><br>
-          <b>Walkability → 8% weight</b><br>
+          <b>Transit & Amenity Access → 8% weight</b><br>
           <b>Noise → 7% weight</b><br>
           <b>Safety → 6% weight</b><br>
           <b>Traffic → 4% weight</b><br><br>
@@ -825,10 +825,10 @@
     }
 
     function getWalkLabel(score) {
-      if (score >= 8) return "Very walkable";
-      if (score >= 6) return "Walkable";
-      if (score >= 4) return "Car-dependent";
-      return "Not walkable";
+      if (score >= 8) return "Excellent access";
+      if (score >= 6) return "Good access";
+      if (score >= 4) return "Limited access";
+      return "Poor access";
     }
 
     function getTrafficLabel(score) {
@@ -1174,12 +1174,12 @@ let finalScore = parseFloat((
       let liveSubScore = avgScore(d.infraScore, d.walkScore, d.trafficScore, d.safetyScore);
       let rows = [
         buildParamRow("ti-building-hospital", "Infrastructure" + areaTag, `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure", "text-blue-500"),
-        buildParamRow("ti-walk", "Walkability" + areaTag, `${Math.round(d.walkScore * 10)} · ${getWalkLabel(d.walkScore)}`, "walkability", "text-blue-500"),
+        buildParamRow("ti-bus", "Transit & Amenity Access" + areaTag, `${Math.round(d.walkScore * 10)} · ${getWalkLabel(d.walkScore)}`, "walkability", "text-blue-500"),
         buildParamRow("ti-car", "Traffic" + areaTag, `${Math.round(d.trafficScore * 10)} · ${getTrafficLabel(d.trafficScore)}`, "traffic", "text-blue-500"),
         buildParamRow("ti-shield", "Safety" + areaTag, `${Math.round(d.safetyScore * 10)} · ${getSafetyLabel(d.safetyScore)}`, "safety", "text-blue-500")
       ].join("");
       let summary = `${getWalkLabel(d.walkScore)}, ${getTrafficLabel(d.trafficScore).toLowerCase()}, ${getSafetyLabel(d.safetyScore).toLowerCase()}.`;
-      return buildLayerCardShell("ti-walk", "Liveability", liveSubScore, summary, rows);
+      return buildLayerCardShell("ti-bus", "Liveability", liveSubScore, summary, rows);
     }
 
     // Mirrors the CATEGORY_DEFS keys in scripts/fetch-nearby-places.mjs —
@@ -1391,7 +1391,7 @@ let finalScore = parseFloat((
             ${buildRealEstateSection(d.nearbyProjects)}
           </div>
           <div class="pt-4 text-center text-xs text-gray-400">
-            AQI and weather are live. Green cover from ESA satellites. Noise, water, infrastructure, walkability, traffic and safety are from researched baseline data. Nearby places from OpenStreetMap, refreshed periodically.
+            AQI and weather are live. Green cover from ESA satellites. Noise, water, infrastructure, transit & amenity access, traffic and safety are from researched baseline data. Nearby places from OpenStreetMap, refreshed periodically.
           </div>
         </div>`;
     }
