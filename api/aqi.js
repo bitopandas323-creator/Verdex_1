@@ -74,10 +74,21 @@ export async function getAqi(lat, lon, city) {
         .slice(0, 5);
 
       for (const candidate of ranked) {
-        const stationData = await fetchJsonWithTimeout(`https://api.waqi.info/feed/@${candidate.uid}/?token=${TOKEN}`, {}, WAQI_TIMEOUT_MS);
+        // One bad candidate (timeout, network error, malformed response —
+        // fetchJsonWithTimeout throws on all of these) must not abort the
+        // whole search. Previously an uncaught throw here propagated all
+        // the way out of getAqi, skipping every remaining candidate AND
+        // the final baseline fallback below, turning a single flaky
+        // station into a hard 500/504 for the whole request instead of
+        // graceful degradation.
+        try {
+          const stationData = await fetchJsonWithTimeout(`https://api.waqi.info/feed/@${candidate.uid}/?token=${TOKEN}`, {}, WAQI_TIMEOUT_MS);
 
-        if (stationData.status === "ok" && stationData.data && typeof stationData.data.aqi === "number") {
-          return { aqi: stationData.data.aqi, station: candidate.name, method: "search-nearest" };
+          if (stationData.status === "ok" && stationData.data && typeof stationData.data.aqi === "number") {
+            return { aqi: stationData.data.aqi, station: candidate.name, method: "search-nearest" };
+          }
+        } catch (err) {
+          console.warn(`AQI candidate station "${candidate.name}" (uid ${candidate.uid}) failed — trying next candidate. ${err.message}`);
         }
       }
     }
