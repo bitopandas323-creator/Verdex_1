@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { computeInfraScore, computeWalkScore } from "../scripts/_lib/infra-walk-scoring.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -27,10 +28,13 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 }
 
 // Same algorithm as scripts/pilot-grid-hyderabad-core.mjs's own
-// findNearestCell (that file is a Node ESM module, not importable into a
-// server-route context sharing this exact same logic would need a shared
-// module setup this project doesn't otherwise have — reimplemented here,
-// not copy-drifted, since it's a short, simple scan).
+// findNearestCell — reimplemented here rather than imported since it's a
+// short, simple scan and not worth a shared module on its own. The
+// Infrastructure/Transit scoring formula below gets the opposite
+// treatment (imported from scripts/_lib/infra-walk-scoring.mjs, not
+// reimplemented) precisely because it ISN'T simple — 9+ category
+// thresholds and a weighted combination are exactly the kind of logic
+// that silently drifts out of sync if duplicated.
 function findNearestCell(lat, lon, cells) {
   let best = null, bestDistKm = Infinity;
   for (const cell of cells) {
@@ -52,9 +56,21 @@ export default async function handler(req, res) {
   }
 
   const { cell, distanceKm } = findNearestCell(latF, lonF, GRID.cells);
+  // Exact-point Infrastructure/Transit & Amenity Access, computed here
+  // from this cell's own places data (same fetchPlaces/CATEGORY_DEFS
+  // schema as data/nearby-places.json, same formula as the 80-
+  // neighbourhood batch — no new Overpass calls, pure computation over
+  // data that already exists). null when a cell has zero data for a
+  // category (computeInfraScore/computeWalkScore's own existing
+  // behavior) — callers should treat null as "exact score unavailable,
+  // fall back to the neighbourhood baseline" rather than a zero score.
+  const infraScore = computeInfraScore(cell.places);
+  const walkScore = computeWalkScore(cell.places);
   return res.status(200).json({
     inGrid: true,
     places: cell.places,
+    infraScore,
+    walkScore,
     cellDistanceKm: parseFloat(distanceKm.toFixed(3))
   });
 }

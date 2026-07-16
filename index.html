@@ -420,7 +420,7 @@
         // Run in parallel, not sequentially after fetchAreaData — the
         // grid lookup is a small, independent request and shouldn't add
         // latency on top of the existing search.
-        const [d, gridResult] = await Promise.all([
+        let [d, gridResult] = await Promise.all([
           fetchAreaData(city, value),
           getHyderabadGridPlaces(s.lat, s.lon)
         ]);
@@ -428,8 +428,30 @@
 
         let nearbyPlacesSource = "area";
         if (gridResult.inGrid) {
+          // Clone before mutating — fetchAreaData's cache stores/returns
+          // the same object reference, keyed by the matched neighbourhood's
+          // own coordinate, not this exact searched point. Mutating d in
+          // place would leak grid-derived values into a plain dropdown
+          // lookup of the same neighbourhood within the 10-minute cache
+          // window — was already a latent risk for nearbyPlaces alone;
+          // now that infraScore/walkScore/finalScore can be overridden
+          // too, an unfixed mutation would corrupt the actual Green Score
+          // shown for a later, unrelated lookup, not just a display list.
+          d = { ...d };
           d.nearbyPlaces = { places: gridResult.places };
           nearbyPlacesSource = "exact";
+
+          if (gridResult.infraScore !== null && gridResult.walkScore !== null) {
+            d.infraScore = gridResult.infraScore;
+            d.walkScore = gridResult.walkScore;
+            d.finalScore = computeFinalScore({
+              aqiScore: d.aqiScore, ndviScore: d.ndviScore, waterScore: d.waterScore,
+              heatScore: d.heatScore, noiseScore: d.noiseScore,
+              infraScore: d.infraScore, walkScore: d.walkScore,
+              safetyScore: d.safetyScore, trafficScore: d.trafficScore
+            });
+            d.infraWalkIsExact = true;
+          }
         }
 
         const distanceNote = `
@@ -790,6 +812,25 @@
       return parseFloat(Math.max(0, Math.min(10, 10 - (tds / 100))).toFixed(1));
     }
 
+    // Extracted out of fetchAreaData so the 9 weight constants exist in
+    // exactly one place — needed once Hyderabad grid-hit addresses can
+    // recompute finalScore client-side with exact-point infraScore/
+    // walkScore substituted in (see selectAddressSuggestion/locateMe),
+    // rather than duplicating this weighted sum a second time.
+    function computeFinalScore(s) {
+      return parseFloat((
+        (s.aqiScore     * 0.22) +
+        (s.ndviScore    * 0.18) +
+        (s.waterScore   * 0.15) +
+        (s.heatScore    * 0.10) +
+        (s.noiseScore   * 0.07) +
+        (s.infraScore   * 0.10) +
+        (s.walkScore    * 0.08) +
+        (s.safetyScore  * 0.06) +
+        (s.trafficScore * 0.04)
+      ).toFixed(1));
+    }
+
     function getScoreColor(score) {
       if (score >= 7) return "text-green-500";
       if (score >= 5) return "text-orange-400";
@@ -1042,17 +1083,9 @@ let infraScore   = infra;
 let walkScore    = walk;
 let trafficScore = traffic;
 let safetyScore  = safety;
-let finalScore = parseFloat((
-  (aqiScore     * 0.22) +
-  (ndviScore    * 0.18) +
-  (waterScore   * 0.15) +
-  (heatScore    * 0.10) +
-  (noiseScore   * 0.07) +
-  (infraScore   * 0.10) +
-  (walkScore    * 0.08) +
-  (safetyScore  * 0.06) +
-  (trafficScore * 0.04)
-).toFixed(1));
+let finalScore = computeFinalScore({
+  aqiScore, ndviScore, waterScore, heatScore, noiseScore, infraScore, walkScore, safetyScore, trafficScore
+});
 
       let result = {
         name, city, aqi, aqiScore, temp, feelsLike, humidity, windSpeed, heatScore,
@@ -1179,10 +1212,18 @@ let finalScore = parseFloat((
 
     function buildLiveabilityCard(d, isAreaEstimate) {
       let areaTag = isAreaEstimate ? precisionTag("area estimate") : "";
+      // d.infraWalkIsExact: set only for Hyderabad grid-hit addresses
+      // where the matched cell had usable places data for both formulas
+      // (see selectAddressSuggestion/locateMe) — Infrastructure and
+      // Transit & Amenity Access get the same "(exact for this point)"
+      // treatment already applied to Nearby Places/Green Cover for grid
+      // hits. Traffic/Safety never get exact-point data, so they keep the
+      // plain area-estimate tag regardless.
+      let infraWalkTag = d.infraWalkIsExact ? precisionTag("exact for this point") : areaTag;
       let liveSubScore = avgScore(d.infraScore, d.walkScore, d.trafficScore, d.safetyScore);
       let rows = [
-        buildParamRow("ti-building-hospital", "Infrastructure" + areaTag, `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure", "text-blue-500"),
-        buildParamRow("ti-bus", "Transit & Amenity Access" + areaTag, `${Math.round(d.walkScore * 10)} · ${getWalkLabel(d.walkScore)}`, "walkability", "text-blue-500"),
+        buildParamRow("ti-building-hospital", "Infrastructure" + infraWalkTag, `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure", "text-blue-500"),
+        buildParamRow("ti-bus", "Transit & Amenity Access" + infraWalkTag, `${Math.round(d.walkScore * 10)} · ${getWalkLabel(d.walkScore)}`, "walkability", "text-blue-500"),
         buildParamRow("ti-car", "Traffic" + areaTag, `${Math.round(d.trafficScore * 10)} · ${getTrafficLabel(d.trafficScore)}`, "traffic", "text-blue-500"),
         buildParamRow("ti-shield", "Safety" + areaTag, `${Math.round(d.safetyScore * 10)} · ${getSafetyLabel(d.safetyScore)}`, "safety", "text-blue-500")
       ].join("");
@@ -1391,6 +1432,7 @@ let finalScore = parseFloat((
             </div>
             <div class="text-base font-medium ${band.text}">${band.label}</div>
             <div class="text-xs text-gray-400 mt-2">Better than ${benchmarkPct}% of neighbourhoods in ${cityName}</div>
+            ${d.infraWalkIsExact ? `<div class="text-xs text-gray-400 mt-1">Score reflects your exact location, which may differ slightly from ${d.name}'s general score.</div>` : ""}
           </div>
           <div class="space-y-4">
             ${buildEnvironmentalCard(d, chartId, isAreaEstimate)}
@@ -1906,11 +1948,20 @@ let finalScore = parseFloat((
 
     // Checks whether an exact searched point (typed address or GPS) falls
     // within the validated Hyderabad-core grid (2200 cells, 500m spacing)
-    // and, if so, returns that cell's own Nearby Places instead of the
-    // matched neighbourhood's pre-computed list. Completely orthogonal to
+    // and, if so, returns that cell's own Nearby Places, Infrastructure
+    // score and Transit & Amenity Access score instead of the matched
+    // neighbourhood's pre-computed baseline. Completely orthogonal to
     // findNearestNeighbourhood() above — that one still always drives the
-    // whole score card (AQI/weather/NDVI/baseline fields); this only ever
-    // affects which Nearby Places list gets shown, and only for Hyderabad.
+    // rest of the score card (AQI/weather/NDVI/noise/water/traffic/
+    // safety); this only ever affects Nearby Places + these two
+    // parameters, and only for Hyderabad.
+    //
+    // infraScore/walkScore are computed server-side in api/hyderabad-
+    // grid-lookup.js (same formula as the 80-neighbourhood batch, shared
+    // via scripts/_lib/infra-walk-scoring.mjs) and can be null if the
+    // matched cell has zero data for every category that formula uses —
+    // callers must treat null as "fall back to baseline", not as a score
+    // of zero.
     //
     // The grid data itself (23.35MB) stays server-side — api/
     // hyderabad-grid-lookup.js reads it once at module load and returns
@@ -1926,7 +1977,7 @@ let finalScore = parseFloat((
         const res = await fetch(`/api/hyderabad-grid-lookup?lat=${lat}&lon=${lon}`, { signal: controller.signal });
         const data = await res.json();
         if (!res.ok || !data.inGrid) return { inGrid: false };
-        return { inGrid: true, places: data.places };
+        return { inGrid: true, places: data.places, infraScore: data.infraScore, walkScore: data.walkScore };
       } catch (err) {
         console.warn("Hyderabad grid lookup failed — using matched-neighbourhood Nearby Places instead.", err.message);
         return { inGrid: false };
@@ -2002,7 +2053,7 @@ let finalScore = parseFloat((
           try {
             // Run in parallel, not sequentially after fetchAreaData — same
             // reasoning as selectAddressSuggestion's identical wiring.
-            const [d, gridResult] = await Promise.all([
+            let [d, gridResult] = await Promise.all([
               fetchAreaData(city, value),
               getHyderabadGridPlaces(latitude, longitude)
             ]);
@@ -2010,8 +2061,23 @@ let finalScore = parseFloat((
 
             let nearbyPlacesSource = "area";
             if (gridResult.inGrid) {
+              // Clone before mutating — same cache-pollution reasoning as
+              // selectAddressSuggestion's identical wiring.
+              d = { ...d };
               d.nearbyPlaces = { places: gridResult.places };
               nearbyPlacesSource = "exact";
+
+              if (gridResult.infraScore !== null && gridResult.walkScore !== null) {
+                d.infraScore = gridResult.infraScore;
+                d.walkScore = gridResult.walkScore;
+                d.finalScore = computeFinalScore({
+                  aqiScore: d.aqiScore, ndviScore: d.ndviScore, waterScore: d.waterScore,
+                  heatScore: d.heatScore, noiseScore: d.noiseScore,
+                  infraScore: d.infraScore, walkScore: d.walkScore,
+                  safetyScore: d.safetyScore, trafficScore: d.trafficScore
+                });
+                d.infraWalkIsExact = true;
+              }
             }
 
             // Available for Map view to render the "you are here" marker if
