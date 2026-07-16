@@ -2,7 +2,6 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { fetchJsonWithTimeout } from "./_lib/http.js";
-import { createClient } from "@supabase/supabase-js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -54,24 +53,14 @@ for (const city in CITY_BBOXES) {
 // coordinate server-side without adding external state (Redis/KV) this app
 // doesn't otherwise need.
 const NOMINATIM_TIMEOUT_MS = 8000;
-const SUPABASE_TIMEOUT_MS = 5000;
 const USER_AGENT = "Verdex-AddressSearch/1.0 (https://verdex-1.vercel.app; contact: bitopandas323@gmail.com)";
 
-function withTimeout(promise, ms, message) {
-  let timeoutId;
-  const timeout = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(message)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
-}
-
 export default async function handler(req, res) {
-  const { q, session, city } = req.query;
+  const { q, city } = req.query;
   if (!q || q.trim().length < 3) {
     return res.status(400).json({ error: "q must be at least 3 characters", results: [] });
   }
 
-  const startTime = Date.now();
   let status = "error";
   let results = [];
   let errorDetail = null;
@@ -110,37 +99,6 @@ export default async function handler(req, res) {
   } catch (err) {
     status = err.name === "AbortError" ? "timeout" : "error";
     errorDetail = err.message;
-  }
-
-  const durationMs = Date.now() - startTime;
-
-  // geocode_attempts is a TEMPORARY diagnostic table (per explicit
-  // decision) to get real numbers on how often Nominatim struggles with
-  // Indian addresses before deciding whether Google Places is needed —
-  // plan to clear it out once that call is made, not a permanent log.
-  // Awaited (not fire-and-forget) because a Vercel function's execution
-  // context isn't guaranteed to survive after the response is sent, so an
-  // un-awaited insert here could silently be dropped — defeating the whole
-  // point of collecting reliable numbers.
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
-    try {
-      const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-      const { error } = await withTimeout(
-        supabase.from("geocode_attempts").insert({
-          session_id: session || null,
-          query: q,
-          result_count: results.length,
-          status,
-          duration_ms: durationMs,
-          error_detail: errorDetail
-        }),
-        SUPABASE_TIMEOUT_MS,
-        "Supabase insert timed out"
-      );
-      if (error) console.warn("geocode_attempts insert failed:", error.message);
-    } catch (logErr) {
-      console.warn("geocode_attempts insert threw:", logErr.message);
-    }
   }
 
   if (status === "error" || status === "timeout") {

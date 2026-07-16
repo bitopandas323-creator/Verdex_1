@@ -249,20 +249,6 @@
     let addressSearchRequestId = 0;
     let addressSelectedIndex = -1;
     let currentAddressSuggestions = [];
-    let addressSearchSessionId = null;
-
-    // One ID per "typing session" (first keystroke until a selection is
-    // made or the page reloads) — lets the geocode_attempts log answer
-    // "how often did someone need a second/third search to find their
-    // address" via a query, without baking that computation in here.
-    function getAddressSearchSessionId() {
-      if (!addressSearchSessionId) {
-        addressSearchSessionId = (window.crypto && crypto.randomUUID)
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      }
-      return addressSearchSessionId;
-    }
 
     // Reused verbatim from the old Smart Search (removed along with that
     // box, restored here): matches when a KNOWN neighbourhood/city NAME
@@ -334,7 +320,6 @@
           // totally different city ahead of the one actually being browsed.
           const selectedCity = document.getElementById('city-select').value;
           const url = "/api/geocode?q=" + encodeURIComponent(query)
-            + "&session=" + getAddressSearchSessionId()
             + "&city=" + encodeURIComponent(selectedCity);
           const res  = await fetch(url);
           const data = await res.json();
