@@ -77,6 +77,10 @@
         class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
         Map view
       </button>
+      <button id="btn-assistant" onclick="setMode('assistant')"
+        class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
+        Assistant
+      </button>
     </div>
 
     <!-- Single Mode -->
@@ -172,8 +176,32 @@
         </select>
       </div>
       <div id="map-status" class="text-sm text-gray-400 text-center mb-2"></div>
+      <div id="map-precision-badge" class="text-center mb-2"></div>
       <div id="map-container" style="height:320px" class="rounded-2xl overflow-hidden border border-gray-100"></div>
       <div id="map-result" class="hidden mt-6"></div>
+    </div>
+
+    <!-- Assistant Mode (Screen 5 — entirely placeholder, deliberately
+         inert: no input box, no canned responses, nothing that could be
+         mistaken for a working feature. See buildAskVerdexCard/
+         buildClimateResilienceCard for the same honesty standard applied
+         to the per-search placeholder cards. -->
+    <div id="assistant-mode" class="hidden">
+      <div class="bg-gray-50 rounded-2xl p-8 text-center">
+        <i class="ti ti-robot text-gray-300" style="font-size:3rem"></i>
+        <div class="flex items-center justify-center gap-2 mt-3 mb-2">
+          <span class="font-semibold text-gray-600 text-lg">Ask Verdex & Smart Alerts</span>
+          <span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Not started</span>
+        </div>
+        <div class="text-sm text-gray-400 max-w-sm mx-auto">
+          Not built yet. This will eventually let you ask real questions about a specific spot
+          and get proactive alerts when conditions change — but it needs real LLM integration,
+          cost handling, and enough real history behind it to answer truthfully rather than
+          guess. Nothing here is functional yet, on purpose: a half-working assistant would
+          invite trust in answers that aren't actually grounded in real data, which is worse
+          than an honest "not built" placeholder.
+        </div>
+      </div>
     </div>
 
   </div>
@@ -758,7 +786,7 @@
     }
 
     function setMode(mode) {
-      const modes = ["single", "compare", "map"];
+      const modes = ["single", "compare", "map", "assistant"];
       modes.forEach(m => {
         document.getElementById(m + "-mode").classList.toggle("hidden", m !== mode);
         document.getElementById("btn-" + m).className = m === mode ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
@@ -1372,6 +1400,49 @@ let finalScore = computeFinalScore({
         </div>`;
     }
 
+    // Honest "not built yet" placeholder cards for the 2040 vision spec's
+    // Screen 1 — same visual language as buildRealEstateSection's empty
+    // state (gray-50 card, muted text, pill-shaped status badge), just a
+    // different status word ("Not built yet"/"Not started") since these
+    // are permanently-unbuilt-for-now features, not "coming soon" data
+    // gaps. No input box, no fake responses/numbers — deliberately inert.
+    function buildAskVerdexCard() {
+      return `
+        <div class="bg-gray-50 rounded-2xl p-6">
+          <div class="flex justify-between items-center gap-2 mb-1">
+            <div class="flex items-center gap-2 min-w-0">
+              <i class="ti ti-message-chatbot text-gray-400 text-lg shrink-0"></i>
+              <span class="font-semibold text-gray-500 truncate">Ask Verdex</span>
+            </div>
+            <span class="shrink-0 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Not built yet</span>
+          </div>
+          <div class="text-sm text-gray-400">Not built yet. Once there's enough real history to draw on, this will answer real questions about this exact spot — not general advice.</div>
+        </div>`;
+    }
+
+    // Deliberately splits the two sub-parts honestly rather than one vague
+    // sentence: heat-stress history is a real, scoped task (free Open-Meteo
+    // historical data exists) just not built yet; flood risk has no known
+    // free India-specific data source at all — genuinely unsolved, not
+    // merely unscheduled. Collapsing those into one status would overstate
+    // how close flood risk actually is to shipping.
+    function buildClimateResilienceCard() {
+      return `
+        <div class="bg-gray-50 rounded-2xl p-6">
+          <div class="flex justify-between items-center gap-2 mb-1">
+            <div class="flex items-center gap-2 min-w-0">
+              <i class="ti ti-cloud-storm text-gray-400 text-lg shrink-0"></i>
+              <span class="font-semibold text-gray-500 truncate">Climate Resilience</span>
+            </div>
+            <span class="shrink-0 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Not started</span>
+          </div>
+          <div class="text-sm text-gray-400 space-y-1.5">
+            <div><span class="font-medium text-gray-500">Heat-stress history</span> — not yet built, but a real, scoped task: free Open-Meteo historical data can support this.</div>
+            <div><span class="font-medium text-gray-500">Flood risk</span> — genuinely unsolved, not just unscheduled: no known free, India-specific flood-risk data source exists yet.</div>
+          </div>
+        </div>`;
+    }
+
     // Approximates a "better than X% of neighbourhoods" ranking using only
     // static baseline fields (no extra live AQI/weather fetches per neighbour
     // in the city, which would multiply API calls ~10x for one lookup).
@@ -1424,6 +1495,8 @@ let finalScore = computeFinalScore({
             ${buildLiveabilityCard(d, isAreaEstimate)}
             ${buildNearbyPlacesSection(d.nearbyPlaces, chartId, nearbyPlacesSource)}
             ${buildRealEstateSection(d.nearbyProjects)}
+            ${buildAskVerdexCard()}
+            ${buildClimateResilienceCard()}
           </div>
           <div class="pt-4 text-center text-xs text-gray-400">
             AQI and weather are live. Green cover from ESA satellites. Infrastructure, transit & amenity access, and noise are computed from real OpenStreetMap distances, refreshed periodically. Water, traffic and safety are from researched baseline data. Nearby places from OpenStreetMap, refreshed periodically.
@@ -1782,6 +1855,20 @@ let finalScore = computeFinalScore({
 
       const statusEl = document.getElementById("map-status");
       const resultEl = document.getElementById("map-result");
+
+      // Honest precision-coverage badge — Hyderabad is the only city with
+      // genuine grid-level exact-point data (see api/hyderabad-grid-
+      // lookup.js); every other city's map pins are colored from the same
+      // 80 fixed neighbourhood coordinates as everywhere else in the app,
+      // not a denser grid. Without this, the map's visual polish could
+      // silently imply a precision that doesn't exist outside Hyderabad.
+      const precisionEl = document.getElementById("map-precision-badge");
+      if (precisionEl) {
+        precisionEl.innerHTML = city === "hyderabad"
+          ? `<span class="inline-flex items-center gap-1.5 text-xs bg-green-50 text-green-700 px-3 py-1.5 rounded-full"><i class="ti ti-map-pin-check text-sm"></i>2200-cell grid · real exact-point precision</span>`
+          : `<span class="inline-flex items-center gap-1.5 text-xs bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full"><i class="ti ti-map-pin text-sm"></i>80 fixed points · area-level estimates</span>`;
+      }
+
       resultEl.classList.add("hidden");
       resultEl.innerHTML = "";
       statusEl.textContent = "Loading neighbourhoods…";
