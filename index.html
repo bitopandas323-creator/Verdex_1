@@ -187,7 +187,14 @@
          buildClimateResilienceCard for the same honesty standard applied
          to the per-search placeholder cards. -->
     <div id="assistant-mode" class="hidden">
-      <div class="bg-gray-50 rounded-2xl p-8 text-center">
+      <!-- bg-white + explicit border, not bg-gray-50 like Real Estate's
+           empty state: that pattern relies on relative contrast against
+           neighboring white/tinted cards in the same stack, which works
+           there but leaves this standalone section literally invisible —
+           bg-gray-50 here is the exact same color as <body>'s own
+           bg-gray-50, confirmed via computed style (both rgb(249,250,251)),
+           zero contrast against the page with no sibling cards nearby. -->
+      <div class="bg-white rounded-2xl p-8 text-center border border-gray-100">
         <i class="ti ti-robot text-gray-300" style="font-size:3rem"></i>
         <div class="flex items-center justify-center gap-2 mt-3 mb-2">
           <span class="font-semibold text-gray-600 text-lg">Ask Verdex & Smart Alerts</span>
@@ -250,6 +257,23 @@
       initialized: false, leafletMap: null, markers: [],
       userLocation: null, userMarker: null, userLine: null
     };
+
+    // Leaflet measures its container size once, at construction/
+    // invalidateSize time (see loadCityMap's own setTimeout invalidateSize
+    // call for hidden-at-construction) — it does NOT automatically
+    // re-measure on window resize. Without this listener, resizing the
+    // browser (or rotating a device) after the map has already loaded
+    // leaves tiles rendered at the OLD size, exposing Leaflet's own
+    // default gray background in the newly-available space — confirmed
+    // live: resizing 500px -> 1280px after load left a real, measured
+    // 174px gray gap next to the map. Debounced since resize fires
+    // continuously during a drag, not just once at the end.
+    let mapResizeTimeout = null;
+    window.addEventListener("resize", () => {
+      if (!mapState.leafletMap) return;
+      clearTimeout(mapResizeTimeout);
+      mapResizeTimeout = setTimeout(() => mapState.leafletMap.invalidateSize(), 150);
+    });
 
     function getCached(key) {
       if (!cache[key]) return null;
@@ -1141,27 +1165,36 @@ let finalScore = computeFinalScore({
     function buildParamRow(icon, label, valueHtml, infoType, colorClass) {
       colorClass = colorClass || "text-gray-400";
       return `
-        <div class="flex justify-between items-start gap-2 border-t border-black/5 py-2.5 text-sm">
-          <div class="flex items-center gap-2 text-gray-700 shrink-0">
-            <i class="ti ${icon} ${colorClass} text-lg shrink-0"></i>
+        <div class="flex justify-between items-start gap-3 border-t border-black/5 py-3 text-base">
+          <div class="flex items-center gap-3 text-gray-700 shrink-0">
+            <i class="ti ${icon} ${colorClass} text-xl shrink-0"></i>
             <span class="font-medium whitespace-nowrap">${label} ${infoBtn(infoType)}</span>
           </div>
           <div class="font-semibold text-gray-700 text-right min-w-0">${valueHtml}</div>
         </div>`;
     }
 
-    function buildLayerCardShell(icon, title, subScore10, summaryText, rowsHtml) {
+    // bgClass: fixed per-card-type identity color (Environmental=green,
+    // Liveability=blue — see call sites), NOT score-band-driven. Previously
+    // this card's whole background came from getBandInfo(subScore10).bg,
+    // which meant Environmental and Liveability rendered IDENTICALLY
+    // whenever their sub-scores landed in the same band (both "Fair" ->
+    // both bg-amber-50) — confirmed this is exactly what was happening.
+    // Score-band color is kept on the icon/number text (still shows how
+    // good THIS sub-score is) so neither signal is lost, just separated:
+    // background = which card this is, text color = how it's scoring.
+    function buildLayerCardShell(icon, title, subScore10, summaryText, rowsHtml, bgClass) {
       let band = getBandInfo(subScore10);
       return `
-        <div class="${band.bg} rounded-2xl p-6">
-          <div class="flex justify-between items-center gap-2 mb-1">
+        <div class="${bgClass} rounded-2xl p-8">
+          <div class="flex justify-between items-center gap-2 mb-1.5">
             <div class="flex items-center gap-2 min-w-0">
-              <i class="ti ${icon} ${band.text} text-lg shrink-0"></i>
-              <span class="font-semibold text-gray-800 truncate">${title}</span>
+              <i class="ti ${icon} ${band.text} text-xl shrink-0"></i>
+              <span class="font-semibold text-gray-800 text-lg truncate">${title}</span>
             </div>
-            <span class="text-2xl font-bold ${band.text} shrink-0">${Math.round(subScore10 * 10)}</span>
+            <span class="text-3xl font-bold ${band.text} shrink-0">${Math.round(subScore10 * 10)}</span>
           </div>
-          <div class="text-sm text-gray-500 mb-1">${summaryText}</div>
+          <div class="text-base text-gray-500 mb-1">${summaryText}</div>
           <div>${rowsHtml}</div>
         </div>`;
     }
@@ -1186,7 +1219,7 @@ let finalScore = computeFinalScore({
         buildParamRow("ti-droplet", "Water Quality" + areaTag, `${getWaterLabel(d.water)} · ${d.water}ppm`, "water", "text-green-500")
       ].join("") + buildAqiTrendContainer(chartId, d.name, d.city);
       let summary = `Air quality ${getAQILabel(d.aqi).toLowerCase()}, ${getNDVILabel(d.ndvi).toLowerCase()}, water ${getWaterLabel(d.water).toLowerCase()}.`;
-      return buildLayerCardShell("ti-leaf", "Environmental", envSubScore, summary, rows);
+      return buildLayerCardShell("ti-leaf", "Environmental", envSubScore, summary, rows, "bg-green-50");
     }
 
     // Two tabs sharing one chart area: "Today" (existing hourly view,
@@ -1241,7 +1274,7 @@ let finalScore = computeFinalScore({
         buildParamRow("ti-shield", "Safety" + areaTag, `${Math.round(d.safetyScore * 10)} · ${getSafetyLabel(d.safetyScore)}`, "safety", "text-blue-500")
       ].join("");
       let summary = `${getWalkLabel(d.walkScore)}, ${getTrafficLabel(d.trafficScore).toLowerCase()}, ${getSafetyLabel(d.safetyScore).toLowerCase()}.`;
-      return buildLayerCardShell("ti-bus", "Liveability", liveSubScore, summary, rows);
+      return buildLayerCardShell("ti-bus", "Liveability", liveSubScore, summary, rows, "bg-blue-50");
     }
 
     // Mirrors the CATEGORY_DEFS keys in scripts/fetch-nearby-places.mjs —
@@ -1390,25 +1423,32 @@ let finalScore = computeFinalScore({
           </div>`;
       }
 
+      // bg-white + border, not bg-gray-50 — same fix as the Assistant tab
+      // (index.html's Screen 5 section): bg-gray-50 is the exact same
+      // color as <body>'s own bg-gray-50, so a card using it renders with
+      // zero contrast against the page — technically styled, invisible in
+      // practice. Confirmed via computed style before fixing.
       return `
-        <div class="bg-gray-50 rounded-2xl p-6">
+        <div class="bg-white rounded-2xl p-8 border border-gray-100">
           <div class="flex items-center gap-2 mb-1">
             <i class="ti ti-building-community text-gray-400 text-lg"></i>
             <span class="font-semibold text-gray-500">Real Estate</span>
           </div>
-          <div class="text-sm text-gray-400">Real estate data coming soon for this neighbourhood.</div>
+          <div class="text-base text-gray-400">Real estate data coming soon for this neighbourhood.</div>
         </div>`;
     }
 
     // Honest "not built yet" placeholder cards for the 2040 vision spec's
-    // Screen 1 — same visual language as buildRealEstateSection's empty
-    // state (gray-50 card, muted text, pill-shaped status badge), just a
-    // different status word ("Not built yet"/"Not started") since these
-    // are permanently-unbuilt-for-now features, not "coming soon" data
-    // gaps. No input box, no fake responses/numbers — deliberately inert.
+    // Screen 1 — same visual language as buildRealEstateSection's populated
+    // state (white card with a border, muted text, pill-shaped status
+    // badge), just a different status word ("Not built yet"/"Not started")
+    // since these are permanently-unbuilt-for-now features, not "coming
+    // soon" data gaps. No input box, no fake responses/numbers —
+    // deliberately inert. bg-white + border, not bg-gray-50 — see the
+    // Real Estate empty-state comment above for why.
     function buildAskVerdexCard() {
       return `
-        <div class="bg-gray-50 rounded-2xl p-6">
+        <div class="bg-white rounded-2xl p-8 border border-gray-100">
           <div class="flex justify-between items-center gap-2 mb-1">
             <div class="flex items-center gap-2 min-w-0">
               <i class="ti ti-message-chatbot text-gray-400 text-lg shrink-0"></i>
@@ -1416,7 +1456,7 @@ let finalScore = computeFinalScore({
             </div>
             <span class="shrink-0 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Not built yet</span>
           </div>
-          <div class="text-sm text-gray-400">Not built yet. Once there's enough real history to draw on, this will answer real questions about this exact spot — not general advice.</div>
+          <div class="text-base text-gray-400">Not built yet. Once there's enough real history to draw on, this will answer real questions about this exact spot — not general advice.</div>
         </div>`;
     }
 
@@ -1428,7 +1468,7 @@ let finalScore = computeFinalScore({
     // how close flood risk actually is to shipping.
     function buildClimateResilienceCard() {
       return `
-        <div class="bg-gray-50 rounded-2xl p-6">
+        <div class="bg-white rounded-2xl p-8 border border-gray-100">
           <div class="flex justify-between items-center gap-2 mb-1">
             <div class="flex items-center gap-2 min-w-0">
               <i class="ti ti-cloud-storm text-gray-400 text-lg shrink-0"></i>
@@ -1436,7 +1476,7 @@ let finalScore = computeFinalScore({
             </div>
             <span class="shrink-0 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Not started</span>
           </div>
-          <div class="text-sm text-gray-400 space-y-1.5">
+          <div class="text-base text-gray-400 space-y-1.5">
             <div><span class="font-medium text-gray-500">Heat-stress history</span> — not yet built, but a real, scoped task: free Open-Meteo historical data can support this.</div>
             <div><span class="font-medium text-gray-500">Flood risk</span> — genuinely unsolved, not just unscheduled: no known free, India-specific flood-risk data source exists yet.</div>
           </div>
@@ -1482,7 +1522,7 @@ let finalScore = computeFinalScore({
             <div class="text-lg font-bold text-gray-800">${d.name}</div>
             <div class="text-sm text-gray-400">${cityName}</div>
             <div class="flex items-center justify-center gap-2 mt-3">
-              <span class="text-6xl font-bold ${band.text}">${Math.round(d.finalScore * 10)}</span>
+              <span class="text-7xl font-bold ${band.text}">${Math.round(d.finalScore * 10)}</span>
               ${infoBtn('score')}
               ${badge}
             </div>
