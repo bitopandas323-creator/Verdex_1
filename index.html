@@ -26,7 +26,13 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-  <div class="max-w-2xl mx-auto mt-12 p-8">
+  <!-- max-w-2xl is the mobile/default width, unchanged from before this
+       responsive pass — most Verdex users are on mobile (India-focused
+       app), so that stays the baseline. md:/lg:/xl: only add width at
+       larger breakpoints, giving Single mode's Environmental/Liveability
+       split (md:) and Compare mode's two-card split (lg:) room to
+       actually display side by side instead of fighting a narrow wrapper. -->
+  <div class="max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto mt-12 p-8">
 
     <div class="mb-8">
       <h1 class="text-4xl font-bold text-green-700 mb-2">Verdex</h1>
@@ -177,7 +183,15 @@
       </div>
       <div id="map-status" class="text-sm text-gray-400 text-center mb-2"></div>
       <div id="map-precision-badge" class="text-center mb-2"></div>
-      <div id="map-container" style="height:320px" class="rounded-2xl overflow-hidden border border-gray-100"></div>
+      <!-- Height moved from an inline style to Tailwind classes -
+           responsive breakpoints can't apply to inline styles (they'd
+           always win over classes anyway), and a cramped 320px-tall map
+           on a wide desktop container looks letterboxed. Width needs no
+           explicit change - it's already unconstrained block-level 100%,
+           so it grows automatically with the outer container. The
+           existing resize listener (mapState.leafletMap.invalidateSize())
+           handles re-measuring correctly at any of these heights. -->
+      <div id="map-container" class="h-80 md:h-[450px] lg:h-[600px] rounded-2xl overflow-hidden border border-gray-100"></div>
       <div id="map-result" class="hidden mt-6"></div>
     </div>
 
@@ -503,7 +517,7 @@
             <div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>
           </div>`;
 
-        resultEl.innerHTML = distanceNote + buildScoreCard(d, false, 'single', true, nearbyPlacesSource) + exactNdviBlock;
+        resultEl.innerHTML = distanceNote + buildScoreCard(d, false, 'single', true, nearbyPlacesSource, true) + exactNdviBlock;
         resultEl.classList.remove('hidden');
         resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         loadAqiTrend(d.name, d.city, 'single');
@@ -1508,13 +1522,22 @@ let finalScore = computeFinalScore({
       return Math.round((betterCount / (neighbourhoods.length - 1)) * 100);
     }
 
-    function buildScoreCard(d, highlight, chartId, isAreaEstimate, nearbyPlacesSource) {
+    // wideEnvLive: only true for Single mode's 3 call sites (checkSingle,
+    // selectAddressSuggestion, locateMe) - deliberately NOT passed by
+    // checkCompare(). A Compare card only ever gets roughly half the
+    // container's width (see checkCompare's own lg:grid-cols-2 wrapper),
+    // so splitting Environmental/Liveability again inside an already-
+    // halved card would cramp both - this parameter keeps that pairing
+    // stacked in Compare mode at every viewport width, full-width-only in
+    // Single mode where the card has the whole wide container to itself.
+    function buildScoreCard(d, highlight, chartId, isAreaEstimate, nearbyPlacesSource, wideEnvLive) {
       chartId = chartId || "single";
       let ringClass    = highlight ? "ring-2 ring-green-400 ring-offset-2" : "";
       let badge        = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Better area</span>' : "";
       let band         = getBandInfo(d.finalScore);
       let cityName     = d.city.charAt(0).toUpperCase() + d.city.slice(1);
       let benchmarkPct = computeBenchmarkPercentile(d);
+      let envLiveClass = wideEnvLive ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4";
 
       return `
         <div class="rounded-2xl p-2 ${ringClass}">
@@ -1530,9 +1553,11 @@ let finalScore = computeFinalScore({
             <div class="text-xs text-gray-400 mt-2">Better than ${benchmarkPct}% of neighbourhoods in ${cityName}</div>
             ${d.infraWalkIsExact ? `<div class="text-xs text-gray-400 mt-1">Score reflects your exact location, which may differ slightly from ${d.name}'s general score.</div>` : ""}
           </div>
-          <div class="space-y-4">
+          <div class="${envLiveClass} mb-4">
             ${buildEnvironmentalCard(d, chartId, isAreaEstimate)}
             ${buildLiveabilityCard(d, isAreaEstimate)}
+          </div>
+          <div class="space-y-4">
             ${buildNearbyPlacesSection(d.nearbyPlaces, chartId, nearbyPlacesSource)}
             ${buildRealEstateSection(d.nearbyProjects)}
             ${buildAskVerdexCard()}
@@ -1826,7 +1851,7 @@ let finalScore = computeFinalScore({
       try {
         let d = await fetchAreaData(city, nVal);
         statusEl.innerHTML = "";
-        resultEl.innerHTML = buildScoreCard(d, false, "single");
+        resultEl.innerHTML = buildScoreCard(d, false, "single", false, undefined, true);
         resultEl.classList.remove("hidden");
         loadAqiTrend(d.name, d.city, "single");
       } catch (err) {
@@ -1858,14 +1883,23 @@ let finalScore = computeFinalScore({
                <span class="font-medium text-green-600">${aWins ? dA.name : dB.name}</span>
                scores ${Math.abs(dA.finalScore - dB.finalScore).toFixed(1)} points higher
              </div>`;
-        // The immersive card design (generous padding, large icon+label+value
-        // rows) needs full width to render without wrapping/overflow — a
-        // side-by-side 2-column grid doesn't leave enough room per card at
-        // typical widths, and redesigning for that is explicitly out of scope
-        // here. Stack the two full-width cards vertically instead.
+        // Stacked by default (mobile/narrow), side-by-side at lg: (1024px)
+        // and up now that the outer container (index.html's top-level div)
+        // widens at that same breakpoint — each card gets ~530px there,
+        // enough room for the current padding/type sizes. lg:, not md:,
+        // deliberately: splitting into two columns immediately halves
+        // available width, so this needs more total viewport before it's
+        // worth doing than Single mode's Environmental/Liveability split
+        // does (that one only needs md: since it's not also being halved
+        // by an outer split). Each buildScoreCard call below does NOT
+        // pass wideEnvLive=true, so Environmental/Liveability stay
+        // stacked within each compare card at every width — avoids
+        // nesting two responsive splits inside each other, which would
+        // cramp both once this outer grid and Single mode's inner grid
+        // activated at the same viewport width.
         statusEl.innerHTML = "";
         resultEl.innerHTML = summary +
-          '<div class="space-y-6">' +
+          '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">' +
           buildScoreCard(dA, aWins && !tie, "compare-a") +
           buildScoreCard(dB, !aWins && !tie, "compare-b") +
           '</div>';
@@ -2015,7 +2049,7 @@ let finalScore = computeFinalScore({
         // just made to color this pin, so the card shown here is guaranteed
         // identical to what determined the pin's color.
         const d = await fetchAreaData(city, value);
-        resultEl.innerHTML = buildScoreCard(d, false, "map");
+        resultEl.innerHTML = buildScoreCard(d, false, "map", false, undefined, true);
         loadAqiTrend(d.name, d.city, "map");
         resultEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
       } catch (err) {
@@ -2210,7 +2244,7 @@ let finalScore = computeFinalScore({
                 <div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>
               </div>`;
 
-            resultEl.innerHTML = distanceNote + buildScoreCard(d, false, "single", true, nearbyPlacesSource) + exactNdviBlock;
+            resultEl.innerHTML = distanceNote + buildScoreCard(d, false, "single", true, nearbyPlacesSource, true) + exactNdviBlock;
             resultEl.classList.remove("hidden");
             loadAqiTrend(d.name, d.city, "single");
             loadExactLocationNdvi(latitude, longitude, ndviContainerId);
