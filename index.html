@@ -40,8 +40,17 @@
     </div>
 
     <!-- Real Address Search (Nominatim/OpenStreetMap geocoding) — sole
-         search entry point now that Smart Search has been removed; the
-         dropdown picker below is still separate and independent. -->
+         search entry point. The separate dropdown-picker + "Check Green
+         Score" button flow that used to live below (city-select +
+         neighbourhood-select, driving checkSingle()) has been removed: it
+         silently ignored whatever was typed here and rendered the last-
+         selected (often still-default) neighbourhood instead, with no
+         precision tags and no warning that it hadn't used the searched
+         address at all — a real, confirmed bug, not a hypothetical one.
+         city-select survives in a narrower role below, purely to bias
+         Nominatim's search ranking toward the right city for ambiguous
+         queries (see handleAddressSearch) — it no longer drives an
+         independent lookup of its own. -->
     <div class="mb-6 relative">
       <label class="block text-sm text-gray-500 mb-2">Search any area, landmark or city</label>
       <input
@@ -58,6 +67,21 @@
       <div id="address-suggestions-box"
         class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
       </div>
+    </div>
+
+    <div class="mb-6">
+      <label class="block text-xs text-gray-400 mb-1">Prioritize results in</label>
+      <select id="city-select"
+        class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600 bg-white">
+        <option value="hyderabad">Hyderabad</option>
+        <option value="mumbai">Mumbai</option>
+        <option value="delhi">Delhi</option>
+        <option value="bangalore">Bangalore</option>
+        <option value="chennai">Chennai</option>
+        <option value="pune">Pune</option>
+        <option value="kolkata">Kolkata</option>
+        <option value="ahmedabad">Ahmedabad</option>
+      </select>
     </div>
 
     <div class="mb-6">
@@ -91,30 +115,6 @@
 
     <!-- Single Mode -->
     <div id="single-mode">
-      <div class="mb-4">
-        <label class="block text-sm text-gray-500 mb-2">Or select a city</label>
-        <select id="city-select" onchange="updateNeighbourhoods('neighbourhood-select', 'city-select')"
-          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
-          <option value="hyderabad">Hyderabad</option>
-          <option value="mumbai">Mumbai</option>
-          <option value="delhi">Delhi</option>
-          <option value="bangalore">Bangalore</option>
-          <option value="chennai">Chennai</option>
-          <option value="pune">Pune</option>
-          <option value="kolkata">Kolkata</option>
-          <option value="ahmedabad">Ahmedabad</option>
-        </select>
-      </div>
-      <div class="mb-6">
-        <label class="block text-sm text-gray-500 mb-2">Select a neighbourhood</label>
-        <select id="neighbourhood-select"
-          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
-        </select>
-      </div>
-      <button onclick="checkSingle()"
-        class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium">
-        Check Green Score
-      </button>
       <div id="single-status" class="mt-4 text-sm text-gray-400 text-center"></div>
       <div id="single-result" class="hidden mt-6"></div>
     </div>
@@ -510,10 +510,24 @@
             Closest matched area: <span class="font-medium text-gray-700">${d.name}</span>
             (${distanceKm.toFixed(1)}km from the searched address)
           </div>`;
+        // Deliberately unconditional — NOT gated behind gridResult.inGrid
+        // the way Infrastructure/Transit/Places are just above. Sentinel
+        // Hub NDVI has no bounding box; it's queried directly for this
+        // exact lat/lon regardless of whether the address fell inside
+        // Hyderabad's grid, so this block can legitimately show a real
+        // exact reading even when the main card's grid-scoped rows fall
+        // back to "area estimate" right above it. Confirmed live: a
+        // Hyderabad address outside the grid box returned
+        // gridResult.inGrid=false (correct area-estimate fallback for
+        // infra/transit/places) while this NDVI call still succeeded with
+        // a genuine per-point reading — that's not a bug, it's two
+        // different parameters with two different real precision
+        // ceilings, which is why the label below says "works anywhere"
+        // instead of reusing infraWalkTag's grid-scoped wording.
         const ndviContainerId = "exact-ndvi-address";
         const exactNdviBlock = `
           <div class="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-sm" id="${ndviContainerId}">
-            <div class="text-xs text-gray-500 mb-1">Green cover${precisionTag("exact for this point")}</div>
+            <div class="text-xs text-gray-500 mb-1">Green cover${precisionTag("exact for this point — works anywhere")}</div>
             <div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>
           </div>`;
 
@@ -1275,11 +1289,16 @@ let finalScore = computeFinalScore({
       // d.infraWalkIsExact: set only for Hyderabad grid-hit addresses
       // where the matched cell had usable places data for both formulas
       // (see selectAddressSuggestion/locateMe) — Infrastructure and
-      // Transit & Amenity Access get the same "(exact for this point)"
-      // treatment already applied to Nearby Places/Green Cover for grid
-      // hits. Traffic/Safety never get exact-point data, so they keep the
-      // plain area-estimate tag regardless.
-      let infraWalkTag = d.infraWalkIsExact ? precisionTag("exact for this point") : areaTag;
+      // Transit & Amenity Access get the same grid-scoped exact treatment
+      // already applied to Nearby Places for grid hits. Explicitly labeled
+      // "Hyderabad grid" (not the plain "exact for this point" Green Cover
+      // uses) because this exactness only exists within that ~2200-cell
+      // grid's bounding box — most Hyderabad addresses, and every address
+      // in every other city, fall back to areaTag here even when Green
+      // Cover's own exact reading (satellite-based, no such boundary)
+      // succeeds right below it. Traffic/Safety never get exact-point
+      // data, so they keep the plain area-estimate tag regardless.
+      let infraWalkTag = d.infraWalkIsExact ? precisionTag("exact for this point — Hyderabad grid") : areaTag;
       let liveSubScore = avgScore(d.infraScore, d.walkScore, d.trafficScore, d.safetyScore);
       let rows = [
         buildParamRow("ti-building-hospital", "Infrastructure" + infraWalkTag, `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure", "text-blue-500"),
@@ -1391,7 +1410,7 @@ let finalScore = computeFinalScore({
 
       let tiles  = available.map(k => buildNearbyTile(k, sectionId)).join("");
       let panels = available.map(k => buildNearbyPanel(k, places[k].candidates, sectionId)).join("");
-      let precisionLabel = nearbyPlacesSource === "exact" ? precisionTag("exact for this point")
+      let precisionLabel = nearbyPlacesSource === "exact" ? precisionTag("exact for this point — Hyderabad grid")
         : nearbyPlacesSource === "area" ? precisionTag("area estimate")
         : "";
 
@@ -1522,8 +1541,9 @@ let finalScore = computeFinalScore({
       return Math.round((betterCount / (neighbourhoods.length - 1)) * 100);
     }
 
-    // wideEnvLive: only true for Single mode's 3 call sites (checkSingle,
-    // selectAddressSuggestion, locateMe) - deliberately NOT passed by
+    // wideEnvLive: only true for Single mode's 3 call sites
+    // (selectAddressSuggestion, locateMe, Map mode's tap-in card) -
+    // deliberately NOT passed by
     // checkCompare(). A Compare card only ever gets roughly half the
     // container's width (see checkCompare's own lg:grid-cols-2 wrapper),
     // so splitting Environmental/Liveability again inside an already-
@@ -1837,26 +1857,6 @@ let finalScore = computeFinalScore({
       } catch (err) {
         console.warn("Daily trend fetch failed — showing fallback message", err);
         showNotEnoughData();
-      }
-    }
-
-    async function checkSingle() {
-      clearUserLocationPin();
-      let city     = document.getElementById("city-select").value;
-      let nVal     = document.getElementById("neighbourhood-select").value;
-      let statusEl = document.getElementById("single-status");
-      let resultEl = document.getElementById("single-result");
-      statusEl.innerHTML = getSpinner();
-      resultEl.classList.add("hidden");
-      try {
-        let d = await fetchAreaData(city, nVal);
-        statusEl.innerHTML = "";
-        resultEl.innerHTML = buildScoreCard(d, false, "single", false, undefined, true);
-        resultEl.classList.remove("hidden");
-        loadAqiTrend(d.name, d.city, "single");
-      } catch (err) {
-        statusEl.innerHTML = "Could not load data. Check console (F12).";
-        console.error(err);
       }
     }
 
@@ -2237,10 +2237,14 @@ let finalScore = computeFinalScore({
                 Closest matched area: <span class="font-medium text-gray-700">${d.name}</span>
                 (${distanceKm.toFixed(1)}km from your location)
               </div>`;
+            // Unconditional, same as selectAddressSuggestion's copy of this
+            // block above (see its longer comment) — not gated behind
+            // gridResult.inGrid, since Sentinel Hub NDVI works for any
+            // coordinate regardless of Hyderabad's grid boundary.
             const ndviContainerId = "exact-ndvi-single";
             const exactNdviBlock = `
               <div class="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-sm" id="${ndviContainerId}">
-                <div class="text-xs text-gray-500 mb-1">Green cover${precisionTag("exact for this point")}</div>
+                <div class="text-xs text-gray-500 mb-1">Green cover${precisionTag("exact for this point — works anywhere")}</div>
                 <div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>
               </div>`;
 
@@ -2264,7 +2268,6 @@ let finalScore = computeFinalScore({
       );
     }
 
-    updateNeighbourhoods("neighbourhood-select", "city-select");
     updateNeighbourhoods("neighbourhood-a", "city-a");
     updateNeighbourhoods("neighbourhood-b", "city-b");
 
