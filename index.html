@@ -1703,6 +1703,13 @@ let finalScore = computeFinalScore({
         </div>`;
     }
 
+    // Suppresses the Real Estate section from the UI entirely, for every
+    // city — data/nearbyProjects, this function, and the RERA-link logic
+    // below are all left fully intact; only buildScoreCard's one call
+    // site (its sole render point, shared by every mode) is gated behind
+    // this flag. Flip to true to re-enable with no other changes needed.
+    const REAL_ESTATE_ENABLED = false;
+
     function buildRealEstateSection(nearbyProjects) {
       if (nearbyProjects && nearbyProjects.length > 0) {
         let rows = nearbyProjects.map(p => {
@@ -1856,7 +1863,7 @@ let finalScore = computeFinalScore({
           </div>
           <div class="space-y-4">
             ${buildNearbyPlacesSection(d.nearbyPlaces, chartId, nearbyPlacesSource)}
-            ${buildRealEstateSection(d.nearbyProjects)}
+            ${REAL_ESTATE_ENABLED ? buildRealEstateSection(d.nearbyProjects) : ""}
             ${buildAskVerdexCard()}
             ${buildClimateResilienceCard()}
           </div>
