@@ -93,20 +93,45 @@ async function fetchJsonWithTimeout(url, options, ms) {
   }
 }
 
+// Never throws — mirrors fetchNdviForCell's fetchNdviOnce in
+// scripts/pilot-grid-hyderabad-core.mjs: internalizes its own try/catch so
+// the caller can safely abandon this promise (via the hard-deadline race
+// below) without risking an unhandled rejection later, if a stalled
+// request eventually settles on its own after the race has already moved
+// on.
+async function queryOverpassOnce(endpoint, query) {
+  try {
+    const data = await fetchJsonWithTimeout(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
+      body: "data=" + encodeURIComponent(query)
+    }, OVERPASS_CLIENT_TIMEOUT_MS);
+    return Array.isArray(data.elements) ? data.elements : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+// Bangalore grid pilot session 3 proved AbortController's own setTimeout
+// isn't sufficient here either — the same OS/network-level stall that hung
+// pilot-grid-hyderabad-core.mjs's NDVI calls for 12-75 minutes despite its
+// 30s guard also hit this exact function: cell [18,3] returned 0/18
+// categories after a 2329s stall, cell [18,4] after 4492s — both far past
+// OVERPASS_CLIENT_TIMEOUT_MS's 45s ceiling, on a function that already
+// retries twice per mirror. Same fix as the NDVI path: race each attempt
+// against an independent hard deadline so this loop keeps moving even if
+// the underlying fetch() promise never settles (the abandoned attempt is
+// left to resolve on its own in the background; queryOverpassOnce's own
+// try/catch above means that's always safe to ignore).
 async function queryOverpassWithRetry(query) {
   for (const endpoint of OVERPASS_ENDPOINTS) {
     for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const data = await fetchJsonWithTimeout(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
-          body: "data=" + encodeURIComponent(query)
-        }, OVERPASS_CLIENT_TIMEOUT_MS);
-        if (!Array.isArray(data.elements)) throw new Error("no elements");
-        return data.elements;
-      } catch (err) {
-        if (attempt === 1) { await sleep(1500); continue; }
-      }
+      const hardDeadline = new Promise(resolve =>
+        setTimeout(() => resolve(null), OVERPASS_CLIENT_TIMEOUT_MS + 5000)
+      );
+      const elements = await Promise.race([queryOverpassOnce(endpoint, query), hardDeadline]);
+      if (elements) return elements;
+      if (attempt === 1) await sleep(1500);
     }
   }
   return null; // every mirror failed after retry
