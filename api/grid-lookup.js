@@ -5,18 +5,28 @@ import { computeInfraScore, computeWalkScore } from "../scripts/_lib/infra-walk-
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// data/pilot-grid-hyderabad-core.json is 23.35MB (2200 cells) — far too
-// large to ship to the browser on every Hyderabad address/GPS search (the
-// original plan before this file existed). Read once here, at module load,
-// kept in memory for this serverless instance's warm lifetime — same
-// JSON.parse(readFileSync(...))-at-top-of-file pattern already used by
-// api/snapshot.js and api/geocode.js for data/neighbourhoods.json. Every
-// actual request then just does an in-memory nearest-cell scan over 2200
-// pre-parsed objects (microseconds) and returns a few KB, not 23MB.
-const GRID = JSON.parse(
-  readFileSync(join(__dirname, "..", "data", "pilot-grid-hyderabad-core.json"), "utf8")
-);
-const BBOX = GRID.meta.bbox;
+// Replaces the old, Hyderabad-only api/hyderabad-grid-lookup.js now that a
+// second city (Bangalore) has its own precomputed grid. Adding a third city
+// later is one line here, not a second copy of this file — everything below
+// operates on "whichever registered grid's bbox contains this point", never
+// on a specific city by name.
+//
+// Each grid file is large (Hyderabad: 23.35MB/2200 cells, Bangalore:
+// similar scale/3332 cells) — far too large to ship to the browser per
+// search. Read once here, at module load, kept in memory for this
+// serverless instance's warm lifetime, same JSON.parse(readFileSync(...))
+// pattern used by api/snapshot.js and api/geocode.js. Every actual request
+// then does an in-memory nearest-cell scan (microseconds) over just the one
+// matched grid's cells and returns a few KB, not the whole file.
+const GRID_REGISTRY = [
+  { city: "hyderabad", file: "pilot-grid-hyderabad-core.json" },
+  { city: "bangalore", file: "pilot-grid-bangalore-core.json" }
+];
+
+const GRIDS = GRID_REGISTRY.map(({ city, file }) => {
+  const parsed = JSON.parse(readFileSync(join(__dirname, "..", "data", file), "utf8"));
+  return { city, bbox: parsed.meta.bbox, cells: parsed.cells };
+});
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -44,6 +54,15 @@ function findNearestCell(lat, lon, cells) {
   return { cell: best, distanceKm: bestDistKm };
 }
 
+// Cities' grids don't overlap (Hyderabad and Bangalore are ~500km apart),
+// so the first bbox match is the only match — no need to compare distances
+// across grids.
+function findGridForPoint(lat, lon) {
+  return GRIDS.find(g =>
+    lat >= g.bbox.south && lat <= g.bbox.north && lon >= g.bbox.west && lon <= g.bbox.east
+  ) || null;
+}
+
 export default async function handler(req, res) {
   const { lat, lon } = req.query;
   const latF = parseFloat(lat), lonF = parseFloat(lon);
@@ -51,11 +70,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "lat and lon required", inGrid: false, places: null });
   }
 
-  if (latF < BBOX.south || latF > BBOX.north || lonF < BBOX.west || lonF > BBOX.east) {
+  const grid = findGridForPoint(latF, lonF);
+  if (!grid) {
     return res.status(200).json({ inGrid: false, places: null });
   }
 
-  const { cell, distanceKm } = findNearestCell(latF, lonF, GRID.cells);
+  const { cell, distanceKm } = findNearestCell(latF, lonF, grid.cells);
   // Exact-point Infrastructure/Transit & Amenity Access, computed here
   // from this cell's own places data (same fetchPlaces/CATEGORY_DEFS
   // schema as data/nearby-places.json, same formula as the 80-
@@ -68,6 +88,7 @@ export default async function handler(req, res) {
   const walkScore = computeWalkScore(cell.places);
   return res.status(200).json({
     inGrid: true,
+    city: grid.city,
     places: cell.places,
     infraScore,
     walkScore,

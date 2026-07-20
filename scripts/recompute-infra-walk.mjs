@@ -29,7 +29,7 @@ const neighbourhoods = JSON.parse(readFileSync(neighbourhoodsPath, "utf8"));
 
 // Formula (distanceToScore, thresholds, computeInfraScore/computeWalkScore)
 // lives in scripts/_lib/infra-walk-scoring.mjs now, shared with
-// api/hyderabad-grid-lookup.js's exact-point computation for Hyderabad
+// api/grid-lookup.js's exact-point computation for any registered city's
 // grid hits — same functions, not a parallel implementation.
 
 const results = [];

@@ -473,7 +473,7 @@
         // latency on top of the existing search.
         let [d, gridResult] = await Promise.all([
           fetchAreaData(city, value),
-          getHyderabadGridPlaces(s.lat, s.lon)
+          getExactGridPlaces(s.lat, s.lon)
         ]);
         statusEl.innerHTML = '';
 
@@ -490,7 +490,11 @@
           // shown for a later, unrelated lookup, not just a display list.
           d = { ...d };
           d.nearbyPlaces = { places: gridResult.places };
-          nearbyPlacesSource = "exact";
+          // gridResult.city ("hyderabad"/"bangalore"/...) rather than a
+          // fixed "exact" literal — buildNearbyPlacesSection uses this
+          // both as a truthiness check and to build the right city name
+          // into the label, so a Bangalore hit doesn't say "Hyderabad".
+          nearbyPlacesSource = gridResult.city;
 
           if (gridResult.infraScore !== null && gridResult.walkScore !== null) {
             d.infraScore = gridResult.infraScore;
@@ -501,7 +505,7 @@
               infraScore: d.infraScore, walkScore: d.walkScore,
               safetyScore: d.safetyScore, trafficScore: d.trafficScore
             });
-            d.infraWalkIsExact = true;
+            d.infraWalkExactCity = gridResult.city;
           }
         }
 
@@ -1190,6 +1194,11 @@ let finalScore = computeFinalScore({
       return ` <span class="text-xs text-gray-400 font-normal">(${label})</span>`;
     }
 
+    // Display names for the city slugs api/grid-lookup.js returns as
+    // gridResult.city — extend this alongside GRID_REGISTRY in that file
+    // when a third city's grid is added.
+    const GRID_CITY_LABELS = { hyderabad: "Hyderabad", bangalore: "Bangalore" };
+
     function buildParamRow(icon, label, valueHtml, infoType, colorClass) {
       colorClass = colorClass || "text-gray-400";
       return `
@@ -1286,19 +1295,23 @@ let finalScore = computeFinalScore({
 
     function buildLiveabilityCard(d, isAreaEstimate) {
       let areaTag = isAreaEstimate ? precisionTag("area estimate") : "";
-      // d.infraWalkIsExact: set only for Hyderabad grid-hit addresses
-      // where the matched cell had usable places data for both formulas
-      // (see selectAddressSuggestion/locateMe) — Infrastructure and
-      // Transit & Amenity Access get the same grid-scoped exact treatment
-      // already applied to Nearby Places for grid hits. Explicitly labeled
-      // "Hyderabad grid" (not the plain "exact for this point" Green Cover
-      // uses) because this exactness only exists within that ~2200-cell
-      // grid's bounding box — most Hyderabad addresses, and every address
-      // in every other city, fall back to areaTag here even when Green
-      // Cover's own exact reading (satellite-based, no such boundary)
-      // succeeds right below it. Traffic/Safety never get exact-point
-      // data, so they keep the plain area-estimate tag regardless.
-      let infraWalkTag = d.infraWalkIsExact ? precisionTag("exact for this point — Hyderabad grid") : areaTag;
+      // d.infraWalkExactCity: the matched grid's city slug (e.g.
+      // "hyderabad", "bangalore"), set only for grid-hit addresses where
+      // the matched cell had usable places data for both formulas (see
+      // selectAddressSuggestion/locateMe) — Infrastructure and Transit &
+      // Amenity Access get the same grid-scoped exact treatment already
+      // applied to Nearby Places for grid hits. Explicitly labeled with
+      // the matching city's grid (not the plain "exact for this point"
+      // Green Cover uses) because this exactness only exists within that
+      // city's own grid's bounding box — most addresses even within a
+      // covered city, and every address in an uncovered city, fall back
+      // to areaTag here even when Green Cover's own exact reading
+      // (satellite-based, no such boundary) succeeds right below it.
+      // Traffic/Safety never get exact-point data, so they keep the plain
+      // area-estimate tag regardless.
+      let infraWalkTag = d.infraWalkExactCity
+        ? precisionTag(`exact for this point — ${GRID_CITY_LABELS[d.infraWalkExactCity] || d.infraWalkExactCity} grid`)
+        : areaTag;
       let liveSubScore = avgScore(d.infraScore, d.walkScore, d.trafficScore, d.safetyScore);
       let rows = [
         buildParamRow("ti-building-hospital", "Infrastructure" + infraWalkTag, `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure", "text-blue-500"),
@@ -1398,10 +1411,11 @@ let finalScore = computeFinalScore({
     // by the caller (see buildScoreCard) rather than showing an empty shell.
     // nearbyPlacesSource: unset (plain dropdown/compare/map — no tag,
     // unchanged), "area" (locateMe/address-search, matched-neighbourhood
-    // fallback), "exact" (locateMe/address-search, Hyderabad-core grid
-    // cell hit — see getHyderabadGridPlaces). Nearby Places had no
-    // precision tag at all before this — the earlier dual-precision work
-    // was scoped to the 9 main-card rows only.
+    // fallback), or a city slug like "hyderabad"/"bangalore" (locateMe/
+    // address-search, that city's grid cell hit — see
+    // getExactGridPlaces). Nearby Places had no precision tag at all
+    // before this — the earlier dual-precision work was scoped to the 9
+    // main-card rows only.
     function buildNearbyPlacesSection(nearbyPlaces, sectionId, nearbyPlacesSource) {
       sectionId = sectionId || "single";
       let places = (nearbyPlaces && nearbyPlaces.places) || {};
@@ -1410,8 +1424,12 @@ let finalScore = computeFinalScore({
 
       let tiles  = available.map(k => buildNearbyTile(k, sectionId)).join("");
       let panels = available.map(k => buildNearbyPanel(k, places[k].candidates, sectionId)).join("");
-      let precisionLabel = nearbyPlacesSource === "exact" ? precisionTag("exact for this point — Hyderabad grid")
-        : nearbyPlacesSource === "area" ? precisionTag("area estimate")
+      // nearbyPlacesSource is either "area" (grid miss), a city slug like
+      // "hyderabad"/"bangalore" (grid hit — see getExactGridPlaces), or
+      // undefined (callers, e.g. Map mode's tap-in card, that never set it
+      // at all and get no precision tag either way).
+      let precisionLabel = nearbyPlacesSource === "area" ? precisionTag("area estimate")
+        : nearbyPlacesSource ? precisionTag(`exact for this point — ${GRID_CITY_LABELS[nearbyPlacesSource] || nearbyPlacesSource} grid`)
         : "";
 
       return `
@@ -1571,7 +1589,7 @@ let finalScore = computeFinalScore({
             </div>
             <div class="text-base font-medium ${band.text}">${band.label}</div>
             <div class="text-xs text-gray-400 mt-2">Better than ${benchmarkPct}% of neighbourhoods in ${cityName}</div>
-            ${d.infraWalkIsExact ? `<div class="text-xs text-gray-400 mt-1">Score reflects your exact location, which may differ slightly from ${d.name}'s general score.</div>` : ""}
+            ${d.infraWalkExactCity ? `<div class="text-xs text-gray-400 mt-1">Score reflects your exact location, which may differ slightly from ${d.name}'s general score.</div>` : ""}
           </div>
           <div class="${envLiveClass} mb-4">
             ${buildEnvironmentalCard(d, chartId, isAreaEstimate)}
@@ -2094,39 +2112,42 @@ let finalScore = computeFinalScore({
     const GRID_LOOKUP_TIMEOUT_MS = 8000;
 
     // Checks whether an exact searched point (typed address or GPS) falls
-    // within the validated Hyderabad-core grid (2200 cells, 500m spacing)
-    // and, if so, returns that cell's own Nearby Places, Infrastructure
-    // score and Transit & Amenity Access score instead of the matched
-    // neighbourhood's pre-computed baseline. Completely orthogonal to
-    // findNearestNeighbourhood() above — that one still always drives the
-    // rest of the score card (AQI/weather/NDVI/noise/water/traffic/
-    // safety); this only ever affects Nearby Places + these two
-    // parameters, and only for Hyderabad.
+    // within ANY of this app's validated per-city grids (currently
+    // Hyderabad-core, 2200 cells, and Bangalore-core, 3332 cells — both
+    // 500m spacing) and, if so, returns that cell's own Nearby Places,
+    // Infrastructure score and Transit & Amenity Access score instead of
+    // the matched neighbourhood's pre-computed baseline. Completely
+    // orthogonal to findNearestNeighbourhood() above — that one still
+    // always drives the rest of the score card (AQI/weather/NDVI/noise/
+    // water/traffic/safety); this only ever affects Nearby Places + these
+    // two parameters, and only within a city that has a grid. Which city
+    // (if any) matched comes back as data.city — callers use it to build
+    // an honest, city-specific label rather than a generic "exact" one.
     //
-    // infraScore/walkScore are computed server-side in api/hyderabad-
-    // grid-lookup.js (same formula as the 80-neighbourhood batch, shared
-    // via scripts/_lib/infra-walk-scoring.mjs) and can be null if the
-    // matched cell has zero data for every category that formula uses —
-    // callers must treat null as "fall back to baseline", not as a score
-    // of zero.
+    // infraScore/walkScore are computed server-side in api/grid-lookup.js
+    // (same formula as the 80-neighbourhood batch, shared via
+    // scripts/_lib/infra-walk-scoring.mjs) and can be null if the matched
+    // cell has zero data for every category that formula uses — callers
+    // must treat null as "fall back to baseline", not as a score of zero.
     //
-    // The grid data itself (23.35MB) stays server-side — api/
-    // hyderabad-grid-lookup.js reads it once at module load and returns
-    // just the matched cell (a few KB), not the whole file. On any
-    // failure (timeout, non-2xx, network error, or a genuine miss outside
-    // the grid's bounding box) this returns { inGrid: false }, and callers
-    // fall back to the existing matched-neighbourhood behavior unchanged —
-    // never blocks or breaks the rest of the result.
-    async function getHyderabadGridPlaces(lat, lon) {
+    // The grid data itself (tens of MB per city) stays server-side —
+    // api/grid-lookup.js reads every registered grid once at module load
+    // and returns just the matched cell (a few KB), not the whole file.
+    // On any failure (timeout, non-2xx, network error, or a genuine miss
+    // outside every registered grid's bounding box) this returns
+    // { inGrid: false }, and callers fall back to the existing matched-
+    // neighbourhood behavior unchanged — never blocks or breaks the rest
+    // of the result.
+    async function getExactGridPlaces(lat, lon) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), GRID_LOOKUP_TIMEOUT_MS);
       try {
-        const res = await fetch(`/api/hyderabad-grid-lookup?lat=${lat}&lon=${lon}`, { signal: controller.signal });
+        const res = await fetch(`/api/grid-lookup?lat=${lat}&lon=${lon}`, { signal: controller.signal });
         const data = await res.json();
         if (!res.ok || !data.inGrid) return { inGrid: false };
-        return { inGrid: true, places: data.places, infraScore: data.infraScore, walkScore: data.walkScore };
+        return { inGrid: true, city: data.city, places: data.places, infraScore: data.infraScore, walkScore: data.walkScore };
       } catch (err) {
-        console.warn("Hyderabad grid lookup failed — using matched-neighbourhood Nearby Places instead.", err.message);
+        console.warn("Grid lookup failed — using matched-neighbourhood Nearby Places instead.", err.message);
         return { inGrid: false };
       } finally {
         clearTimeout(timeoutId);
@@ -2202,7 +2223,7 @@ let finalScore = computeFinalScore({
             // reasoning as selectAddressSuggestion's identical wiring.
             let [d, gridResult] = await Promise.all([
               fetchAreaData(city, value),
-              getHyderabadGridPlaces(latitude, longitude)
+              getExactGridPlaces(latitude, longitude)
             ]);
             singleStatusEl.innerHTML = "";
 
@@ -2212,7 +2233,7 @@ let finalScore = computeFinalScore({
               // selectAddressSuggestion's identical wiring.
               d = { ...d };
               d.nearbyPlaces = { places: gridResult.places };
-              nearbyPlacesSource = "exact";
+              nearbyPlacesSource = gridResult.city;
 
               if (gridResult.infraScore !== null && gridResult.walkScore !== null) {
                 d.infraScore = gridResult.infraScore;
@@ -2223,7 +2244,7 @@ let finalScore = computeFinalScore({
                   infraScore: d.infraScore, walkScore: d.walkScore,
                   safetyScore: d.safetyScore, trafficScore: d.trafficScore
                 });
-                d.infraWalkIsExact = true;
+                d.infraWalkExactCity = gridResult.city;
               }
             }
 

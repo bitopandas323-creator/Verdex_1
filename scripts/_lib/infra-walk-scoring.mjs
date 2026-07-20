@@ -1,15 +1,16 @@
 // Infrastructure/Transit & Amenity Access scoring formula, extracted out
 // of scripts/recompute-infra-walk.mjs so it can be shared between that
 // batch script (data/nearby-places.json, all 80 neighbourhoods) and
-// api/hyderabad-grid-lookup.js (a single grid cell's places, computed
-// per-request for exact-point precision). Same functions, same
-// thresholds, no behavior change from the version validated and shipped
-// for the 80-neighbourhood rollout — this file only relocates them.
+// api/grid-lookup.js (a single grid cell's places, computed per-request
+// for exact-point precision, for any registered city's grid). Same
+// functions, same thresholds, no behavior change from the version
+// validated and shipped for the 80-neighbourhood rollout — this file
+// only relocates them.
 //
 // Callers just need `places` in the schema produced by fetchPlaces/
-// CATEGORY_DEFS (scripts/fetch-nearby-places.mjs): both data/nearby-
-// places.json entries and pilot-grid-hyderabad-core.json cells are built
-// by that same function, so no adaptation is needed either way.
+// CATEGORY_DEFS (scripts/fetch-nearby-places.mjs): data/nearby-
+// places.json entries and every pilot-grid-<city>-core.json's cells are
+// all built by that same function, so no adaptation is needed either way.
 
 // FLOOR: the practical minimum is 1.5, not 0 — a hard 0 read identically to
 // "nothing exists here" for legitimately spread-out/suburban areas (e.g.
