@@ -39,51 +39,6 @@
       <p class="text-gray-500">Green scores for every neighbourhood in India — live data.</p>
     </div>
 
-    <!-- Real Address Search (Nominatim/OpenStreetMap geocoding) — sole
-         search entry point. The separate dropdown-picker + "Check Green
-         Score" button flow that used to live below (city-select +
-         neighbourhood-select, driving checkSingle()) has been removed: it
-         silently ignored whatever was typed here and rendered the last-
-         selected (often still-default) neighbourhood instead, with no
-         precision tags and no warning that it hadn't used the searched
-         address at all — a real, confirmed bug, not a hypothetical one.
-         city-select survives in a narrower role below, purely to bias
-         Nominatim's search ranking toward the right city for ambiguous
-         queries (see handleAddressSearch) — it no longer drives an
-         independent lookup of its own. -->
-    <div class="mb-6 relative">
-      <label class="block text-sm text-gray-500 mb-2">Search any area, landmark or city</label>
-      <input
-        id="address-search-input-single"
-        type="text"
-        placeholder="e.g. Road 12, Banjara Hills, Hyderabad"
-        oninput="handleAddressSearch('single')"
-        onkeydown="handleAddressKeydown(event, 'single')"
-        class="w-full border border-gray-200 rounded-full px-5 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
-      />
-      <div id="address-search-spinner-single" class="hidden absolute right-3 top-10">
-        <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
-      </div>
-      <div id="address-suggestions-box-single"
-        class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
-      </div>
-    </div>
-
-    <div class="mb-6">
-      <label class="block text-xs text-gray-400 mb-1">Prioritize results in</label>
-      <select id="city-select"
-        class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600 bg-white">
-        <option value="hyderabad">Hyderabad</option>
-        <option value="mumbai">Mumbai</option>
-        <option value="delhi">Delhi</option>
-        <option value="bangalore">Bangalore</option>
-        <option value="chennai">Chennai</option>
-        <option value="pune">Pune</option>
-        <option value="kolkata">Kolkata</option>
-        <option value="ahmedabad">Ahmedabad</option>
-      </select>
-    </div>
-
     <div class="mb-6">
       <button id="locate-me-btn" onclick="locateMe()"
         class="flex items-center gap-2 text-sm text-green-700 bg-green-50 hover:bg-green-100 px-4 py-2 rounded-full font-medium">
@@ -93,28 +48,92 @@
       <div id="locate-me-status" class="mt-2 text-xs text-gray-400"></div>
     </div>
 
-    <!-- Mode Toggle -->
-    <div class="flex gap-2 mb-6">
-      <button id="btn-single" onclick="setMode('single')"
+    <!-- Top-level heads: "Address search" vs "Browse areas" are chosen
+         first, each revealing its own Single/Compare sub-tabs below. Map
+         view and Assistant stay plain top-level tabs, untouched by this
+         split. The two heads are kept structurally pure on purpose — no
+         dropdown ever appears under Address search, no address box ever
+         appears under Browse areas — which is what lets each side stay
+         simple: Address search never needs a "which one wins" precedence
+         rule because there's nothing to conflict with, and Browse areas'
+         Single/Compare are plain, direct, dropdown-driven flows (the
+         historically dangerous version of this — city-select +
+         neighbourhood-select silently ignoring a typed address elsewhere
+         on the same screen — required an address box competing for the
+         same submit action; with no address box on this head at all,
+         that specific danger doesn't exist here, so this is safe to
+         reintroduce as its original, simplest form). -->
+    <div class="flex gap-2 mb-4">
+      <button id="btn-head-address" onclick="selectHead('address')"
         class="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white">
-        Single area
+        Address search
       </button>
-      <button id="btn-compare" onclick="setMode('compare')"
+      <button id="btn-head-browse" onclick="selectHead('browse')"
         class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
-        Compare two areas
+        Browse areas
       </button>
-      <button id="btn-map" onclick="setMode('map')"
+      <button id="btn-head-map" onclick="selectHead('map')"
         class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
         Map view
       </button>
-      <button id="btn-assistant" onclick="setMode('assistant')"
+      <button id="btn-head-assistant" onclick="selectHead('assistant')"
         class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
         Assistant
       </button>
     </div>
 
-    <!-- Single Mode -->
+    <!-- Single/Compare sub-tabs — shared markup for both heads. currentHead
+         is read live at click time (not baked in), so these two buttons
+         always toggle whichever head is currently active. Hidden entirely
+         for Map view/Assistant, which have no sub-tabs. -->
+    <div id="subtab-bar" class="flex gap-2 mb-6">
+      <button id="btn-sub-single" onclick="selectSubTab(currentHead, 'single')"
+        class="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white">
+        Single area
+      </button>
+      <button id="btn-sub-compare" onclick="selectSubTab(currentHead, 'compare')"
+        class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
+        Compare two areas
+      </button>
+    </div>
+
+    <!-- Address Search > Single. Real Address Search (Nominatim/
+         OpenStreetMap geocoding) — sole search entry point on this head.
+         city-select biases Nominatim's ranking toward the right city for
+         ambiguous queries (see handleAddressSearch) — it never drives an
+         independent lookup of its own. -->
     <div id="single-mode">
+      <div class="mb-6 relative">
+        <label class="block text-sm text-gray-500 mb-2">Search any area, landmark or city</label>
+        <input
+          id="address-search-input-single"
+          type="text"
+          placeholder="e.g. Road 12, Banjara Hills, Hyderabad"
+          oninput="handleAddressSearch('single')"
+          onkeydown="handleAddressKeydown(event, 'single')"
+          class="w-full border border-gray-200 rounded-full px-5 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
+        />
+        <div id="address-search-spinner-single" class="hidden absolute right-3 top-10">
+          <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+        </div>
+        <div id="address-suggestions-box-single"
+          class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="block text-xs text-gray-400 mb-1">Prioritize results in</label>
+        <select id="city-select"
+          class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600 bg-white">
+          <option value="hyderabad">Hyderabad</option>
+          <option value="mumbai">Mumbai</option>
+          <option value="delhi">Delhi</option>
+          <option value="bangalore">Bangalore</option>
+          <option value="chennai">Chennai</option>
+          <option value="pune">Pune</option>
+          <option value="kolkata">Kolkata</option>
+          <option value="ahmedabad">Ahmedabad</option>
+        </select>
+      </div>
       <div id="single-status" class="mt-4 text-sm text-gray-400 text-center"></div>
       <div id="single-result" class="hidden mt-6"></div>
     </div>
@@ -128,7 +147,7 @@
             <input
               id="address-search-input-compare-a"
               type="text"
-              placeholder="Search an address (optional)"
+              placeholder="Search an address"
               oninput="handleAddressSearch('compare-a')"
               onkeydown="handleAddressKeydown(event, 'compare-a')"
               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-green-400"
@@ -141,24 +160,6 @@
             </div>
           </div>
           <div id="compare-a-address-status" class="hidden text-xs text-gray-500 mb-2"></div>
-          <!-- Address search takes priority when staged; picking either
-               dropdown below clears it again (clearCompareAddress) so
-               switching back is explicit, never silent — see the address
-               search block's comment for why this dropdown stays at all. -->
-          <select id="city-a" onchange="updateNeighbourhoods('neighbourhood-a', 'city-a'); clearCompareAddress('compare-a')"
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white mb-2">
-            <option value="hyderabad">Hyderabad</option>
-            <option value="mumbai">Mumbai</option>
-            <option value="delhi">Delhi</option>
-            <option value="bangalore">Bangalore</option>
-            <option value="chennai">Chennai</option>
-            <option value="pune">Pune</option>
-            <option value="kolkata">Kolkata</option>
-            <option value="ahmedabad">Ahmedabad</option>
-          </select>
-          <select id="neighbourhood-a" onchange="clearCompareAddress('compare-a')"
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white">
-          </select>
         </div>
         <div>
           <div class="text-sm font-medium text-gray-600 mb-3">Area 2</div>
@@ -166,7 +167,7 @@
             <input
               id="address-search-input-compare-b"
               type="text"
-              placeholder="Search an address (optional)"
+              placeholder="Search an address"
               oninput="handleAddressSearch('compare-b')"
               onkeydown="handleAddressKeydown(event, 'compare-b')"
               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-green-400"
@@ -179,7 +180,59 @@
             </div>
           </div>
           <div id="compare-b-address-status" class="hidden text-xs text-gray-500 mb-2"></div>
-          <select id="city-b" onchange="updateNeighbourhoods('neighbourhood-b', 'city-b'); clearCompareAddress('compare-b')"
+        </div>
+      </div>
+      <button onclick="checkCompare()"
+        class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium">
+        Compare Areas
+      </button>
+      <div id="compare-status" class="mt-4 text-sm text-gray-400 text-center"></div>
+      <div id="compare-result" class="hidden mt-6"></div>
+    </div>
+
+    <!-- Browse Areas > Single. Plain, direct, dropdown-driven — no address
+         box on this head at all, so the danger that got the original
+         version of this removed (a competing address box a button could
+         silently ignore) doesn't exist here. See the head-selector's
+         comment above for the full reasoning. -->
+    <div id="browse-single-mode" class="hidden">
+      <div class="mb-4">
+        <label class="block text-sm text-gray-500 mb-2">City</label>
+        <select id="browse-city-select" onchange="updateNeighbourhoods('browse-neighbourhood-select', 'browse-city-select')"
+          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
+          <option value="hyderabad">Hyderabad</option>
+          <option value="mumbai">Mumbai</option>
+          <option value="delhi">Delhi</option>
+          <option value="bangalore">Bangalore</option>
+          <option value="chennai">Chennai</option>
+          <option value="pune">Pune</option>
+          <option value="kolkata">Kolkata</option>
+          <option value="ahmedabad">Ahmedabad</option>
+        </select>
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm text-gray-500 mb-2">Neighbourhood</label>
+        <select id="browse-neighbourhood-select"
+          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
+        </select>
+      </div>
+      <button onclick="checkBrowseSingle()"
+        class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium">
+        Check Green Score
+      </button>
+      <div id="browse-single-status" class="mt-4 text-sm text-gray-400 text-center"></div>
+      <div id="browse-single-result" class="hidden mt-6"></div>
+    </div>
+
+    <!-- Browse Areas > Compare — the original, pre-address-search
+         two-dropdown compare flow, unchanged in substance: direct
+         fetchAreaData for both sides, no staged-address precedence to
+         resolve since there's nothing here to stage. -->
+    <div id="browse-compare-mode" class="hidden">
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <div class="text-sm font-medium text-gray-600 mb-3">Area 1</div>
+          <select id="browse-city-a" onchange="updateNeighbourhoods('browse-neighbourhood-a', 'browse-city-a')"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white mb-2">
             <option value="hyderabad">Hyderabad</option>
             <option value="mumbai">Mumbai</option>
@@ -190,17 +243,34 @@
             <option value="kolkata">Kolkata</option>
             <option value="ahmedabad">Ahmedabad</option>
           </select>
-          <select id="neighbourhood-b" onchange="clearCompareAddress('compare-b')"
+          <select id="browse-neighbourhood-a"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white">
+          </select>
+        </div>
+        <div>
+          <div class="text-sm font-medium text-gray-600 mb-3">Area 2</div>
+          <select id="browse-city-b" onchange="updateNeighbourhoods('browse-neighbourhood-b', 'browse-city-b')"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white mb-2">
+            <option value="hyderabad">Hyderabad</option>
+            <option value="mumbai">Mumbai</option>
+            <option value="delhi">Delhi</option>
+            <option value="bangalore">Bangalore</option>
+            <option value="chennai">Chennai</option>
+            <option value="pune">Pune</option>
+            <option value="kolkata">Kolkata</option>
+            <option value="ahmedabad">Ahmedabad</option>
+          </select>
+          <select id="browse-neighbourhood-b"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white">
           </select>
         </div>
       </div>
-      <button onclick="checkCompare()"
+      <button onclick="checkBrowseCompare()"
         class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium">
         Compare Areas
       </button>
-      <div id="compare-status" class="mt-4 text-sm text-gray-400 text-center"></div>
-      <div id="compare-result" class="hidden mt-6"></div>
+      <div id="browse-compare-status" class="mt-4 text-sm text-gray-400 text-center"></div>
+      <div id="browse-compare-result" class="hidden mt-6"></div>
     </div>
 
     <!-- Map Mode -->
@@ -361,15 +431,20 @@
       "compare-b":  { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] }
     };
     // Which element's value biases each box's Nominatim query (see
-    // handleAddressSearch) — Single mode uses the standalone "Prioritize
-    // results in" picker; Compare mode reuses each side's OWN existing
-    // city-a/city-b dropdown rather than adding a third pair of city
-    // selectors just for search bias.
-    const ADDRESS_SEARCH_CITY_BIAS_ID = { "single": "city-select", "compare-a": "city-a", "compare-b": "city-b" };
-    // Compare mode only: the staged exact point for each side once a
-    // suggestion's been picked there, or null if that side is still
-    // driven by its dropdown. See stageCompareAddress/clearCompareAddress
-    // and checkCompare's resolveSide.
+    // handleAddressSearch) — only "single" has one (the "Prioritize
+    // results in" picker). Address Search > Compare has no dropdown of
+    // any kind on its head at all (see the head-selector's comment), so
+    // its two boxes have nothing to bias from — they search unbiased,
+    // which is fine in practice since a compare-mode query typically
+    // already names its own city in the text (e.g. "Vidhana Soudha,
+    // Bangalore"). searchId's not in this map (compare-a/compare-b) get
+    // undefined here, handled explicitly below rather than throwing on a
+    // getElementById(undefined) miss.
+    const ADDRESS_SEARCH_CITY_BIAS_ID = { "single": "city-select" };
+    // Address Search > Compare only: the staged exact point for each
+    // side once a suggestion's been picked there. See
+    // stageCompareAddress/clearCompareAddress and checkCompare's
+    // resolveStagedCompareSide.
     const compareAddressState = { "compare-a": null, "compare-b": null };
 
     // Reused verbatim from the old Smart Search (removed along with that
@@ -441,8 +516,11 @@
           // Circle" with no city name in it ranks purely on Nominatim's
           // own importance score, which can surface a same-named place in
           // a totally different city ahead of the one actually being
-          // browsed.
-          const selectedCity = document.getElementById(ADDRESS_SEARCH_CITY_BIAS_ID[searchId]).value;
+          // browsed. searchIds with no bias picker at all (compare-a/
+          // compare-b — see ADDRESS_SEARCH_CITY_BIAS_ID) search unbiased
+          // rather than throwing on a missing element.
+          const biasElementId = ADDRESS_SEARCH_CITY_BIAS_ID[searchId];
+          const selectedCity = biasElementId ? document.getElementById(biasElementId).value : "";
           const url = "/api/geocode?q=" + encodeURIComponent(query)
             + "&city=" + encodeURIComponent(selectedCity);
           const res  = await fetch(url);
@@ -502,17 +580,17 @@
       }
     }
 
-    // Compare mode's "on select" path: stages the resolved point for this
-    // side and shows a status line confirming it, but does NOT fetch or
-    // render — checkCompare() does that for both sides together once
-    // "Compare Areas" is clicked. Picking this side's dropdown afterward
-    // clears the staged address again (see the <select> onchange handlers
-    // in the Compare Mode markup), so switching back to dropdown-driven
-    // is always explicit, never silent.
+    // Address Search > Compare's "on select" path: stages the resolved
+    // point for this side and shows a status line confirming it, but does
+    // NOT fetch or render — checkCompare() does that for both sides
+    // together once "Compare Areas" is clicked. There's no dropdown on
+    // this head to fall back to (see Browse Areas > Compare for that
+    // flow) — Clear just un-stages this side so a fresh address can be
+    // searched.
     function stageCompareAddress(side, s) {
       compareAddressState[side] = { lat: s.lat, lon: s.lon, displayName: s.displayName };
       const statusEl = document.getElementById(`${side}-address-status`);
-      statusEl.innerHTML = `Using exact address: <span class="font-medium text-gray-700">${s.displayName}</span> ` +
+      statusEl.innerHTML = `Using: <span class="font-medium text-gray-700">${s.displayName}</span> ` +
         `<button type="button" onclick="clearCompareAddress('${side}')" class="text-green-600 hover:underline">Clear</button>`;
       statusEl.classList.remove('hidden');
     }
@@ -522,6 +600,8 @@
       const statusEl = document.getElementById(`${side}-address-status`);
       statusEl.classList.add('hidden');
       statusEl.innerHTML = '';
+      const input = document.getElementById(`address-search-input-${side}`);
+      if (input) input.value = '';
     }
 
     // Given an already-matched nearest neighbourhood (see
@@ -595,7 +675,7 @@
       }
 
       clearUserLocationPin();
-      setMode('single');
+      selectSubTab('address', 'single');
       const statusEl = document.getElementById('single-status');
       const resultEl = document.getElementById('single-result');
       statusEl.innerHTML = getSpinner();
@@ -613,6 +693,12 @@
 
       try {
         const { d, nearbyPlacesSource } = await fetchExactAreaData(entry, city, s.lat, s.lon);
+        // Real searched-address title, Hyderabad/Bangalore grid hits only
+        // — see shortenSearchedAddress. Everywhere else (grid misses,
+        // other cities) keeps the matched neighbourhood's name as the
+        // title, unchanged — buildScoreCard falls back to d.name whenever
+        // this isn't set.
+        if (d.infraWalkExactCity) d.exactAddressTitle = shortenSearchedAddress(s.displayName);
         statusEl.innerHTML = '';
 
         const distanceNote = `
@@ -953,14 +1039,48 @@
       mapState.userLocation = null;
     }
 
-    function setMode(mode) {
-      const modes = ["single", "compare", "map", "assistant"];
-      modes.forEach(m => {
-        document.getElementById(m + "-mode").classList.toggle("hidden", m !== mode);
-        document.getElementById("btn-" + m).className = m === mode ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
+    // Two top-level heads ("address"/"browse") each carry their own
+    // remembered sub-tab ("single"/"compare"); "map"/"assistant" are
+    // plain leaves with no sub-tab of their own. currentHead is read live
+    // by the sub-tab bar's onclick handlers in the markup (see
+    // selectSubTab(currentHead, ...)), not passed in ahead of time.
+    let currentHead = "address";
+    let currentSubTab = { address: "single", browse: "single" };
+    const NAV_LEAVES = ["single", "compare", "browse-single", "browse-compare", "map", "assistant"];
+
+    function selectHead(head) {
+      currentHead = head;
+      applyNav();
+    }
+
+    function selectSubTab(head, subTab) {
+      currentHead = head;
+      currentSubTab[head] = subTab;
+      applyNav();
+    }
+
+    function applyNav() {
+      const isSubHead = currentHead === "address" || currentHead === "browse";
+      const leaf = isSubHead
+        ? (currentHead === "address" ? currentSubTab.address : "browse-" + currentSubTab.browse)
+        : currentHead;
+
+      NAV_LEAVES.forEach(m => {
+        document.getElementById(m + "-mode").classList.toggle("hidden", m !== leaf);
       });
 
-      if (mode !== "map") {
+      ["address", "browse", "map", "assistant"].forEach(h => {
+        document.getElementById("btn-head-" + h).className = (h === currentHead) ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
+      });
+
+      document.getElementById("subtab-bar").classList.toggle("hidden", !isSubHead);
+      if (isSubHead) {
+        const active = currentSubTab[currentHead];
+        document.getElementById("btn-sub-single").className  = active === "single"  ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
+        document.getElementById("btn-sub-compare").className = active === "compare" ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
+      }
+
+      if (currentHead !== "map") {
         clearUserLocationPin();
         return;
       }
@@ -1310,6 +1430,33 @@ let finalScore = computeFinalScore({
     // gridResult.city — extend this alongside GRID_REGISTRY in that file
     // when a third city's grid is added.
     const GRID_CITY_LABELS = { hyderabad: "Hyderabad", bangalore: "Bangalore" };
+
+    // For a genuine grid hit (Hyderabad/Bangalore only — see
+    // d.infraWalkExactCity), the result's title shows the actual searched
+    // address instead of the matched neighbourhood's name — but
+    // Nominatim's full display_name is far too long for a title (e.g.
+    // "Gopanpally - Wipro Road, Financial District, Greater Hyderabad
+    // Municipal Corporation West Zone, Hyderabad, ... India"). Takes the
+    // first 2 comma-segments (most-specific-first: the local name/road,
+    // then its immediate area — real, useful context, e.g. "Financial
+    // District" disambiguating a generic road name) and falls back to
+    // just the first segment alone when that combination would exceed a
+    // readable length — Nominatim's administrative-zone segments
+    // ("Greater Hyderabad Municipal Corporation West Zone") can be long
+    // enough on their own to make a 2-segment title unwieldy, and the
+    // first segment alone is still a real, recognizable name by itself.
+    // Verified against real addresses from this session: "Gopanpally -
+    // Wipro Road, Financial District" (43 chars, kept 2), "My Home
+    // Vihanga" (2nd segment alone was 50 chars, fell back to 1).
+    const EXACT_TITLE_MAX_CHARS = 50;
+    function shortenSearchedAddress(displayName) {
+      const segments = displayName.split(",").map(s => s.trim()).filter(Boolean);
+      if (segments.length === 0) return displayName;
+      const first = segments[0];
+      if (segments.length === 1) return first;
+      const firstTwo = `${first}, ${segments[1]}`;
+      return firstTwo.length <= EXACT_TITLE_MAX_CHARS ? firstTwo : first;
+    }
 
     function buildParamRow(icon, label, valueHtml, infoType, colorClass) {
       colorClass = colorClass || "text-gray-400";
@@ -1692,7 +1839,7 @@ let finalScore = computeFinalScore({
       return `
         <div class="rounded-2xl p-2 ${ringClass}">
           <div class="text-center mb-5">
-            <div class="text-lg font-bold text-gray-800">${d.name}</div>
+            <div class="text-lg font-bold text-gray-800">${d.exactAddressTitle || d.name}</div>
             <div class="text-sm text-gray-400">${cityName}</div>
             <div class="flex items-center justify-center gap-2 mt-3">
               <span class="text-7xl font-bold ${band.text}">${Math.round(d.finalScore * 10)}</span>
@@ -1997,33 +2144,39 @@ let finalScore = computeFinalScore({
     // onchange handlers clear the staged address. Independent per side by
     // construction: side A only ever reads compareAddressState["compare-a"]
     // and city-a/neighbourhood-a, never anything belonging to side B.
-    async function resolveCompareSide(side, citySelectId, neighbourhoodSelectId) {
+    // Address Search > Compare no longer has a dropdown to fall back to
+    // (see Browse Areas > Compare for that flow), so this always resolves
+    // via the staged address — no isAreaEstimate branch needed, both
+    // sides are unconditionally exact-point-aware.
+    async function resolveStagedCompareSide(side) {
       const staged = compareAddressState[side];
-      if (staged) {
-        const nearest = findNearestNeighbourhood(staged.lat, staged.lon);
-        if (!nearest || nearest.distanceKm > LOCATE_ME_MAX_DISTANCE_KM) {
-          return { error: "No closely-matched neighbourhood found for this address." };
-        }
-        const { entry, city, distanceKm } = nearest;
-        const { d, nearbyPlacesSource } = await fetchExactAreaData(entry, city, staged.lat, staged.lon);
-        return { d, isAreaEstimate: true, nearbyPlacesSource, distanceKm, lat: staged.lat, lon: staged.lon };
+      const nearest = findNearestNeighbourhood(staged.lat, staged.lon);
+      if (!nearest || nearest.distanceKm > LOCATE_ME_MAX_DISTANCE_KM) {
+        return { error: "No closely-matched neighbourhood found for this address." };
       }
-      const city  = document.getElementById(citySelectId).value;
-      const value = document.getElementById(neighbourhoodSelectId).value;
-      const d = await fetchAreaData(city, value);
-      return { d, isAreaEstimate: false, nearbyPlacesSource: undefined };
+      const { entry, city, distanceKm } = nearest;
+      const { d, nearbyPlacesSource } = await fetchExactAreaData(entry, city, staged.lat, staged.lon);
+      if (d.infraWalkExactCity) d.exactAddressTitle = shortenSearchedAddress(staged.displayName);
+      return { d, nearbyPlacesSource, distanceKm, lat: staged.lat, lon: staged.lon };
     }
 
     async function checkCompare() {
       clearUserLocationPin();
       let statusEl = document.getElementById("compare-status");
       let resultEl = document.getElementById("compare-result");
+
+      if (!compareAddressState["compare-a"] || !compareAddressState["compare-b"]) {
+        resultEl.classList.add("hidden");
+        statusEl.innerHTML = `<div class="text-center text-sm text-gray-500">Search and select an address for both areas before comparing.</div>`;
+        return;
+      }
+
       statusEl.innerHTML = getSpinner();
       resultEl.classList.add("hidden");
       try {
         let [resA, resB] = await Promise.all([
-          resolveCompareSide("compare-a", "city-a", "neighbourhood-a"),
-          resolveCompareSide("compare-b", "city-b", "neighbourhood-b")
+          resolveStagedCompareSide("compare-a"),
+          resolveStagedCompareSide("compare-b")
         ]);
 
         if (resA.error || resB.error) {
@@ -2043,23 +2196,13 @@ let finalScore = computeFinalScore({
                scores ${Math.abs(dA.finalScore - dB.finalScore).toFixed(1)} points higher
              </div>`;
 
-        // distanceNote/exactNdviBlock only render for a side actually
-        // driven by a staged address (res.lat is only set on that path in
-        // resolveCompareSide) — a dropdown-driven side gets neither,
-        // matching Single mode's own rule that isAreaEstimate/precision
-        // tags only ever appear when there's a genuinely more-exact point
-        // to contrast against.
-        const distanceNote = (res) => res.distanceKm !== undefined
-          ? `<div class="text-center text-xs text-gray-400 mb-2">
+        const distanceNote = (res) => `<div class="text-center text-xs text-gray-400 mb-2">
                Closest matched area: ${res.d.name} (${res.distanceKm.toFixed(1)}km from the searched address)
-             </div>`
-          : "";
-        const exactNdviBlock = (res, containerId) => res.lat !== undefined
-          ? `<div class="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-sm" id="${containerId}">
+             </div>`;
+        const exactNdviBlock = (containerId) => `<div class="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-sm" id="${containerId}">
                <div class="text-xs text-gray-500 mb-1">Green cover${precisionTag("exact for this point — works anywhere")}</div>
                <div id="${containerId}-status" class="text-xs text-gray-400">Loading…</div>
-             </div>`
-          : "";
+             </div>`;
 
         // Stacked by default (mobile/narrow), side-by-side at lg: (1024px)
         // and up now that the outer container (index.html's top-level div)
@@ -2078,14 +2221,79 @@ let finalScore = computeFinalScore({
         statusEl.innerHTML = "";
         resultEl.innerHTML = summary +
           '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">' +
-          '<div>' + distanceNote(resA) + buildScoreCard(dA, aWins && !tie, "compare-a", resA.isAreaEstimate, resA.nearbyPlacesSource) + exactNdviBlock(resA, "exact-ndvi-compare-a") + '</div>' +
-          '<div>' + distanceNote(resB) + buildScoreCard(dB, !aWins && !tie, "compare-b", resB.isAreaEstimate, resB.nearbyPlacesSource) + exactNdviBlock(resB, "exact-ndvi-compare-b") + '</div>' +
+          '<div>' + distanceNote(resA) + buildScoreCard(dA, aWins && !tie, "compare-a", true, resA.nearbyPlacesSource) + exactNdviBlock("exact-ndvi-compare-a") + '</div>' +
+          '<div>' + distanceNote(resB) + buildScoreCard(dB, !aWins && !tie, "compare-b", true, resB.nearbyPlacesSource) + exactNdviBlock("exact-ndvi-compare-b") + '</div>' +
           '</div>';
         resultEl.classList.remove("hidden");
         loadAqiTrend(dA.name, dA.city, "compare-a");
         loadAqiTrend(dB.name, dB.city, "compare-b");
-        if (resA.lat !== undefined) loadExactLocationNdvi(resA.lat, resA.lon, "exact-ndvi-compare-a");
-        if (resB.lat !== undefined) loadExactLocationNdvi(resB.lat, resB.lon, "exact-ndvi-compare-b");
+        loadExactLocationNdvi(resA.lat, resA.lon, "exact-ndvi-compare-a");
+        loadExactLocationNdvi(resB.lat, resB.lon, "exact-ndvi-compare-b");
+      } catch (err) {
+        statusEl.innerHTML = "Could not load data. Check console (F12).";
+        console.error(err);
+      }
+    }
+
+    // Browse Areas > Single — the original, pre-address-search flow:
+    // direct fetchAreaData off the dropdown, no precision tags (there's
+    // no more-exact point to contrast against here, same reasoning
+    // isAreaEstimate documents elsewhere).
+    async function checkBrowseSingle() {
+      clearUserLocationPin();
+      const city  = document.getElementById("browse-city-select").value;
+      const nVal  = document.getElementById("browse-neighbourhood-select").value;
+      const statusEl = document.getElementById("browse-single-status");
+      const resultEl = document.getElementById("browse-single-result");
+      statusEl.innerHTML = getSpinner();
+      resultEl.classList.add("hidden");
+      try {
+        const d = await fetchAreaData(city, nVal);
+        statusEl.innerHTML = "";
+        resultEl.innerHTML = buildScoreCard(d, false, "browse-single", false, undefined, true);
+        resultEl.classList.remove("hidden");
+        loadAqiTrend(d.name, d.city, "browse-single");
+      } catch (err) {
+        statusEl.innerHTML = "Could not load data. Check console (F12).";
+        console.error(err);
+      }
+    }
+
+    // Browse Areas > Compare — the original, pre-address-search two-
+    // dropdown compare: direct fetchAreaData for both sides, no staged-
+    // address precedence to resolve since there's nothing to stage here.
+    async function checkBrowseCompare() {
+      clearUserLocationPin();
+      let cityA    = document.getElementById("browse-city-a").value;
+      let cityB    = document.getElementById("browse-city-b").value;
+      let nValA    = document.getElementById("browse-neighbourhood-a").value;
+      let nValB    = document.getElementById("browse-neighbourhood-b").value;
+      let statusEl = document.getElementById("browse-compare-status");
+      let resultEl = document.getElementById("browse-compare-result");
+      statusEl.innerHTML = getSpinner();
+      resultEl.classList.add("hidden");
+      try {
+        let [dA, dB] = await Promise.all([
+          fetchAreaData(cityA, nValA),
+          fetchAreaData(cityB, nValB)
+        ]);
+        let aWins = dA.finalScore > dB.finalScore;
+        let tie   = dA.finalScore === dB.finalScore;
+        let summary = tie
+          ? '<div class="text-center text-sm text-gray-500 mb-4">Both areas scored equally</div>'
+          : `<div class="text-center text-sm text-gray-500 mb-4">
+               <span class="font-medium text-green-600">${aWins ? dA.name : dB.name}</span>
+               scores ${Math.abs(dA.finalScore - dB.finalScore).toFixed(1)} points higher
+             </div>`;
+        statusEl.innerHTML = "";
+        resultEl.innerHTML = summary +
+          '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">' +
+          buildScoreCard(dA, aWins && !tie, "browse-compare-a") +
+          buildScoreCard(dB, !aWins && !tie, "browse-compare-b") +
+          '</div>';
+        resultEl.classList.remove("hidden");
+        loadAqiTrend(dA.name, dA.city, "browse-compare-a");
+        loadAqiTrend(dB.name, dB.city, "browse-compare-b");
       } catch (err) {
         statusEl.innerHTML = "Could not load data. Check console (F12).";
         console.error(err);
@@ -2370,7 +2578,7 @@ let finalScore = computeFinalScore({
           }
           statusEl.textContent = "";
 
-          setMode("single");
+          selectSubTab("address", "single");
           const singleStatusEl = document.getElementById("single-status");
           const resultEl       = document.getElementById("single-result");
           singleStatusEl.innerHTML = getSpinner();
@@ -2426,8 +2634,10 @@ let finalScore = computeFinalScore({
       );
     }
 
-    updateNeighbourhoods("neighbourhood-a", "city-a");
-    updateNeighbourhoods("neighbourhood-b", "city-b");
+    updateNeighbourhoods("browse-neighbourhood-select", "browse-city-select");
+    updateNeighbourhoods("browse-neighbourhood-a", "browse-city-a");
+    updateNeighbourhoods("browse-neighbourhood-b", "browse-city-b");
+    applyNav();
 
   </script>
 
