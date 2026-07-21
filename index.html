@@ -26,114 +26,144 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-  <!-- max-w-2xl is the mobile/default width, unchanged from before this
-       responsive pass — most Verdex users are on mobile (India-focused
-       app), so that stays the baseline. md:/lg:/xl: only add width at
-       larger breakpoints, giving Single mode's Environmental/Liveability
-       split (md:) and Compare mode's two-card split (lg:) room to
-       actually display side by side instead of fighting a narrow wrapper. -->
-  <div class="max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto mt-12 p-8">
+  <!-- max-w-2xl is the mobile/default width, unchanged below lg: — this is
+       purely additive. At lg: (1024px) and up, this becomes a persistent
+       sidebar + main-content dashboard (lg:grid-cols-[220px_1fr]); below
+       that it stays plain block flow, identical to before this pass, by
+       construction — no base grid/flex class here for narrow widths to
+       override. #sidebar and #main-content below are the two grid
+       columns; since they're adjacent block-level siblings when NOT a
+       grid (i.e. every width under 1024px), their contents stack in DOM
+       order exactly as one long column, same as today. -->
+  <div class="max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto mt-12 p-8 lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:items-start">
 
-    <div class="mb-8">
-      <h1 class="text-4xl font-bold text-green-700 mb-2">Verdex</h1>
-      <p class="text-gray-500">Green scores for every neighbourhood in India — live data.</p>
-    </div>
+    <!-- Sidebar (desktop only — see the outer div's own comment). Holds
+         everything that's a persistent, page-level control rather than a
+         result: branding, Locate me, head/sub-tab nav, and — pulled out
+         of single-mode so it can be grid-placed independently of
+         single-mode's status/result — the address-search-input-single +
+         city-select block. Below lg:, this is just the first of two
+         stacked divs, so its contents render first, in the same order as
+         today. -->
+    <div id="sidebar" class="lg:sticky lg:top-8">
 
-    <div class="mb-6">
-      <button id="locate-me-btn" onclick="locateMe()"
-        class="flex items-center gap-2 text-sm text-green-700 bg-green-50 hover:bg-green-100 px-4 py-2 rounded-full font-medium">
-        <i class="ti ti-current-location"></i>
-        Locate me
-      </button>
-      <div id="locate-me-status" class="mt-2 text-xs text-gray-400"></div>
-    </div>
-
-    <!-- Top-level heads: "Address search" vs "Browse areas" are chosen
-         first, each revealing its own Single/Compare sub-tabs below. Map
-         view and Assistant stay plain top-level tabs, untouched by this
-         split. The two heads are kept structurally pure on purpose — no
-         dropdown ever appears under Address search, no address box ever
-         appears under Browse areas — which is what lets each side stay
-         simple: Address search never needs a "which one wins" precedence
-         rule because there's nothing to conflict with, and Browse areas'
-         Single/Compare are plain, direct, dropdown-driven flows (the
-         historically dangerous version of this — city-select +
-         neighbourhood-select silently ignoring a typed address elsewhere
-         on the same screen — required an address box competing for the
-         same submit action; with no address box on this head at all,
-         that specific danger doesn't exist here, so this is safe to
-         reintroduce as its original, simplest form). -->
-    <div class="flex gap-2 mb-4">
-      <button id="btn-head-address" onclick="selectHead('address')"
-        class="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white">
-        Address search
-      </button>
-      <button id="btn-head-browse" onclick="selectHead('browse')"
-        class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
-        Browse areas
-      </button>
-      <button id="btn-head-map" onclick="selectHead('map')"
-        class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
-        Map view
-      </button>
-      <button id="btn-head-assistant" onclick="selectHead('assistant')"
-        class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
-        Assistant
-      </button>
-    </div>
-
-    <!-- Single/Compare sub-tabs — shared markup for both heads. currentHead
-         is read live at click time (not baked in), so these two buttons
-         always toggle whichever head is currently active. Hidden entirely
-         for Map view/Assistant, which have no sub-tabs. -->
-    <div id="subtab-bar" class="flex gap-2 mb-6">
-      <button id="btn-sub-single" onclick="selectSubTab(currentHead, 'single')"
-        class="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white">
-        Single area
-      </button>
-      <button id="btn-sub-compare" onclick="selectSubTab(currentHead, 'compare')"
-        class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
-        Compare two areas
-      </button>
-    </div>
-
-    <!-- Address Search > Single. Real Address Search (Nominatim/
-         OpenStreetMap geocoding) — sole search entry point on this head.
-         city-select biases Nominatim's ranking toward the right city for
-         ambiguous queries (see handleAddressSearch) — it never drives an
-         independent lookup of its own. -->
-    <div id="single-mode">
-      <div class="mb-6 relative">
-        <label class="block text-sm text-gray-500 mb-2">Search any area, landmark or city</label>
-        <input
-          id="address-search-input-single"
-          type="text"
-          placeholder="e.g. Road 12, Banjara Hills, Hyderabad"
-          oninput="handleAddressSearch('single')"
-          onkeydown="handleAddressKeydown(event, 'single')"
-          class="w-full border border-gray-200 rounded-full px-5 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
-        />
-        <div id="address-search-spinner-single" class="hidden absolute right-3 top-10">
-          <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
-        </div>
-        <div id="address-suggestions-box-single"
-          class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
-        </div>
+      <div class="mb-8">
+        <h1 class="text-4xl font-bold text-green-700 mb-2">Verdex</h1>
+        <p class="text-gray-500">Green scores for every neighbourhood in India — live data.</p>
       </div>
+
       <div class="mb-6">
-        <label class="block text-xs text-gray-400 mb-1">Prioritize results in</label>
-        <select id="city-select"
-          class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600 bg-white">
-          <option value="hyderabad">Hyderabad</option>
-          <option value="mumbai">Mumbai</option>
-          <option value="delhi">Delhi</option>
-          <option value="bangalore">Bangalore</option>
-          <option value="chennai">Chennai</option>
-          <option value="pune">Pune</option>
-          <option value="kolkata">Kolkata</option>
-          <option value="ahmedabad">Ahmedabad</option>
-        </select>
+        <button id="locate-me-btn" onclick="locateMe()"
+          class="flex items-center gap-2 text-sm text-green-700 bg-green-50 hover:bg-green-100 px-4 py-2 rounded-full font-medium">
+          <i class="ti ti-current-location"></i>
+          Locate me
+        </button>
+        <div id="locate-me-status" class="mt-2 text-xs text-gray-400"></div>
       </div>
+
+      <!-- Top-level heads: "Address search" vs "Browse areas" are chosen
+           first, each revealing its own Single/Compare sub-tabs below. Map
+           view and Assistant stay plain top-level tabs, untouched by this
+           split. The two heads are kept structurally pure on purpose — no
+           dropdown ever appears under Address search, no address box ever
+           appears under Browse areas — which is what lets each side stay
+           simple: Address search never needs a "which one wins" precedence
+           rule because there's nothing to conflict with, and Browse areas'
+           Single/Compare are plain, direct, dropdown-driven flows (the
+           historically dangerous version of this — city-select +
+           neighbourhood-select silently ignoring a typed address elsewhere
+           on the same screen — required an address box competing for the
+           same submit action; with no address box on this head at all,
+           that specific danger doesn't exist here, so this is safe to
+           reintroduce as its original, simplest form). -->
+      <div class="flex flex-wrap gap-2 mb-4 lg:flex-col lg:flex-nowrap">
+        <button id="btn-head-address" onclick="selectHead('address')"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white lg:w-full lg:text-left">
+          Address search
+        </button>
+        <button id="btn-head-browse" onclick="selectHead('browse')"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left">
+          Browse areas
+        </button>
+        <button id="btn-head-map" onclick="selectHead('map')"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left">
+          Map view
+        </button>
+        <button id="btn-head-assistant" onclick="selectHead('assistant')"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left">
+          Assistant
+        </button>
+      </div>
+
+      <!-- Single/Compare sub-tabs — shared markup for both heads. currentHead
+           is read live at click time (not baked in), so these two buttons
+           always toggle whichever head is currently active. Hidden entirely
+           for Map view/Assistant, which have no sub-tabs. -->
+      <div id="subtab-bar" class="flex flex-wrap gap-2 mb-6 lg:flex-col lg:flex-nowrap">
+        <button id="btn-sub-single" onclick="selectSubTab(currentHead, 'single')"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white lg:w-full lg:text-left">
+          Single area
+        </button>
+        <button id="btn-sub-compare" onclick="selectSubTab(currentHead, 'compare')"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left">
+          Compare two areas
+        </button>
+      </div>
+
+      <!-- Address Search > Single's search box + city-bias, relocated here
+           from single-mode (its visibility is now driven directly by
+           applyNav(), the same leaf==='single' condition single-mode
+           itself uses — see applyNav's NAV_LEAVES loop). Real Address
+           Search (Nominatim/OpenStreetMap geocoding) — sole search entry
+           point on this head. city-select biases Nominatim's ranking
+           toward the right city for ambiguous queries (see
+           handleAddressSearch) — it never drives an independent lookup of
+           its own. -->
+      <div id="single-search-block">
+        <div class="mb-6 relative">
+          <label class="block text-sm text-gray-500 mb-2">Search any area, landmark or city</label>
+          <input
+            id="address-search-input-single"
+            type="text"
+            placeholder="e.g. Road 12, Banjara Hills, Hyderabad"
+            oninput="handleAddressSearch('single')"
+            onkeydown="handleAddressKeydown(event, 'single')"
+            class="w-full border border-gray-200 rounded-full px-5 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
+          />
+          <div id="address-search-spinner-single" class="hidden absolute right-3 top-10">
+            <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+          </div>
+          <div id="address-suggestions-box-single"
+            class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
+          </div>
+        </div>
+        <div class="mb-6">
+          <label class="block text-xs text-gray-400 mb-1">Prioritize results in</label>
+          <select id="city-select"
+            class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600 bg-white">
+            <option value="hyderabad">Hyderabad</option>
+            <option value="mumbai">Mumbai</option>
+            <option value="delhi">Delhi</option>
+            <option value="bangalore">Bangalore</option>
+            <option value="chennai">Chennai</option>
+            <option value="pune">Pune</option>
+            <option value="kolkata">Kolkata</option>
+            <option value="ahmedabad">Ahmedabad</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Main content (desktop) / rest of the page (narrow). Every leaf
+         panel lives here — see applyNav's NAV_LEAVES for the full list.
+         At lg:+ this is the second grid column, taking up the remaining
+         width next to #sidebar; below lg: it's just the second of two
+         stacked divs, so this content renders directly after #sidebar's,
+         same order as today. -->
+    <div id="main-content">
+
+    <div id="single-mode">
       <div id="single-status" class="mt-4 text-sm text-gray-400 text-center"></div>
       <div id="single-result" class="hidden mt-6"></div>
     </div>
@@ -316,7 +346,7 @@
            bg-gray-50 here is the exact same color as <body>'s own
            bg-gray-50, confirmed via computed style (both rgb(249,250,251)),
            zero contrast against the page with no sibling cards nearby. -->
-      <div class="bg-white rounded-2xl p-8 text-center border border-gray-100">
+      <div class="bg-white rounded-2xl p-8 lg:p-10 text-center border border-gray-100">
         <i class="ti ti-robot text-gray-300" style="font-size:3rem"></i>
         <div class="flex items-center justify-center gap-2 mt-3 mb-2">
           <span class="font-semibold text-gray-600 text-lg">Ask Verdex & Smart Alerts</span>
@@ -331,6 +361,8 @@
           than an honest "not built" placeholder.
         </div>
       </div>
+    </div>
+
     </div>
 
   </div>
@@ -1025,8 +1057,15 @@
       });
     }
 
-    const MODE_BTN_ACTIVE   = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white";
-    const MODE_BTN_INACTIVE = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600";
+    // lg:w-full lg:text-left included here (not just in the static HTML)
+    // because applyNav() below does a full className= replacement on
+    // these buttons, not a classList.toggle — any class only present in
+    // the HTML would be wiped out the first time applyNav() runs. Full
+    // width + left-aligned only matters once the sidebar is a narrow
+    // fixed-width column (lg:+); below that, the flex-wrap row these sit
+    // in doesn't care.
+    const MODE_BTN_ACTIVE   = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white lg:w-full lg:text-left";
+    const MODE_BTN_INACTIVE = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left";
 
     // Removes the "you are here" marker/line and forgets the located
     // position — called whenever the person moves on to something else
@@ -1068,6 +1107,11 @@
       NAV_LEAVES.forEach(m => {
         document.getElementById(m + "-mode").classList.toggle("hidden", m !== leaf);
       });
+      // single-search-block lives in the sidebar now, pulled out of
+      // single-mode (see the HTML), so it needs its own visibility toggle
+      // using the exact same condition single-mode's own entry in the
+      // loop above already computes.
+      document.getElementById("single-search-block").classList.toggle("hidden", leaf !== "single");
 
       ["address", "browse", "map", "assistant"].forEach(h => {
         document.getElementById("btn-head-" + h).className = (h === currentHead) ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
@@ -1482,13 +1526,13 @@ let finalScore = computeFinalScore({
     function buildLayerCardShell(icon, title, subScore10, summaryText, rowsHtml, bgClass) {
       let band = getBandInfo(subScore10);
       return `
-        <div class="${bgClass} rounded-2xl p-8">
+        <div class="${bgClass} rounded-2xl p-8 lg:p-10">
           <div class="flex justify-between items-center gap-2 mb-1.5">
             <div class="flex items-center gap-2 min-w-0">
               <i class="ti ${icon} ${band.text} text-xl shrink-0"></i>
               <span class="font-semibold text-gray-800 text-lg truncate">${title}</span>
             </div>
-            <span class="text-3xl font-bold ${band.text} shrink-0">${Math.round(subScore10 * 10)}</span>
+            <span class="text-3xl lg:text-4xl font-bold ${band.text} shrink-0">${Math.round(subScore10 * 10)}</span>
           </div>
           <div class="text-base text-gray-500 mb-1">${summaryText}</div>
           <div>${rowsHtml}</div>
@@ -1746,7 +1790,7 @@ let finalScore = computeFinalScore({
       // zero contrast against the page — technically styled, invisible in
       // practice. Confirmed via computed style before fixing.
       return `
-        <div class="bg-white rounded-2xl p-8 border border-gray-100">
+        <div class="bg-white rounded-2xl p-8 lg:p-10 border border-gray-100">
           <div class="flex items-center gap-2 mb-1">
             <i class="ti ti-building-community text-gray-400 text-lg"></i>
             <span class="font-semibold text-gray-500">Real Estate</span>
@@ -1765,7 +1809,7 @@ let finalScore = computeFinalScore({
     // Real Estate empty-state comment above for why.
     function buildAskVerdexCard() {
       return `
-        <div class="bg-white rounded-2xl p-8 border border-gray-100">
+        <div class="bg-white rounded-2xl p-8 lg:p-10 border border-gray-100">
           <div class="flex justify-between items-center gap-2 mb-1">
             <div class="flex items-center gap-2 min-w-0">
               <i class="ti ti-message-chatbot text-gray-400 text-lg shrink-0"></i>
@@ -1785,7 +1829,7 @@ let finalScore = computeFinalScore({
     // how close flood risk actually is to shipping.
     function buildClimateResilienceCard() {
       return `
-        <div class="bg-white rounded-2xl p-8 border border-gray-100">
+        <div class="bg-white rounded-2xl p-8 lg:p-10 border border-gray-100">
           <div class="flex justify-between items-center gap-2 mb-1">
             <div class="flex items-center gap-2 min-w-0">
               <i class="ti ti-cloud-storm text-gray-400 text-lg shrink-0"></i>
@@ -1848,7 +1892,7 @@ let finalScore = computeFinalScore({
             <div class="text-lg font-bold text-gray-800">${d.exactAddressTitle || d.name}</div>
             <div class="text-sm text-gray-400">${cityName}</div>
             <div class="flex items-center justify-center gap-2 mt-3">
-              <span class="text-7xl font-bold ${band.text}">${Math.round(d.finalScore * 10)}</span>
+              <span class="text-7xl lg:text-8xl font-bold ${band.text}">${Math.round(d.finalScore * 10)}</span>
               ${infoBtn('score')}
               ${badge}
             </div>
@@ -2210,23 +2254,23 @@ let finalScore = computeFinalScore({
                <div id="${containerId}-status" class="text-xs text-gray-400">Loading…</div>
              </div>`;
 
-        // Stacked by default (mobile/narrow), side-by-side at lg: (1024px)
-        // and up now that the outer container (index.html's top-level div)
-        // widens at that same breakpoint — each card gets ~530px there,
-        // enough room for the current padding/type sizes. lg:, not md:,
-        // deliberately: splitting into two columns immediately halves
-        // available width, so this needs more total viewport before it's
-        // worth doing than Single mode's Environmental/Liveability split
-        // does (that one only needs md: since it's not also being halved
-        // by an outer split). Each buildScoreCard call below does NOT
-        // pass wideEnvLive=true, so Environmental/Liveability stay
-        // stacked within each compare card at every width — avoids
-        // nesting two responsive splits inside each other, which would
-        // cramp both once this outer grid and Single mode's inner grid
-        // activated at the same viewport width.
+        // Stacked by default, side-by-side at xl: (1280px) — deliberately
+        // NOT lg: (1024px) now that the dashboard sidebar (see the outer
+        // container's own lg:grid) also activates at lg:, eating ~250px
+        // of viewport before this grid's own width math even starts.
+        // Splitting into two full result columns at the exact same
+        // breakpoint the sidebar appears would immediately halve an
+        // already-narrower main-content column — cramped, not "more
+        // room" as the split is meant to provide. xl: only fires once
+        // there's genuine width left over after the sidebar. Each
+        // buildScoreCard call below does NOT pass wideEnvLive=true, so
+        // Environmental/Liveability stay stacked within each compare card
+        // at every width — avoids nesting two responsive splits inside
+        // each other, which would cramp both once this grid and Single
+        // mode's inner grid activated at the same viewport width.
         statusEl.innerHTML = "";
         resultEl.innerHTML = summary +
-          '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">' +
+          '<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">' +
           '<div>' + distanceNote(resA) + buildScoreCard(dA, aWins && !tie, "compare-a", true, resA.nearbyPlacesSource) + exactNdviBlock("exact-ndvi-compare-a") + '</div>' +
           '<div>' + distanceNote(resB) + buildScoreCard(dB, !aWins && !tie, "compare-b", true, resB.nearbyPlacesSource) + exactNdviBlock("exact-ndvi-compare-b") + '</div>' +
           '</div>';
@@ -2293,7 +2337,7 @@ let finalScore = computeFinalScore({
              </div>`;
         statusEl.innerHTML = "";
         resultEl.innerHTML = summary +
-          '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">' +
+          '<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">' +
           buildScoreCard(dA, aWins && !tie, "browse-compare-a") +
           buildScoreCard(dB, !aWins && !tie, "browse-compare-b") +
           '</div>';
