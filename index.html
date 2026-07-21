@@ -110,17 +110,34 @@
         </button>
       </div>
 
-      <!-- Address Search > Single's search box + city-bias, relocated here
-           from single-mode (its visibility is now driven directly by
-           applyNav(), the same leaf==='single' condition single-mode
-           itself uses — see applyNav's NAV_LEAVES loop). Real Address
-           Search (Nominatim/OpenStreetMap geocoding) — sole search entry
-           point on this head. city-select biases Nominatim's ranking
-           toward the right city for ambiguous queries (see
-           handleAddressSearch) — it never drives an independent lookup of
-           its own. -->
-      <div id="single-search-block">
-        <div class="mb-6 relative">
+    </div>
+
+    <!-- Main content (desktop) / rest of the page (narrow). Every leaf
+         panel lives here — see applyNav's NAV_LEAVES for the full list.
+         At lg:+ this is the second grid column, taking up the remaining
+         width next to #sidebar; below lg: it's just the second of two
+         stacked divs, so this content renders directly after #sidebar's,
+         same order as today. -->
+    <div id="main-content">
+
+    <!-- Address Search > Single's search box + city-bias. Lives at the
+         top of main-content (not the sidebar) so it gets the full content
+         column's width instead of fighting the sidebar's fixed 220px —
+         moved here from the sidebar for that reason. Visibility is driven
+         by applyNav()'s leaf==='single' check, same condition single-mode
+         itself uses. Since main-content immediately follows sidebar in
+         DOM order at every width, and this is still the first thing
+         inside main-content, narrow-width stacking order is unchanged
+         from before this move. Real Address Search (Nominatim/
+         OpenStreetMap geocoding) — sole search entry point on this head.
+         city-select biases Nominatim's ranking toward the right city for
+         ambiguous queries (see handleAddressSearch) — it never drives an
+         independent lookup of its own. Input/select stack vertically
+         below lg: (unchanged from the sidebar version) and sit side by
+         side at lg:+, where there's now room for it. -->
+    <div id="single-search-block" class="mb-8">
+      <div class="lg:flex lg:gap-4 lg:items-end">
+        <div class="mb-6 lg:mb-0 lg:flex-1 relative">
           <label class="block text-sm text-gray-500 mb-2">Search any area, landmark or city</label>
           <input
             id="address-search-input-single"
@@ -137,7 +154,7 @@
             class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
           </div>
         </div>
-        <div class="mb-6">
+        <div class="mb-6 lg:mb-0 lg:w-56">
           <label class="block text-xs text-gray-400 mb-1">Prioritize results in</label>
           <select id="city-select"
             class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600 bg-white">
@@ -152,16 +169,7 @@
           </select>
         </div>
       </div>
-
     </div>
-
-    <!-- Main content (desktop) / rest of the page (narrow). Every leaf
-         panel lives here — see applyNav's NAV_LEAVES for the full list.
-         At lg:+ this is the second grid column, taking up the remaining
-         width next to #sidebar; below lg: it's just the second of two
-         stacked divs, so this content renders directly after #sidebar's,
-         same order as today. -->
-    <div id="main-content">
 
     <div id="single-mode">
       <div id="single-status" class="mt-4 text-sm text-gray-400 text-center"></div>
@@ -1502,15 +1510,23 @@ let finalScore = computeFinalScore({
       return firstTwo.length <= EXACT_TITLE_MAX_CHARS ? firstTwo : first;
     }
 
+    // Adaptive row: label+value sit on one line when they fit (identical to
+    // the old fixed single-line layout in that case); when they don't, the
+    // label wraps internally (it's allowed to shrink — no shrink-0/nowrap)
+    // and the value drops to its own line, pinned right via ml-auto rather
+    // than justify-between (auto margin works whether value shares label's
+    // line or gets a line of its own, so one rule covers both cases). This
+    // is a structural fix, not a length-based one — it degrades gracefully
+    // for a label of any length, not just today's known tag strings.
     function buildParamRow(icon, label, valueHtml, infoType, colorClass) {
       colorClass = colorClass || "text-gray-400";
       return `
-        <div class="flex justify-between items-start gap-3 border-t border-black/5 py-3 text-base">
-          <div class="flex items-center gap-3 text-gray-700 shrink-0">
-            <i class="ti ${icon} ${colorClass} text-xl shrink-0"></i>
-            <span class="font-medium whitespace-nowrap">${label} ${infoBtn(infoType)}</span>
+        <div class="flex flex-wrap items-start gap-x-3 gap-y-1 border-t border-black/5 py-3 text-base">
+          <div class="flex items-start gap-3 text-gray-700 min-w-0">
+            <i class="ti ${icon} ${colorClass} text-xl shrink-0 mt-0.5"></i>
+            <span class="font-medium">${label} ${infoBtn(infoType)}</span>
           </div>
-          <div class="font-semibold text-gray-700 text-right min-w-0">${valueHtml}</div>
+          <div class="font-semibold text-gray-700 text-right whitespace-nowrap ml-auto">${valueHtml}</div>
         </div>`;
     }
 
