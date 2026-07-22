@@ -95,22 +95,25 @@
         <button id="btn-head-address" onclick="selectHead('address')"
           class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white">
           <i class="ti ti-search text-lg lg:hidden" aria-hidden="true"></i>
-          <span>Address search</span>
+          <span class="text-[13px] tracking-tight lg:hidden">Address</span>
+          <span class="hidden lg:inline lg:text-sm">Address search</span>
         </button>
         <button id="btn-head-browse" onclick="selectHead('browse')"
-          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-400 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
           <i class="ti ti-list text-lg lg:hidden" aria-hidden="true"></i>
-          <span>Browse areas</span>
+          <span class="text-[13px] tracking-tight lg:hidden">Browse</span>
+          <span class="hidden lg:inline lg:text-sm">Browse areas</span>
         </button>
         <button id="btn-head-map" onclick="selectHead('map')"
-          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-400 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
           <i class="ti ti-map text-lg lg:hidden" aria-hidden="true"></i>
-          <span>Map view</span>
+          <span class="text-[13px] tracking-tight lg:hidden">Map</span>
+          <span class="hidden lg:inline lg:text-sm">Map view</span>
         </button>
         <button id="btn-head-assistant" onclick="selectHead('assistant')"
-          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-400 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
           <i class="ti ti-robot text-lg lg:hidden" aria-hidden="true"></i>
-          <span>Assistant</span>
+          <span class="text-[13px] tracking-tight lg:text-sm lg:tracking-normal">Assistant</span>
         </button>
       </div>
 
@@ -1099,7 +1102,12 @@
     // identical lg:+ pill styling as before, so the sidebar at lg:+ is
     // unaffected by the split.
     const HEAD_BTN_ACTIVE   = "flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white";
-    const HEAD_BTN_INACTIVE = "flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-400 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600";
+    // text-gray-600 (not gray-400) below lg: — gray-400 measured ~2.6:1
+    // contrast on white, well under WCAG AA's 4.5:1 for normal text;
+    // gray-600 (already what the sidebar itself used at lg:+) is ~7.5:1,
+    // legible at a glance without diluting the active tab's green as the
+    // "you are here" signal.
+    const HEAD_BTN_INACTIVE = "flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600";
     const SUB_BTN_ACTIVE    = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white lg:w-full lg:text-left";
     const SUB_BTN_INACTIVE  = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left";
 
