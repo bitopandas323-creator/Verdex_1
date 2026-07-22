@@ -35,7 +35,12 @@
        columns; since they're adjacent block-level siblings when NOT a
        grid (i.e. every width under 1024px), their contents stack in DOM
        order exactly as one long column, same as today. -->
-  <div class="max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto mt-12 p-8 lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:items-start">
+  <!-- pb is split out of the p-8 shorthand below lg: so it can carry extra
+       clearance for the fixed bottom tab bar (its own ~3.5rem content
+       height plus the safe-area inset) on top of the page's normal 2rem
+       bottom gap; lg:pb-8 resets it to the plain original value once the
+       bar goes back to being an in-flow sidebar list at lg:+. -->
+  <div class="max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto mt-12 pt-8 pr-8 pl-8 pb-[calc(2rem_+_3.5rem_+_env(safe-area-inset-bottom))] lg:pb-8 lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:items-start">
 
     <!-- Sidebar (desktop only — see the outer div's own comment). Holds
          everything that's a persistent, page-level control rather than a
@@ -75,23 +80,37 @@
            on the same screen — required an address box competing for the
            same submit action; with no address box on this head at all,
            that specific danger doesn't exist here, so this is safe to
-           reintroduce as its original, simplest form). -->
-      <div class="flex flex-wrap gap-2 mb-4 lg:flex-col lg:flex-nowrap">
+           reintroduce as its original, simplest form).
+
+           Below lg: this same container/buttons render as a fixed bottom
+           tab bar instead of the top-of-sidebar row — fixed positioning
+           escapes the sidebar's/outer container's width constraints (its
+           containing block is the viewport), so inset-x-0 spans full
+           screen width regardless of DOM nesting. At lg:+ it resets back
+           to exactly today's shipped in-flow vertical sidebar list — no
+           second copy of these buttons, no second click handler, only
+           responsive classes differ. Icons are lg:hidden so the sidebar
+           stays text-only/untouched at lg:+. -->
+      <div id="head-tabs-bar" class="flex fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)] lg:flex lg:flex-col lg:flex-nowrap lg:gap-2 lg:mb-4 lg:static lg:bottom-auto lg:inset-x-auto lg:z-auto lg:bg-transparent lg:border-t-0 lg:pb-0">
         <button id="btn-head-address" onclick="selectHead('address')"
-          class="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white lg:w-full lg:text-left">
-          Address search
+          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white">
+          <i class="ti ti-search text-lg lg:hidden" aria-hidden="true"></i>
+          <span>Address search</span>
         </button>
         <button id="btn-head-browse" onclick="selectHead('browse')"
-          class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left">
-          Browse areas
+          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-400 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          <i class="ti ti-list text-lg lg:hidden" aria-hidden="true"></i>
+          <span>Browse areas</span>
         </button>
         <button id="btn-head-map" onclick="selectHead('map')"
-          class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left">
-          Map view
+          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-400 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          <i class="ti ti-map text-lg lg:hidden" aria-hidden="true"></i>
+          <span>Map view</span>
         </button>
         <button id="btn-head-assistant" onclick="selectHead('assistant')"
-          class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left">
-          Assistant
+          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-400 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          <i class="ti ti-robot text-lg lg:hidden" aria-hidden="true"></i>
+          <span>Assistant</span>
         </button>
       </div>
 
@@ -1065,15 +1084,24 @@
       });
     }
 
-    // lg:w-full lg:text-left included here (not just in the static HTML)
-    // because applyNav() below does a full className= replacement on
+    // Every class string below is included here (not just in the static
+    // HTML) because applyNav() does a full className= replacement on
     // these buttons, not a classList.toggle — any class only present in
-    // the HTML would be wiped out the first time applyNav() runs. Full
-    // width + left-aligned only matters once the sidebar is a narrow
-    // fixed-width column (lg:+); below that, the flex-wrap row these sit
-    // in doesn't care.
-    const MODE_BTN_ACTIVE   = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white lg:w-full lg:text-left";
-    const MODE_BTN_INACTIVE = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left";
+    // the HTML would be wiped out the first time applyNav() runs.
+    //
+    // HEAD_BTN_* (the 4 top-level heads) and SUB_BTN_* (Single/Compare)
+    // used to share one constant, back when both were plain horizontal
+    // pills at every width. They're split now because the heads become a
+    // fixed bottom tab bar below lg: (flex-col icon-over-label, equal
+    // width) while the sub-tabs stay exactly the in-flow pill they've
+    // always been — reusing one constant would leak the bottom-bar
+    // layout onto the sub-tab buttons too. Both still resolve to the
+    // identical lg:+ pill styling as before, so the sidebar at lg:+ is
+    // unaffected by the split.
+    const HEAD_BTN_ACTIVE   = "flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white";
+    const HEAD_BTN_INACTIVE = "flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-400 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600";
+    const SUB_BTN_ACTIVE    = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white lg:w-full lg:text-left";
+    const SUB_BTN_INACTIVE  = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left";
 
     // Removes the "you are here" marker/line and forgets the located
     // position — called whenever the person moves on to something else
@@ -1122,14 +1150,14 @@
       document.getElementById("single-search-block").classList.toggle("hidden", leaf !== "single");
 
       ["address", "browse", "map", "assistant"].forEach(h => {
-        document.getElementById("btn-head-" + h).className = (h === currentHead) ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
+        document.getElementById("btn-head-" + h).className = (h === currentHead) ? HEAD_BTN_ACTIVE : HEAD_BTN_INACTIVE;
       });
 
       document.getElementById("subtab-bar").classList.toggle("hidden", !isSubHead);
       if (isSubHead) {
         const active = currentSubTab[currentHead];
-        document.getElementById("btn-sub-single").className  = active === "single"  ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
-        document.getElementById("btn-sub-compare").className = active === "compare" ? MODE_BTN_ACTIVE : MODE_BTN_INACTIVE;
+        document.getElementById("btn-sub-single").className  = active === "single"  ? SUB_BTN_ACTIVE : SUB_BTN_INACTIVE;
+        document.getElementById("btn-sub-compare").className = active === "compare" ? SUB_BTN_ACTIVE : SUB_BTN_INACTIVE;
       }
 
       if (currentHead !== "map") {
