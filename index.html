@@ -2622,17 +2622,24 @@ let finalScore = computeFinalScore({
       // before this runs, but the browser needs a tick to lay it out.
       setTimeout(() => mapState.leafletMap.invalidateSize(), 0);
 
-      // Faint grid-coverage overlay, understated on purpose (thin dashed
-      // outline, near-invisible fill, interactive:false so it never steals
-      // clicks meant for the pins on top of it) — supplements the
-      // precision badge above rather than replacing it, since the badge is
-      // an always-visible accessible signal a map overlay can't fully
-      // substitute for.
+      // Grid-coverage overlay — supplements the precision badge above
+      // rather than replacing it, since the badge is an always-visible
+      // accessible signal a map overlay can't fully substitute for.
+      // interactive:false so it never steals clicks meant for the pins on
+      // top of it. Violet rather than the app's green/blue: green blended
+      // into OSM's own park/greenspace tiles, and blue is already used
+      // elsewhere on this map (score-band pins, the "you are here"
+      // marker/line) — violet doesn't occur naturally in OSM's tile
+      // palette or in this app's existing map colors, so it reads
+      // unambiguously as an app overlay rather than a map feature.
+      // Confirmed visible against real tiles via a pixel reconstruction
+      // (not just checked in code) after the first version at 1px/0.35
+      // opacity/green turned out genuinely too subtle to notice.
       if (hasGrid(city)) {
         const b = GRID_BOUNDS[city];
         mapState.gridRect = L.rectangle(
           [[b.south, b.west], [b.north, b.east]],
-          { color: "#16a34a", weight: 1, dashArray: "4 4", fillOpacity: 0.04, opacity: 0.35, interactive: false }
+          { color: "#7c3aed", weight: 2, dashArray: "4 4", fillOpacity: 0.07, opacity: 0.75, interactive: false }
         ).addTo(mapState.leafletMap);
       }
 
