@@ -22,6 +22,14 @@
       display: flex; align-items: center; justify-content: center;
       color: white; font-size: 13px;
     }
+    /* Country-view city marker — deliberately NOT score-colored (that would
+       need live-fetching every city's neighbourhoods just to paint 8 dots
+       before anyone's chosen anything), so a fixed brand green rather than
+       a band color makes that non-scoring intent visually obvious too. */
+    .city-pin {
+      border-radius: 50%; width: 36px; height: 36px; border: 3px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35); background: #16a34a;
+    }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -335,19 +343,45 @@
 
     <!-- Map Mode -->
     <div id="map-mode" class="hidden">
-      <div class="mb-4">
-        <label class="block text-sm text-gray-500 mb-2">City</label>
-        <select id="city-map-select" onchange="loadCityMap(this.value)"
-          class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
-          <option value="hyderabad">Hyderabad</option>
-          <option value="mumbai">Mumbai</option>
-          <option value="delhi">Delhi</option>
-          <option value="bangalore">Bangalore</option>
-          <option value="chennai">Chennai</option>
-          <option value="pune">Pune</option>
-          <option value="kolkata">Kolkata</option>
-          <option value="ahmedabad">Ahmedabad</option>
-        </select>
+      <!-- Shown only in city view (toggled by loadCityMap/showCountryMap) —
+           takes you back to the zoomed-out all-cities overview. The city
+           dropdown right below stays visible in BOTH views: it's the fast
+           "I already know which city" path and was never meant to be
+           replaced by the zoomable country view, just supplemented. -->
+      <div id="map-back-link" class="hidden mb-3">
+        <button onclick="showCountryMap()"
+          class="text-sm text-green-700 hover:text-green-800 font-medium inline-flex items-center gap-1">
+          <i class="ti ti-arrow-left"></i> All cities
+        </button>
+      </div>
+      <div class="mb-4 flex flex-col sm:flex-row gap-3">
+        <div class="flex-1">
+          <label class="block text-sm text-gray-500 mb-2">City</label>
+          <select id="city-map-select" onchange="loadCityMap(this.value)"
+            class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
+            <option value="hyderabad">Hyderabad</option>
+            <option value="mumbai">Mumbai</option>
+            <option value="delhi">Delhi</option>
+            <option value="bangalore">Bangalore</option>
+            <option value="chennai">Chennai</option>
+            <option value="pune">Pune</option>
+            <option value="kolkata">Kolkata</option>
+            <option value="ahmedabad">Ahmedabad</option>
+          </select>
+        </div>
+        <!-- Shown only in city view — filtering pins makes no sense on the
+             country overview, which has no neighbourhood pins yet. Recolors
+             already-fetched pins via recolorPins(), no re-fetch. -->
+        <div id="map-param-filter" class="hidden flex-1">
+          <label class="block text-sm text-gray-500 mb-2">Color pins by</label>
+          <select id="map-param-select" onchange="recolorPins(this.value)"
+            class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
+            <option value="final">Overall Score</option>
+            <option value="aqi">Air Quality</option>
+            <option value="ndvi">Green Cover</option>
+            <option value="infra">Infrastructure</option>
+          </select>
+        </div>
       </div>
       <div id="map-status" class="text-sm text-gray-400 text-center mb-2"></div>
       <div id="map-precision-badge" class="text-center mb-2"></div>
@@ -437,8 +471,22 @@
     // userLocation/userMarker/userLine are session-only, in-memory state for
     // the "you are here" marker — never sent anywhere, cleared on any new
     // search/lookup or on leaving map view (see clearUserLocationPin()).
+    //
+    // view/currentCity/activeParam are new: view toggles between the
+    // zoomed-out country overview and a city's neighbourhood pins;
+    // currentCity is which city that neighbourhood view is showing (null in
+    // country view); activeParam is which score field currently colors the
+    // pins (persists across city switches, so picking "Air Quality" and
+    // then jumping to another city via the dropdown keeps that filter).
+    // markers now holds {marker, d} pairs (d = that pin's already-fetched
+    // fetchAreaData result) so recolorPins() can re-band and re-color
+    // without re-fetching; cityMarkers is the separate set of country-view
+    // city markers, cleared independently since the two views never show
+    // markers at the same time. gridRect is the current grid-boundary
+    // overlay (see drawGridBoundary), null when the active city has none.
     const mapState = {
-      initialized: false, leafletMap: null, markers: [],
+      initialized: false, leafletMap: null, markers: [], cityMarkers: [], gridRect: null,
+      view: "country", currentCity: null, activeParam: "final",
       userLocation: null, userMarker: null, userLine: null
     };
 
@@ -1176,12 +1224,17 @@
       if (mapState.userLocation) {
         // A "Locate me" match is active — sync the map to that city so the
         // person's marker actually shows, even if the map was already
-        // showing a different city before.
-        const citySelect = document.getElementById("city-map-select");
-        citySelect.value = mapState.userLocation.city;
-        loadCityMap(citySelect.value);
+        // showing a different city before. loadCityMap syncs the dropdown
+        // itself now, so no need to set citySelect.value here first.
+        loadCityMap(mapState.userLocation.city);
       } else if (!mapState.initialized) {
-        loadCityMap(document.getElementById("city-map-select").value);
+        // First time Map view is opened this session: show the zoomed-out
+        // country overview, not an auto-loaded city — the dropdown is
+        // still right there as the fast path for anyone who already knows
+        // which city they want. Returning to Map view on a later visit
+        // (mapState.initialized already true) intentionally does nothing
+        // here, leaving whatever view/city was last active in place.
+        showCountryMap();
       }
     }
 
@@ -2414,22 +2467,137 @@ let finalScore = computeFinalScore({
     // since guaranteed pin/card consistency was the explicit priority.
     const MAP_CONCURRENCY = 5;
 
+    // Real bbox corners copied directly from data/pilot-grid-{hyderabad,
+    // bangalore}-core.json's own meta.bbox — hardcoded rather than fetched
+    // client-side since Bangalore's grid file alone is 36MB and only these
+    // 4 numbers per city are actually needed here. If either grid's
+    // coverage ever changes, these two entries need a matching update.
+    const GRID_BOUNDS = {
+      hyderabad: { south: 17.325842220625223, north: 17.507357779374775, west: 78.3253631415508, east: 78.5828368584492 },
+      bangalore: { south: 12.817442220625225, north: 13.123157779374775, west: 77.54695424364526, east: 77.77294575635473 }
+    };
+    // Single shared source of truth for "does this city have real grid
+    // coverage" — both the precision badge and the grid-boundary rectangle
+    // read this, so they can't drift out of sync with each other again the
+    // way the badge alone drifted after Bangalore's grid shipped (it kept
+    // checking city === "hyderabad" and silently missed Bangalore).
+    function hasGrid(city) {
+      return city in GRID_BOUNDS;
+    }
+
+    // Which fetchAreaData field colors map pins, keyed by map-param-select's
+    // option values. All four are already-computed 0-10 sub-scores from the
+    // same fetchAreaData call loadCityMap already makes — reusing
+    // getBandInfo() (the same bander the overall score uses) against a
+    // different field, not a new scoring system.
+    const MAP_PARAM_FIELDS = {
+      final: { field: "finalScore", label: "Overall Score" },
+      aqi:   { field: "aqiScore",   label: "Air Quality" },
+      ndvi:  { field: "ndviScore",  label: "Green Cover" },
+      infra: { field: "infraScore", label: "Infrastructure" }
+    };
+
+    // Same averaging loadCityMap already used to center on a city —
+    // extracted so the country view's city markers reuse this instead of
+    // a second copy of the same math.
+    function getCityCenter(city) {
+      const neighbourhoods = cities[city] || [];
+      if (neighbourhoods.length === 0) return null;
+      const lat = neighbourhoods.reduce((sum, n) => sum + n.lat, 0) / neighbourhoods.length;
+      const lon = neighbourhoods.reduce((sum, n) => sum + n.lon, 0) / neighbourhoods.length;
+      return [lat, lon];
+    }
+
+    // Clears everything either map view can have placed on the Leaflet
+    // instance — shared by loadCityMap and showCountryMap so switching
+    // between them (in either direction) never leaves stray markers/
+    // overlays from the previous view behind.
+    function clearMapLayers() {
+      mapState.markers.forEach(m => m.marker.remove());
+      mapState.markers = [];
+      mapState.cityMarkers.forEach(m => m.remove());
+      mapState.cityMarkers = [];
+      if (mapState.gridRect)   { mapState.gridRect.remove();   mapState.gridRect   = null; }
+      if (mapState.userMarker) { mapState.userMarker.remove(); mapState.userMarker = null; }
+      if (mapState.userLine)   { mapState.userLine.remove();   mapState.userLine   = null; }
+    }
+
+    function ensureLeafletMap() {
+      if (mapState.leafletMap) return;
+      mapState.leafletMap = L.map("map-container");
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+        maxZoom: 18
+      }).addTo(mapState.leafletMap);
+    }
+
+    // Zoomed-out country overview — one plain, fast, uncolored marker per
+    // city (see .city-pin's own comment for why it's not score-colored).
+    // Iterates Object.keys(cities) rather than a fixed city list, and
+    // frames itself via fitBounds() rather than a hardcoded center/zoom,
+    // so a 9th+ city added to `cities` shows up here automatically with no
+    // map-code changes. This is the view Map mode now opens to on first
+    // visit each session (see applyNav) — the city dropdown stays visible
+    // the whole time as the fast, no-zooming alternative.
+    function showCountryMap() {
+      mapState.initialized = true;
+      mapState.view = "country";
+      mapState.currentCity = null;
+
+      document.getElementById("map-back-link").classList.add("hidden");
+      document.getElementById("map-param-filter").classList.add("hidden");
+      document.getElementById("map-precision-badge").innerHTML = "";
+
+      const statusEl = document.getElementById("map-status");
+      const resultEl = document.getElementById("map-result");
+      resultEl.classList.add("hidden");
+      resultEl.innerHTML = "";
+      statusEl.textContent = "";
+
+      clearMapLayers();
+      ensureLeafletMap();
+      setTimeout(() => mapState.leafletMap.invalidateSize(), 0);
+
+      Object.keys(cities).forEach(city => {
+        const center = getCityCenter(city);
+        if (!center) return;
+        const icon = L.divIcon({ className: "", html: '<div class="city-pin"></div>', iconSize: [36, 36] });
+        const marker = L.marker(center, { icon })
+          .addTo(mapState.leafletMap)
+          .bindTooltip(city.charAt(0).toUpperCase() + city.slice(1), { permanent: true, direction: "top", offset: [0, -14] });
+        marker.on("click", () => loadCityMap(city));
+        mapState.cityMarkers.push(marker);
+      });
+
+      if (mapState.cityMarkers.length > 0) {
+        mapState.leafletMap.fitBounds(L.featureGroup(mapState.cityMarkers).getBounds(), { padding: [40, 40] });
+      }
+    }
+
     async function loadCityMap(city) {
       mapState.initialized = true;
+      mapState.view = "city";
+      mapState.currentCity = city;
+      // Every entry path (dropdown onchange, country-view marker click,
+      // Locate Me) funnels through here, so syncing the dropdown as the
+      // first line — rather than relying on each caller to do it before
+      // calling loadCityMap — is what actually guarantees they can't drift
+      // out of sync with each other.
+      document.getElementById("city-map-select").value = city;
+      document.getElementById("map-back-link").classList.remove("hidden");
+      document.getElementById("map-param-filter").classList.remove("hidden");
+      document.getElementById("map-param-select").value = mapState.activeParam;
 
       const statusEl = document.getElementById("map-status");
       const resultEl = document.getElementById("map-result");
 
-      // Honest precision-coverage badge — Hyderabad is the only city with
-      // genuine grid-level exact-point data (see api/hyderabad-grid-
-      // lookup.js); every other city's map pins are colored from the same
-      // 80 fixed neighbourhood coordinates as everywhere else in the app,
-      // not a denser grid. Without this, the map's visual polish could
-      // silently imply a precision that doesn't exist outside Hyderabad.
+      // Honest precision-coverage badge — hasGrid(city) rather than a
+      // hardcoded city check (see hasGrid's own comment for the bug this
+      // used to have).
       const precisionEl = document.getElementById("map-precision-badge");
       if (precisionEl) {
-        precisionEl.innerHTML = city === "hyderabad"
-          ? `<span class="inline-flex items-center gap-1.5 text-xs bg-green-50 text-green-700 px-3 py-1.5 rounded-full"><i class="ti ti-map-pin-check text-sm"></i>2200-cell grid · real exact-point precision</span>`
+        precisionEl.innerHTML = hasGrid(city)
+          ? `<span class="inline-flex items-center gap-1.5 text-xs bg-green-50 text-green-700 px-3 py-1.5 rounded-full"><i class="ti ti-map-pin-check text-sm"></i>Grid-level · real exact-point precision</span>`
           : `<span class="inline-flex items-center gap-1.5 text-xs bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full"><i class="ti ti-map-pin text-sm"></i>80 fixed points · area-level estimates</span>`;
       }
 
@@ -2437,10 +2605,7 @@ let finalScore = computeFinalScore({
       resultEl.innerHTML = "";
       statusEl.textContent = "Loading neighbourhoods…";
 
-      mapState.markers.forEach(m => m.remove());
-      mapState.markers = [];
-      if (mapState.userMarker) { mapState.userMarker.remove(); mapState.userMarker = null; }
-      if (mapState.userLine)   { mapState.userLine.remove();   mapState.userLine   = null; }
+      clearMapLayers();
 
       const neighbourhoods = cities[city] || [];
       if (neighbourhoods.length === 0) {
@@ -2448,21 +2613,30 @@ let finalScore = computeFinalScore({
         return;
       }
 
-      if (!mapState.leafletMap) {
-        mapState.leafletMap = L.map("map-container");
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "&copy; OpenStreetMap contributors",
-          maxZoom: 18
-        }).addTo(mapState.leafletMap);
-      }
+      ensureLeafletMap();
 
-      const avgLat = neighbourhoods.reduce((sum, n) => sum + n.lat, 0) / neighbourhoods.length;
-      const avgLon = neighbourhoods.reduce((sum, n) => sum + n.lon, 0) / neighbourhoods.length;
+      const [avgLat, avgLon] = getCityCenter(city);
       mapState.leafletMap.setView([avgLat, avgLon], 11);
       // Leaflet mis-measures its container if it was hidden (display:none)
       // at construction time — map-mode's hidden class is removed just
       // before this runs, but the browser needs a tick to lay it out.
       setTimeout(() => mapState.leafletMap.invalidateSize(), 0);
+
+      // Faint grid-coverage overlay, understated on purpose (thin dashed
+      // outline, near-invisible fill, interactive:false so it never steals
+      // clicks meant for the pins on top of it) — supplements the
+      // precision badge above rather than replacing it, since the badge is
+      // an always-visible accessible signal a map overlay can't fully
+      // substitute for.
+      if (hasGrid(city)) {
+        const b = GRID_BOUNDS[city];
+        mapState.gridRect = L.rectangle(
+          [[b.south, b.west], [b.north, b.east]],
+          { color: "#16a34a", weight: 1, dashArray: "4 4", fillOpacity: 0.04, opacity: 0.35, interactive: false }
+        ).addTo(mapState.leafletMap);
+      }
+
+      const paramField = MAP_PARAM_FIELDS[mapState.activeParam].field;
 
       // Batched concurrency — same lesson learned in Phase 2's snapshot
       // pipeline (open-meteo returns 429 above ~5 concurrent requests).
@@ -2474,11 +2648,12 @@ let finalScore = computeFinalScore({
 
           let pinClass = "bg-gray-400";
           let label = n.name;
+          let d = null;
           try {
-            const d = await fetchAreaData(city, value);
-            const band = getBandInfo(d.finalScore);
+            d = await fetchAreaData(city, value);
+            const band = getBandInfo(d[paramField]);
             pinClass = band.pin;
-            label = `${n.name} · ${Math.round(d.finalScore * 10)}`;
+            label = `${n.name} · ${Math.round(d[paramField] * 10)}`;
           } catch (err) {
             console.warn("Map pin data failed for " + n.name, err);
             label += " · data unavailable";
@@ -2492,7 +2667,10 @@ let finalScore = computeFinalScore({
           const marker = L.marker([n.lat, n.lon], { icon }).addTo(mapState.leafletMap);
           marker.bindTooltip(label);
           marker.on("click", () => showMapPinResult(n.name, city));
-          mapState.markers.push(marker);
+          // Storing the fetched d (not just the marker) is what lets
+          // recolorPins() re-band and re-color instantly from data already
+          // in hand, with no re-fetch, when the parameter filter changes.
+          mapState.markers.push({ marker, d });
         }));
       }
 
@@ -2522,6 +2700,26 @@ let finalScore = computeFinalScore({
       }
 
       statusEl.textContent = "";
+    }
+
+    // Re-bands and re-colors already-fetched pins against a different
+    // parameter (see MAP_PARAM_FIELDS) — no re-fetch, since every marker's
+    // fetchAreaData result is already sitting in mapState.markers. Persists
+    // the choice on mapState.activeParam so switching cities afterward via
+    // the dropdown keeps using the same filter.
+    function recolorPins(param) {
+      mapState.activeParam = param;
+      const paramField = MAP_PARAM_FIELDS[param].field;
+      mapState.markers.forEach(({ marker, d }) => {
+        if (!d) return;
+        const band = getBandInfo(d[paramField]);
+        marker.setIcon(L.divIcon({
+          className: "",
+          html: `<div class="aqi-pin ${band.pin}"></div>`,
+          iconSize: [18, 18]
+        }));
+        marker.setTooltipContent(`${d.name} · ${Math.round(d[paramField] * 10)}`);
+      });
     }
 
     async function showMapPinResult(name, city) {
