@@ -2537,6 +2537,76 @@ let finalScore = computeFinalScore({
       if (mapState.userLine)   { mapState.userLine.remove();   mapState.userLine   = null; }
     }
 
+    // Zoom level at which "zooming in on the country overview" is treated
+    // as "committed to a specific area, transition to that city." Chosen
+    // from real measurements, not the ~8 first proposed: at zoom 8 the
+    // viewport is 547km wide — wider than every city-pair gap in this
+    // app, including the closest (Mumbai-Pune, 121km) — so it would fire
+    // while still looking at a view that could span multiple cities'
+    // regions, reading as premature rather than deliberate. At zoom 10
+    // (136x86km viewport) it's comfortably past that for every pair
+    // except right at the Mumbai-Pune midpoint, where both cities' centers
+    // are still technically in view even at zoom 10 (confirmed: neither
+    // is by zoom 11, the exact zoom loadCityMap itself uses) — an
+    // unavoidable nearest-neighbor tie zone for the one city pair this
+    // app has that's genuinely close together, not something worth
+    // building more complex logic around.
+    const ZOOM_TRANSITION_THRESHOLD = 10;
+    // Caps the transition to zoom-ins that are actually near SOME city —
+    // without this, zooming into (say) Nepal or Sri Lanka past the
+    // threshold would still auto-jump to whichever Indian city happens to
+    // be nearest, which is geographically nonsensical. 250km comfortably
+    // covers "zooming toward a city, not quite there yet" while excluding
+    // clearly-unrelated regions (Hyderabad-Bangalore, the closest pair
+    // beyond Mumbai-Pune, are 503km apart).
+    const ZOOM_TRANSITION_MAX_DISTANCE_KM = 250;
+
+    // Fires on every zoomend regardless of view — the mapState.view check
+    // is what makes this a no-op outside country view, so this only ever
+    // needs to be attached once (see ensureLeafletMap) rather than
+    // re-attached each time showCountryMap() runs, which would otherwise
+    // stack a new listener on every return trip to country view. Reuses
+    // haversineKm/getCityCenter exactly as loadCityMap's marker-click and
+    // the dropdown already do — same transition, one more trigger for it,
+    // not a second implementation.
+    function handleCountryMapZoom() {
+      if (mapState.view !== "country") return;
+      if (mapState.leafletMap.getZoom() < ZOOM_TRANSITION_THRESHOLD) return;
+
+      const center = mapState.leafletMap.getCenter();
+      let nearestCity = null;
+      let nearestDistanceKm = Infinity;
+      Object.keys(cities).forEach(city => {
+        const cityCenter = getCityCenter(city);
+        if (!cityCenter) return;
+        const distanceKm = haversineKm(center.lat, center.lng, cityCenter[0], cityCenter[1]);
+        if (distanceKm < nearestDistanceKm) {
+          nearestDistanceKm = distanceKm;
+          nearestCity = city;
+        }
+      });
+      // setTimeout with a real delay, not setTimeout(fn, 0) and not a
+      // direct call — this handler runs inside Leaflet's own zoomend
+      // dispatch, and loadCityMap does its own setView(..., 11)
+      // immediately after. Confirmed live, empirically, not assumed:
+      // a bare setTimeout(fn, 0) gap (~3ms) still silently drops the zoom
+      // change while keeping the pan, landing on zoom 10 instead of 11;
+      // even 50ms wasn't reliably enough through this exact code path
+      // (extra synchronous DOM/badge work in loadCityMap eats into the
+      // gap before its setView call actually runs). 250ms tested
+      // reliable. Leaflet's own animated zoom (the default for real
+      // scroll/pinch/button interactions) takes ~250ms to settle before
+      // zoomend even fires, so real usage likely wouldn't hit this race
+      // at all — but the fix shouldn't depend on that. 250ms reads as
+      // "the city view snapped in a beat after I crossed the zoom
+      // threshold," not as lag. Every other entry path — dropdown,
+      // marker click, Locate Me — is unaffected, they don't have this
+      // collision to begin with.
+      if (nearestCity && nearestDistanceKm <= ZOOM_TRANSITION_MAX_DISTANCE_KM) {
+        setTimeout(() => loadCityMap(nearestCity), 250);
+      }
+    }
+
     function ensureLeafletMap() {
       if (mapState.leafletMap) return;
       mapState.leafletMap = L.map("map-container");
@@ -2544,6 +2614,7 @@ let finalScore = computeFinalScore({
         attribution: "&copy; OpenStreetMap contributors",
         maxZoom: 18
       }).addTo(mapState.leafletMap);
+      mapState.leafletMap.on("zoomend", handleCountryMapZoom);
     }
 
     // Zoomed-out country overview — one plain, fast, uncolored marker per
@@ -2637,26 +2708,13 @@ let finalScore = computeFinalScore({
       // before this runs, but the browser needs a tick to lay it out.
       setTimeout(() => mapState.leafletMap.invalidateSize(), 0);
 
-      // Grid-coverage overlay — supplements the precision badge above
-      // rather than replacing it, since the badge is an always-visible
-      // accessible signal a map overlay can't fully substitute for.
-      // interactive:false so it never steals clicks meant for the pins on
-      // top of it. Violet rather than the app's green/blue: green blended
-      // into OSM's own park/greenspace tiles, and blue is already used
-      // elsewhere on this map (score-band pins, the "you are here"
-      // marker/line) — violet doesn't occur naturally in OSM's tile
-      // palette or in this app's existing map colors, so it reads
-      // unambiguously as an app overlay rather than a map feature.
-      // Confirmed visible against real tiles via a pixel reconstruction
-      // (not just checked in code) after the first version at 1px/0.35
-      // opacity/green turned out genuinely too subtle to notice.
-      if (hasGrid(city)) {
-        const b = GRID_BOUNDS[city];
-        mapState.gridRect = L.rectangle(
-          [[b.south, b.west], [b.north, b.east]],
-          { color: "#7c3aed", weight: 2, dashArray: "4 4", fillOpacity: 0.07, opacity: 0.75, interactive: false }
-        ).addTo(mapState.leafletMap);
-      }
+      // Grid-coverage rectangle overlay was removed here after real usage
+      // showed it didn't look good in practice — the precision badge
+      // above (driven by the same hasGrid(city), untouched) stays as the
+      // sole grid-coverage signal. mapState.gridRect and its cleanup in
+      // clearMapLayers() are left in place (always null now) rather than
+      // ripped out, since re-adding a boundary overlay later is plausible
+      // and this keeps that path cheap to restore.
 
       const paramField = MAP_PARAM_FIELDS[mapState.activeParam].field;
 
