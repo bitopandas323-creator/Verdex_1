@@ -44,11 +44,17 @@
        grid (i.e. every width under 1024px), their contents stack in DOM
        order exactly as one long column, same as today. -->
   <!-- pb is split out of the p-8 shorthand below lg: so it can carry extra
-       clearance for the fixed bottom tab bar (its own ~3.5rem content
-       height plus the safe-area inset) on top of the page's normal 2rem
-       bottom gap; lg:pb-8 resets it to the plain original value once the
-       bar goes back to being an in-flow sidebar list at lg:+. -->
-  <div class="max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto mt-12 pt-8 pr-8 pl-8 pb-[calc(2rem_+_3.5rem_+_env(safe-area-inset-bottom))] lg:pb-8 lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:items-start">
+       clearance for the fixed bottom tab bar (its own ~5rem content
+       height — measured 76.7px live, post-interaction, after the larger
+       icons/labels/padding below, up from ~56px before the mobile
+       readability pass — plus the safe-area inset) on top of the page's
+       normal 2rem bottom gap; lg:pb-8 resets it to the plain original
+       value once the bar goes back to being an in-flow sidebar list at
+       lg:+. Measured after clicking through nav tabs, not just on first
+       paint — HEAD_BTN_ACTIVE/INACTIVE's own py-2.5/gap-1 (see their
+       comment) make the bar slightly taller once applyNav() has run at
+       least once, which is true for nearly every real visit. -->
+  <div class="max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto mt-12 pt-8 pr-8 pl-8 pb-[calc(2rem_+_5rem_+_env(safe-area-inset-bottom))] lg:pb-8 lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:items-start">
 
     <!-- Sidebar (desktop only — see the outer div's own comment). Holds
          everything that's a persistent, page-level control rather than a
@@ -101,27 +107,27 @@
            stays text-only/untouched at lg:+. -->
       <div id="head-tabs-bar" class="flex fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)] lg:flex lg:flex-col lg:flex-nowrap lg:gap-2 lg:mb-4 lg:static lg:bottom-auto lg:inset-x-auto lg:z-auto lg:bg-transparent lg:border-t-0 lg:pb-0">
         <button id="btn-head-address" onclick="selectHead('address')"
-          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white">
-          <i class="ti ti-search text-lg lg:hidden" aria-hidden="true"></i>
-          <span class="text-[13px] tracking-tight lg:hidden">Address</span>
+          class="flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white">
+          <i class="ti ti-search text-2xl lg:hidden" aria-hidden="true"></i>
+          <span class="text-base font-semibold leading-tight lg:hidden">Address</span>
           <span class="hidden lg:inline lg:text-sm">Address search</span>
         </button>
         <button id="btn-head-browse" onclick="selectHead('browse')"
-          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
-          <i class="ti ti-list text-lg lg:hidden" aria-hidden="true"></i>
-          <span class="text-[13px] tracking-tight lg:hidden">Browse</span>
+          class="flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          <i class="ti ti-list text-2xl lg:hidden" aria-hidden="true"></i>
+          <span class="text-base font-semibold leading-tight lg:hidden">Browse</span>
           <span class="hidden lg:inline lg:text-sm">Browse areas</span>
         </button>
         <button id="btn-head-map" onclick="selectHead('map')"
-          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
-          <i class="ti ti-map text-lg lg:hidden" aria-hidden="true"></i>
-          <span class="text-[13px] tracking-tight lg:hidden">Map</span>
+          class="flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          <i class="ti ti-map text-2xl lg:hidden" aria-hidden="true"></i>
+          <span class="text-base font-semibold leading-tight lg:hidden">Map</span>
           <span class="hidden lg:inline lg:text-sm">Map view</span>
         </button>
         <button id="btn-head-assistant" onclick="selectHead('assistant')"
-          class="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
-          <i class="ti ti-robot text-lg lg:hidden" aria-hidden="true"></i>
-          <span class="text-[13px] tracking-tight lg:text-sm lg:tracking-normal">Assistant</span>
+          class="flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          <i class="ti ti-robot text-2xl lg:hidden" aria-hidden="true"></i>
+          <span class="text-base font-semibold leading-tight lg:text-sm lg:font-medium lg:leading-normal">Assistant</span>
         </button>
       </div>
 
@@ -1149,13 +1155,22 @@
     // layout onto the sub-tab buttons too. Both still resolve to the
     // identical lg:+ pill styling as before, so the sidebar at lg:+ is
     // unaffected by the split.
-    const HEAD_BTN_ACTIVE   = "flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white";
+    // gap-1/py-2.5 (not gap-0.5/py-2) below lg: — bumped alongside the
+    // icon/label sizes in the buttons' inner <i>/<span> markup, so the
+    // whole tab (not just the text) reads as noticeably bigger. This is
+    // exactly the kind of value that MUST live here, not just in the
+    // static HTML: a first pass at this same bump only touched the
+    // static HTML and missed these constants, so it silently reverted to
+    // the old, smaller padding the moment applyNav() ran on the first
+    // nav click — the static HTML's classes only ever paint for the
+    // very first, unclicked render.
+    const HEAD_BTN_ACTIVE   = "flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white";
     // text-gray-600 (not gray-400) below lg: — gray-400 measured ~2.6:1
     // contrast on white, well under WCAG AA's 4.5:1 for normal text;
     // gray-600 (already what the sidebar itself used at lg:+) is ~7.5:1,
     // legible at a glance without diluting the active tab's green as the
     // "you are here" signal.
-    const HEAD_BTN_INACTIVE = "flex flex-col items-center justify-center gap-0.5 flex-1 px-1 py-2 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600";
+    const HEAD_BTN_INACTIVE = "flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600";
     const SUB_BTN_ACTIVE    = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white lg:w-full lg:text-left";
     const SUB_BTN_INACTIVE  = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left";
 
