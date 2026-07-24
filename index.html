@@ -2537,73 +2537,111 @@ let finalScore = computeFinalScore({
       if (mapState.userLine)   { mapState.userLine.remove();   mapState.userLine   = null; }
     }
 
-    // Zoom level at which "zooming in on the country overview" is treated
-    // as "committed to a specific area, transition to that city." Chosen
-    // from real measurements, not the ~8 first proposed: at zoom 8 the
-    // viewport is 547km wide — wider than every city-pair gap in this
-    // app, including the closest (Mumbai-Pune, 121km) — so it would fire
-    // while still looking at a view that could span multiple cities'
-    // regions, reading as premature rather than deliberate. At zoom 10
-    // (136x86km viewport) it's comfortably past that for every pair
-    // except right at the Mumbai-Pune midpoint, where both cities' centers
-    // are still technically in view even at zoom 10 (confirmed: neither
-    // is by zoom 11, the exact zoom loadCityMap itself uses) — an
-    // unavoidable nearest-neighbor tie zone for the one city pair this
-    // app has that's genuinely close together, not something worth
-    // building more complex logic around.
+    // Zoom level at which the country<->city view transition fires, both
+    // directions. Zoom-in (country -> city) fires at zoom >= 10; zoom-out
+    // (city -> country) reuses this exact same number with the opposite
+    // comparison (zoom < 10) rather than a second, looser constant.
+    // Chosen from real measurements, not the ~8 first proposed for the
+    // zoom-in case: at zoom 8 the viewport is 547km wide — wider than
+    // every city-pair gap in this app, including the closest
+    // (Mumbai-Pune, 121km) — so it would fire while still looking at a
+    // view that could span multiple cities' regions, reading as premature
+    // rather than deliberate. At zoom 10 (136x86km viewport) it's
+    // comfortably past that for every pair except right at the
+    // Mumbai-Pune midpoint, where both cities' centers are still
+    // technically in view even at zoom 10 (confirmed: neither is by zoom
+    // 11, the exact zoom loadCityMap itself uses) — an unavoidable
+    // nearest-neighbor tie zone for the one city pair this app has that's
+    // genuinely close together, not something worth building more complex
+    // logic around.
+    //
+    // Reusing one number for both directions rather than adding a looser
+    // out-threshold (e.g. 9) is safe by construction, not just by picking
+    // a wide-enough gap: the mapState.view check below means only one
+    // direction's branch can ever be live for a given zoomend (a single
+    // event can't be evaluated as both "in country view" and "in city
+    // view" at once), and each transition's own landing zoom is already
+    // far from this boundary either way — city view always lands at
+    // exactly zoom 11 (loadCityMap's own setView), country view's
+    // fitBounds always lands around zoom 5 for this app's actual city
+    // spread (measured). So neither transition's result can immediately
+    // re-trigger the other. The practical effect of one shared threshold
+    // with a strict >=/< split: someone at city view (zoom 11) needs to
+    // zoom out two steps (11->10->9) before the out-transition fires, not
+    // one — already not twitchy, without a second magic number to justify.
     const ZOOM_TRANSITION_THRESHOLD = 10;
-    // Caps the transition to zoom-ins that are actually near SOME city —
-    // without this, zooming into (say) Nepal or Sri Lanka past the
+    // Caps the zoom-IN transition to zoom-ins that are actually near SOME
+    // city — without this, zooming into (say) Nepal or Sri Lanka past the
     // threshold would still auto-jump to whichever Indian city happens to
     // be nearest, which is geographically nonsensical. 250km comfortably
     // covers "zooming toward a city, not quite there yet" while excluding
     // clearly-unrelated regions (Hyderabad-Bangalore, the closest pair
-    // beyond Mumbai-Pune, are 503km apart).
+    // beyond Mumbai-Pune, are 503km apart). No equivalent cap is needed
+    // for zoom-OUT: showCountryMap() always shows the same correct thing
+    // (the full country overview) regardless of where in a city someone
+    // zoomed out from.
     const ZOOM_TRANSITION_MAX_DISTANCE_KM = 250;
 
-    // Fires on every zoomend regardless of view — the mapState.view check
-    // is what makes this a no-op outside country view, so this only ever
-    // needs to be attached once (see ensureLeafletMap) rather than
-    // re-attached each time showCountryMap() runs, which would otherwise
-    // stack a new listener on every return trip to country view. Reuses
-    // haversineKm/getCityCenter exactly as loadCityMap's marker-click and
-    // the dropdown already do — same transition, one more trigger for it,
-    // not a second implementation.
-    function handleCountryMapZoom() {
-      if (mapState.view !== "country") return;
-      if (mapState.leafletMap.getZoom() < ZOOM_TRANSITION_THRESHOLD) return;
+    // Fires on every zoomend regardless of view, handling both directions
+    // of the country<->city transition — not two separate listeners, one
+    // function that owns "when do we cross this boundary." Attached once
+    // (see ensureLeafletMap), not re-attached per visit to either view,
+    // so it can never stack duplicates. Reuses haversineKm/getCityCenter
+    // exactly as loadCityMap's marker-click and the dropdown already do
+    // for the zoom-in direction, and showCountryMap() exactly as the
+    // "All cities" link already does for zoom-out — no new transition
+    // logic, only new triggers for the existing ones.
+    //
+    // Both deferred calls below re-check their own trigger condition at
+    // execution time, not just at scheduling time: without this, crossing
+    // the threshold and then immediately taking a different, deliberate
+    // action (picking a specific city from the dropdown while a pending
+    // zoom-in timer is still in flight, or zooming back in yourself while
+    // a pending zoom-out timer is in flight) would still get silently
+    // overridden 250ms later by the stale timer. Re-checking makes a
+    // stale timer a no-op instead — the deliberate action wins.
+    function handleMapZoomTransition() {
+      const zoom = mapState.leafletMap.getZoom();
 
-      const center = mapState.leafletMap.getCenter();
-      let nearestCity = null;
-      let nearestDistanceKm = Infinity;
-      Object.keys(cities).forEach(city => {
-        const cityCenter = getCityCenter(city);
-        if (!cityCenter) return;
-        const distanceKm = haversineKm(center.lat, center.lng, cityCenter[0], cityCenter[1]);
-        if (distanceKm < nearestDistanceKm) {
-          nearestDistanceKm = distanceKm;
-          nearestCity = city;
+      if (mapState.view === "country" && zoom >= ZOOM_TRANSITION_THRESHOLD) {
+        const center = mapState.leafletMap.getCenter();
+        let nearestCity = null;
+        let nearestDistanceKm = Infinity;
+        Object.keys(cities).forEach(city => {
+          const cityCenter = getCityCenter(city);
+          if (!cityCenter) return;
+          const distanceKm = haversineKm(center.lat, center.lng, cityCenter[0], cityCenter[1]);
+          if (distanceKm < nearestDistanceKm) {
+            nearestDistanceKm = distanceKm;
+            nearestCity = city;
+          }
+        });
+        // setTimeout with a real delay, not setTimeout(fn, 0) and not a
+        // direct call — this handler runs inside Leaflet's own zoomend
+        // dispatch, and loadCityMap does its own setView(..., 11)
+        // immediately after. Confirmed live, empirically, not assumed:
+        // a bare setTimeout(fn, 0) gap (~3ms) still silently drops the
+        // zoom change while keeping the pan, landing on zoom 10 instead
+        // of 11; even 50ms wasn't reliably enough through this exact code
+        // path (extra synchronous DOM/badge work in loadCityMap eats into
+        // the gap before its setView call actually runs). 250ms tested
+        // reliable. Leaflet's own animated zoom (the default for real
+        // scroll/pinch/button interactions) takes ~250ms to settle before
+        // zoomend even fires, so real usage likely wouldn't hit this race
+        // at all — but the fix shouldn't depend on that.
+        if (nearestCity && nearestDistanceKm <= ZOOM_TRANSITION_MAX_DISTANCE_KM) {
+          setTimeout(() => {
+            if (mapState.view === "country" && mapState.leafletMap.getZoom() >= ZOOM_TRANSITION_THRESHOLD) {
+              loadCityMap(nearestCity);
+            }
+          }, 250);
         }
-      });
-      // setTimeout with a real delay, not setTimeout(fn, 0) and not a
-      // direct call — this handler runs inside Leaflet's own zoomend
-      // dispatch, and loadCityMap does its own setView(..., 11)
-      // immediately after. Confirmed live, empirically, not assumed:
-      // a bare setTimeout(fn, 0) gap (~3ms) still silently drops the zoom
-      // change while keeping the pan, landing on zoom 10 instead of 11;
-      // even 50ms wasn't reliably enough through this exact code path
-      // (extra synchronous DOM/badge work in loadCityMap eats into the
-      // gap before its setView call actually runs). 250ms tested
-      // reliable. Leaflet's own animated zoom (the default for real
-      // scroll/pinch/button interactions) takes ~250ms to settle before
-      // zoomend even fires, so real usage likely wouldn't hit this race
-      // at all — but the fix shouldn't depend on that. 250ms reads as
-      // "the city view snapped in a beat after I crossed the zoom
-      // threshold," not as lag. Every other entry path — dropdown,
-      // marker click, Locate Me — is unaffected, they don't have this
-      // collision to begin with.
-      if (nearestCity && nearestDistanceKm <= ZOOM_TRANSITION_MAX_DISTANCE_KM) {
-        setTimeout(() => loadCityMap(nearestCity), 250);
+      } else if (mapState.view === "city" && zoom < ZOOM_TRANSITION_THRESHOLD) {
+        setTimeout(() => {
+          if (mapState.view === "city" && mapState.leafletMap.getZoom() < ZOOM_TRANSITION_THRESHOLD) {
+            showCountryMap();
+          }
+        }, 250);
       }
     }
 
@@ -2614,7 +2652,7 @@ let finalScore = computeFinalScore({
         attribution: "&copy; OpenStreetMap contributors",
         maxZoom: 18
       }).addTo(mapState.leafletMap);
-      mapState.leafletMap.on("zoomend", handleCountryMapZoom);
+      mapState.leafletMap.on("zoomend", handleMapZoomTransition);
     }
 
     // Zoomed-out country overview — one plain, fast, uncolored marker per
