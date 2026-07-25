@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { computeInfraScore, computeWalkScore } from "../scripts/_lib/infra-walk-scoring.mjs";
+import { computeGridNoiseScore } from "../scripts/_lib/noise-scoring.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -86,12 +87,21 @@ export default async function handler(req, res) {
   // fall back to the neighbourhood baseline" rather than a zero score.
   const infraScore = computeInfraScore(cell.places);
   const walkScore = computeWalkScore(cell.places);
+  // computeGridNoiseScore reads cell.roadPrecise/cell.railway (scripts/
+  // fetch-grid-noise-proximity.mjs) — separate fields from cell.places,
+  // fetched once per city rather than per-cell (see that script's header).
+  // null only if a cell is missing those fields entirely (shouldn't happen
+  // for any cell in a grid that's completed this fetch) — never a score of
+  // zero, same "null means unavailable, not bad" contract as infraScore/
+  // walkScore above.
+  const noiseScore = computeGridNoiseScore(cell);
   return res.status(200).json({
     inGrid: true,
     city: grid.city,
     places: cell.places,
     infraScore,
     walkScore,
+    noiseScore,
     cellDistanceKm: parseFloat(distanceKm.toFixed(3))
   });
 }

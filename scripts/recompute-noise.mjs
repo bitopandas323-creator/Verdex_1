@@ -24,6 +24,7 @@
 import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { distanceToNoiseScore, ROAD_THRESHOLDS, RAIL_THRESHOLDS, combineNoiseScore } from "./_lib/noise-scoring.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const nearbyPlacesPath = join(__dirname, "..", "data", "nearby-places.json");
@@ -61,35 +62,15 @@ function roadDistanceFor(name, city) {
 // rather than guess a value or fall back to a road-only score.
 const UNRESOLVED_GAP_NAMES = new Set(["Prahlad Nagar"]);
 
-const FLOOR = 1.5; // same practical-minimum reasoning as Infrastructure/Walkability
-
-// closeKm = empirical p10 nearest-distance across the 80 real
-// neighbourhoods (loudest 10%), farKm = empirical p90 (quietest 10%) -
-// same convention as Infrastructure/Walkability, just inverted meaning
-// since closer is worse here, not better.
-function distanceToNoiseScore(distanceKm, closeKm, farKm) {
-  if (distanceKm <= closeKm) return FLOOR;
-  if (distanceKm >= farKm) return 10;
-  return FLOOR + (10 - FLOOR) * (distanceKm - closeKm) / (farKm - closeKm);
-}
-
-// closeKm=0.05 (chosen to match rail's own close threshold) turned out to
-// be an ad-hoc placeholder, not an empirical value - data/nearby-places.json
-// rounds to 1 decimal before storage, which collapsed genuinely different
-// close distances (0.008km vs 0.04km) into an identical stored 0.0km and
-// mechanically floored 23/80 neighbourhoods' road component regardless of
-// their real distance. data/road-proximity-precise.json (62/80 resolved,
-// 18 fall back to the rounded value - see that file's meta.unresolved)
-// recovers the real distribution: true p10=0.0028km, p90=0.4456km. Even
-// with full precision, this remains a very tight range at the close end
-// (most named-neighbourhood coordinates sit within metres of *some* road)
-// - road proximity alone has limited discriminating power there; the
-// railway component carries most of the real differentiation for
-// road-adjacent neighbourhoods. 13/79 still land at the exact floor after
-// this fix (down from 24/79 pre-precision), a real reduction, not full
-// resolution - the remainder is a property of the real data, not a bug.
-const ROAD_THRESHOLDS = [0.0028, 0.4456]; // true p10/p90 of the corrected (precise + documented-fallback) road distance distribution
-const RAIL_THRESHOLDS = [0.05, 2.01]; // p10/p90 of railway-line nearest distance, 79/80 resolved
+// FLOOR/distanceToNoiseScore/ROAD_THRESHOLDS/RAIL_THRESHOLDS now live in
+// scripts/_lib/noise-scoring.mjs, shared with api/grid-lookup.js's
+// grid-cell exact-point Noise scoring - same values as before this move
+// (true p10/p90 of the corrected road distance distribution: 0.0028km/
+// 0.4456km; railway p10/p90 of the 79/80 resolved: 0.05km/2.01km), see
+// that file for the full threshold-derivation history. 13/79 neighbourhoods
+// still land at the exact road floor even with full precision (down from
+// 24/79 pre-precision) - a property of the real data (most named-
+// neighbourhood coordinates sit within metres of *some* road), not a bug.
 
 function computeNoiseScore(name, city) {
   if (UNRESOLVED_GAP_NAMES.has(name)) return null; // held on old baseline, not recomputed
@@ -101,9 +82,7 @@ function computeNoiseScore(name, city) {
   if (!rail || rail.distanceKm === null) return null; // shouldn't happen for the 79 resolved - defensive only
   const railScore = distanceToNoiseScore(rail.distanceKm, ...RAIL_THRESHOLDS);
 
-  // Worse (louder) of the two dominates - noise doesn't average, the
-  // closer/louder source determines the actual ambient experience.
-  return parseFloat(Math.min(roadScore, railScore).toFixed(1));
+  return combineNoiseScore(roadScore, railScore);
 }
 
 const results = [];
