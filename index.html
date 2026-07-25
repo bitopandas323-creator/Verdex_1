@@ -405,9 +405,10 @@
 
     <!-- Assistant Mode (Screen 5 — entirely placeholder, deliberately
          inert: no input box, no canned responses, nothing that could be
-         mistaken for a working feature. See buildAskVerdexCard/
-         buildClimateResilienceCard for the same honesty standard applied
-         to the per-search placeholder cards. -->
+         mistaken for a working feature. See buildAskVerdexCard for the
+         same honesty standard applied to a per-search placeholder card;
+         buildClimateResilienceCard is now a hybrid — heat-stress is real,
+         computed data, flood risk is still genuinely unsolved. -->
     <div id="assistant-mode" class="hidden">
       <!-- bg-white + explicit border, not bg-gray-50 like Real Estate's
            empty state: that pattern relies on relative contrast against
@@ -1081,6 +1082,16 @@
     // and the area's average character.
     { name: "Hinjewadi",       lat: 18.5912, lon: 73.7389, ndvi: 0.28, noise: 1.5, water: 380, traffic: 2, safety: 6, infra: 8.5, walk: 9.4 },
     { name: "Kothrud",         lat: 18.5074, lon: 73.8077, ndvi: 0.32, noise: 1.5, water: 300, traffic: 4.5, safety: 7, infra: 7.8, walk: 8.6 },
+    // HEAT-STRESS FLAG (data/heat-stress.json, fetched via scripts/
+    // fetch-heat-stress.mjs): 9.9 avg hot days/yr (>=40C, Mar-Jun,
+    // 2016-2025) vs Pune's own average of 4.6 across its other 9
+    // neighbourhoods — the single biggest within-city outlier found in
+    // that dataset. Best working theory is proximity to Pune Airport
+    // (~2km), a plausible real tarmac/urban-heat-island effect, but this
+    // is NOT independently confirmed the way Mumbai's Thane/coastal
+    // pattern was — plausible, not verified. Flagging rather than
+    // silently trusting it, same as Hinjewadi's walkability-anchor gap
+    // and Dumdum's municipality-boundary ambiguity elsewhere in this file.
     { name: "Viman Nagar",     lat: 18.5679, lon: 73.9143, ndvi: 0.25, noise: 5.6, water: 320, traffic: 4, safety: 6.5, infra: 5.3, walk: 5.7 },
     { name: "Hadapsar",        lat: 18.5008, lon: 73.9379, ndvi: 0.22, noise: 1.5, water: 380, traffic: 3.5, safety: 6, infra: 4.8, walk: 6.1 },
     { name: "Aundh",           lat: 18.5590, lon: 73.8080, ndvi: 0.35, noise: 3.4, water: 290, traffic: 5, safety: 7.5, infra: 7.1, walk: 8.4 },
@@ -1398,6 +1409,23 @@
       return nearbyPlacesIndex;
     }
 
+    // Same fetch-once/cache-in-memory pattern as getNearbyPlacesIndex —
+    // data/heat-stress.json (scripts/fetch-heat-stress.mjs) changes slowly
+    // (yearly refresh at most), never needs a live per-search fetch.
+    let heatStressIndex = null;
+    async function getHeatStressIndex() {
+      if (heatStressIndex) return heatStressIndex;
+      try {
+        const res = await fetch("/data/heat-stress.json");
+        const arr = await res.json();
+        heatStressIndex = new Map(arr.map(e => [e.city + "|" + e.name, e]));
+      } catch (e) {
+        console.warn("Failed to load heat-stress.json — Climate Resilience card will show as unavailable.", e.message);
+        heatStressIndex = new Map();
+      }
+      return heatStressIndex;
+    }
+
     // Client-side counterpart to api/_lib/http.js's fetchJsonWithTimeout —
     // same "clear the timer in finally, cover the full response read" shape,
     // needed here specifically for the Open-Meteo weather call below, which
@@ -1436,6 +1464,7 @@ let walk    = parseFloat(parts[9]) || 6.0;
       let neighbourhoodEntry = (cities[city] || []).find(n => n.name === name);
       let nearbyProjects = (neighbourhoodEntry && neighbourhoodEntry.nearbyProjects) || [];
       let nearbyPlaces = (await getNearbyPlacesIndex()).get(city + "|" + name) || null;
+      let heatStress = (await getHeatStressIndex()).get(city + "|" + name) || null;
       // Fetch live NDVI from satellite. api/ndvi.js distinguishes a real
       // failure (non-2xx status: auth broken, upstream rejected the
       // request, etc.) from a legitimate empty result (200 with ndvi:null,
@@ -1556,7 +1585,8 @@ let finalScore = computeFinalScore({
         aqiIsEstimated, weatherIsEstimated, ndviIsEstimated,
         // Informational only — deliberately excluded from finalScore above.
         nearbyProjects,
-        nearbyPlaces
+        nearbyPlaces,
+        heatStress
       };
       setCached(cacheKey, result);
       return result;
@@ -1941,13 +1971,18 @@ let finalScore = computeFinalScore({
         </div>`;
     }
 
-    // Deliberately splits the two sub-parts honestly rather than one vague
-    // sentence: heat-stress history is a real, scoped task (free Open-Meteo
-    // historical data exists) just not built yet; flood risk has no known
+    // Heat-stress is real, computed data now (data/heat-stress.json, via
+    // scripts/fetch-heat-stress.mjs — see that file's own header for the
+    // full methodology and IMD grounding). Flood risk still has no known
     // free India-specific data source at all — genuinely unsolved, not
-    // merely unscheduled. Collapsing those into one status would overstate
-    // how close flood risk actually is to shipping.
-    function buildClimateResilienceCard() {
+    // merely unscheduled — so the badge reflects a partially-built card,
+    // not a fully "done" one; collapsing that into a plain "Live" badge
+    // would overstate how complete this section actually is.
+    function buildClimateResilienceCard(d) {
+      const hs = d && d.heatStress;
+      const heatStressLine = (hs && typeof hs.avgHotDaysPerYear === "number")
+        ? `<span class="font-medium text-gray-600">${hs.avgHotDaysPerYear} hot days</span> (above 40°C) in a typical heat season (March–June), based on 10 years of historical data (2016–2025).`
+        : `Heat-stress data not yet available for this area.`;
       return `
         <div class="bg-white rounded-2xl p-8 lg:p-10 border border-gray-100">
           <div class="flex justify-between items-center gap-2 mb-1">
@@ -1955,10 +1990,10 @@ let finalScore = computeFinalScore({
               <i class="ti ti-cloud-storm text-gray-400 text-lg shrink-0"></i>
               <span class="font-semibold text-gray-500 truncate">Climate Resilience</span>
             </div>
-            <span class="shrink-0 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Not started</span>
+            <span class="shrink-0 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Heat-stress only</span>
           </div>
-          <div class="text-base text-gray-400 space-y-1.5">
-            <div><span class="font-medium text-gray-500">Heat-stress history</span> — not yet built, but a real, scoped task: free Open-Meteo historical data can support this.</div>
+          <div class="text-base text-gray-500 space-y-1.5">
+            <div>${heatStressLine}</div>
           </div>
         </div>`;
     }
@@ -2028,7 +2063,7 @@ let finalScore = computeFinalScore({
             ${buildNearbyPlacesSection(d.nearbyPlaces, chartId, nearbyPlacesSource)}
             ${REAL_ESTATE_ENABLED ? buildRealEstateSection(d.nearbyProjects) : ""}
             ${buildAskVerdexCard()}
-            ${buildClimateResilienceCard()}
+            ${buildClimateResilienceCard(d)}
           </div>
           <div class="pt-4 text-center text-xs text-gray-400">
             AQI and weather are live. Green cover from ESA satellites. Infrastructure, transit & amenity access, and noise are computed from real OpenStreetMap distances, refreshed periodically. Water, traffic and safety are from researched baseline data. Nearby places from OpenStreetMap, refreshed periodically.
