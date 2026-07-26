@@ -29,8 +29,10 @@
 // This is NOT called live per user search — climate history changes
 // slowly. Meant to be re-run infrequently (e.g. yearly), unlike the
 // hourly snapshot pipeline:
-//   node scripts/fetch-heat-stress.mjs             (full run, all 80)
-//   node scripts/fetch-heat-stress.mjs --limit=5   (test run, first N)
+//   node scripts/fetch-heat-stress.mjs                  (full run, all)
+//   node scripts/fetch-heat-stress.mjs --limit=5        (test run, first N)
+//   node scripts/fetch-heat-stress.mjs --only=A,B,C     (just these names, upserts)
+//   node scripts/fetch-heat-stress.mjs --retry-failed   (retry only failReason entries)
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { fileURLToPath, pathToFileURL } from "url";
@@ -232,10 +234,50 @@ async function runRetryFailed() {
   console.log(`\n${stillFailed} still failing.` + (stillFailed > 0 ? " Re-run --retry-failed again." : " All neighbourhoods now have data."));
 }
 
+// Scoped fetch for specific neighbourhoods by name (e.g. a newly-added
+// city) - upserts into the existing output file rather than the full
+// from-scratch overwrite runFull() does, so adding a 9th+ city doesn't
+// re-burn the hourly Overpass-style archive quota re-fetching the other
+// 80/90 that already have good data. Mirrors fetch-nearby-places.mjs's
+// --only mode.
+async function runOnly(namesArg) {
+  const names = namesArg.split(",").map(n => n.trim()).filter(Boolean);
+  const existing = existsSync(outPath) ? JSON.parse(readFileSync(outPath, "utf8")) : [];
+
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i];
+    const n = NEIGHBOURHOODS.find(x => x.name === name);
+    if (!n) {
+      console.warn(`Skipping "${name}" — not found in data/neighbourhoods.json.`);
+      continue;
+    }
+    const { data, reason } = await fetchHistoricalForNeighbourhood(n.lat, n.lon);
+    const idx = existing.findIndex(e => e.city === n.city && e.name === n.name);
+    let entry;
+    if (!data) {
+      console.log(`  [${i + 1}/${names.length}] [FAILED] ${n.name}, ${n.city}: ${reason}`);
+      entry = { name: n.name, city: n.city, avgHotDaysPerYear: null, avgApparentTempMaxC: null, maxTempSeenC: null, yearsUsed: [], perYearHotDays: {}, failReason: reason };
+    } else {
+      const summary = summarizeHeatStress(data.daily);
+      console.log(`  [${i + 1}/${names.length}] ${n.name}, ${n.city}: avg ${summary.avgHotDaysPerYear} hot days/yr (>=${HOT_DAY_THRESHOLD_C}C), max seen ${summary.maxTempSeenC}C`);
+      entry = { name: n.name, city: n.city, ...summary };
+    }
+    if (idx === -1) existing.push(entry);
+    else existing[idx] = entry;
+    writeFileSync(outPath, JSON.stringify(existing, null, 2));
+    if (i < names.length - 1) await sleep(2000);
+  }
+
+  console.log(`\nWrote ${existing.length} total entries to ${outPath}`);
+}
+
 const isMainModule = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMainModule) {
   const args = process.argv.slice(2);
-  if (args.includes("--retry-failed")) {
+  const onlyArg = args.find(a => a.startsWith("--only="));
+  if (onlyArg) {
+    runOnly(onlyArg.split("=")[1]);
+  } else if (args.includes("--retry-failed")) {
     runRetryFailed();
   } else {
     const limitArg = args.find(a => a.startsWith("--limit="));

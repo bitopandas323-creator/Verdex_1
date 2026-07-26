@@ -98,7 +98,11 @@ export async function getAqi(lat, lon, city) {
   const fallbacks = {
     hyderabad: 85, mumbai: 95, delhi: 150,
     bangalore: 65, chennai: 90, pune: 75,
-    kolkata: 110, ahmedabad: 120
+    kolkata: 110, ahmedabad: 120,
+    // Same multi-year-average reasoning as index.html's own aqiFallbacks
+    // (aqi.in, 2020-2025: 96-122) — kept in sync manually since there's no
+    // shared-module system between this file and index.html.
+    guwahati: 120
   };
 
   return { aqi: fallbacks[city] || 100, station: "fallback", method: "fallback" };

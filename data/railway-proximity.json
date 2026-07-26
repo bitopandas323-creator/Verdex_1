@@ -569,6 +569,76 @@
       "distanceKm": 0.5757703258813985,
       "railName": "Blue Line, Ahmedabad Metro",
       "reason": null
+    },
+    {
+      "name": "Beltola",
+      "city": "guwahati",
+      "distanceKm": 4.55482674301246,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Six Mile",
+      "city": "guwahati",
+      "distanceKm": 3.4807443821418063,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Ganeshguri",
+      "city": "guwahati",
+      "distanceKm": 3.457027986706392,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Dispur",
+      "city": "guwahati",
+      "distanceKm": 4.151583402486048,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Kahilipara",
+      "city": "guwahati",
+      "distanceKm": 4.28198353535718,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Jalukbari",
+      "city": "guwahati",
+      "distanceKm": 0.47374502747105196,
+      "railName": "Kamakhya Junction - Rangiya Junction",
+      "reason": null
+    },
+    {
+      "name": "Narengi",
+      "city": "guwahati",
+      "distanceKm": 0.30480700932448174,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Chandmari",
+      "city": "guwahati",
+      "distanceKm": 0.09090650740928186,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Pan Bazar",
+      "city": "guwahati",
+      "distanceKm": 0.3502806733125843,
+      "railName": null,
+      "reason": null
+    },
+    {
+      "name": "Zoo Road",
+      "city": "guwahati",
+      "distanceKm": 1.5606125910262958,
+      "railName": null,
+      "reason": null
     }
   ]
 }

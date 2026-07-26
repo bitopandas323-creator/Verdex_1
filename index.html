@@ -202,6 +202,7 @@
             <option value="pune">Pune</option>
             <option value="kolkata">Kolkata</option>
             <option value="ahmedabad">Ahmedabad</option>
+            <option value="guwahati">Guwahati</option>
           </select>
         </div>
       </div>
@@ -282,6 +283,7 @@
           <option value="pune">Pune</option>
           <option value="kolkata">Kolkata</option>
           <option value="ahmedabad">Ahmedabad</option>
+          <option value="guwahati">Guwahati</option>
         </select>
       </div>
       <div class="mb-6">
@@ -316,6 +318,7 @@
             <option value="pune">Pune</option>
             <option value="kolkata">Kolkata</option>
             <option value="ahmedabad">Ahmedabad</option>
+            <option value="guwahati">Guwahati</option>
           </select>
           <select id="browse-neighbourhood-a"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white">
@@ -333,6 +336,7 @@
             <option value="pune">Pune</option>
             <option value="kolkata">Kolkata</option>
             <option value="ahmedabad">Ahmedabad</option>
+            <option value="guwahati">Guwahati</option>
           </select>
           <select id="browse-neighbourhood-b"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white">
@@ -373,6 +377,7 @@
             <option value="pune">Pune</option>
             <option value="kolkata">Kolkata</option>
             <option value="ahmedabad">Ahmedabad</option>
+            <option value="guwahati">Guwahati</option>
           </select>
         </div>
         <!-- Shown only in city view — filtering pins makes no sense on the
@@ -1164,6 +1169,39 @@
     { name: "Gota",            lat: 23.0900, lon: 72.5400, ndvi: 0.21, noise: 2.7, water: 510, traffic: 5.5, safety: 6, infra: 2.6, walk: 3 },
     { name: "SG Highway",      lat: 23.0284, lon: 72.5069, ndvi: 0.17, noise: 3.4, water: 460, traffic: 3, safety: 6.5, infra: 6.6, walk: 5.8 },
     { name: "Thaltej",         lat: 23.0450, lon: 72.5100, ndvi: 0.23, noise: 3.8, water: 430, traffic: 5, safety: 7.5, infra: 5.2, walk: 4.5 }
+  ],
+  // WATER DATA CAVEAT: unlike every other city's water (TDS ppm) values,
+  // which are per-neighbourhood researched estimates, Guwahati's water
+  // values below are a defensible RELATIVE RANKING derived from a real
+  // zone-level groundwater contamination study (the central zone needs no
+  // intervention; south/east zones show iron/fluoride/arsenic beyond
+  // permissible limits) - not per-locality ppm measurements the way other
+  // cities' water values are. Same number format, genuinely coarser
+  // precision underneath it - worth knowing if this data is ever audited
+  // or questioned later, same honest-flagging discipline as Dumdum's
+  // municipality-boundary ambiguity and Hinjewadi/Viman Nagar's
+  // anchor-point caveats elsewhere in this file.
+  //
+  // noise/infra/walk below are throwaway placeholders, not researched -
+  // scripts/recompute-noise.mjs and scripts/recompute-infra-walk.mjs
+  // overwrite them with real computed values immediately after this data
+  // lands (same bootstrap sequence every other city went through). ndvi is
+  // a genuine estimate (used as the live-NDVI-fetch fallback, never
+  // recomputed by a script), based on each area's known character -
+  // IIT Guwahati's riverside campus (Jalukbari) and the Narengi cantonment
+  // area score highest; the dense Pan Bazar/Six Mile commercial cores
+  // score lowest.
+  guwahati: [
+    { name: "Zoo Road",    lat: 26.1687, lon: 91.7787, ndvi: 0.22, noise: 1.5,   water: 380, traffic: 3,   safety: 7,   infra: 7.1, walk: 6.6 },
+    { name: "Beltola",     lat: 26.1242, lon: 91.7995, ndvi: 0.20, noise: 3.4, water: 460, traffic: 2.5, safety: 6.5, infra: 5.5, walk: 9.4 },
+    { name: "Six Mile",    lat: 26.1310, lon: 91.8072, ndvi: 0.16, noise: 3.4,   water: 460, traffic: 2,   safety: 6.5, infra: 5, walk: 7.2 },
+    { name: "Ganeshguri",  lat: 26.1490, lon: 91.7837, ndvi: 0.18, noise: 5.3, water: 400, traffic: 2.5, safety: 7,   infra: 5.9, walk: 6.3 },
+    { name: "Dispur",      lat: 26.1409, lon: 91.7910, ndvi: 0.28, noise: 3.4, water: 340, traffic: 3,   safety: 7.5, infra: 5.3, walk: 5.8 },
+    { name: "Kahilipara",  lat: 26.1446, lon: 91.7718, ndvi: 0.24, noise: 1.5,   water: 440, traffic: 4,   safety: 6.5, infra: 5.1, walk: 4 },
+    { name: "Jalukbari",   lat: 26.1555, lon: 91.6712, ndvi: 0.35, noise: 3.3,   water: 380, traffic: 3,   safety: 6.5, infra: 5.5, walk: 5.2 },
+    { name: "Narengi",     lat: 26.1762, lon: 91.8293, ndvi: 0.30, noise: 2.6, water: 480, traffic: 4.5, safety: 6,   infra: 3.8, walk: 3.2 },
+    { name: "Chandmari",   lat: 26.1841, lon: 91.7741, ndvi: 0.20, noise: 1.7, water: 360, traffic: 3.5, safety: 7,   infra: 6.6, walk: 7.3 },
+    { name: "Pan Bazar",   lat: 26.1853, lon: 91.7473, ndvi: 0.15, noise: 2.8,   water: 340, traffic: 3,   safety: 7.5, infra: 6.6, walk: 8.9 }
   ]
 };
     function updateNeighbourhoods(selectId, citySelectId) {
@@ -1582,7 +1620,15 @@ let walk    = parseFloat(parts[9]) || 6.0;
       let aqiFallbacks = {
         hyderabad: 85, mumbai: 95, delhi: 150,
         bangalore: 65, chennai: 90, pune: 75,
-        kolkata: 110, ahmedabad: 120
+        kolkata: 110, ahmedabad: 120,
+        // Multi-year historical average (aqi.in, 2020-2025: 96-122), not the
+        // disputed/volatile single-year 2026 spike figure (~182, "Unhealthy")
+        // that Assam's own Pollution Control Board publicly rejected the
+        // framing of ("second most polluted city") - this fallback only
+        // matters when the live AQI fetch fails anyway, so a stable
+        // multi-year baseline is more honest than chasing one contested
+        // number.
+        guwahati: 120
       };
       if (aqi === null) aqi = aqiFallbacks[city] || 100;
 

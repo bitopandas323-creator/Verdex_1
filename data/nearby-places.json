@@ -35749,5 +35749,4231 @@
         "reason": null
       }
     }
+  },
+  {
+    "name": "Zoo Road",
+    "city": "guwahati",
+    "places": {
+      "hospital": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "KIMS HOSPITAL CLINIC",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "APOLLO HOSPITAL",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "Name care hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Dr. Nitin Dutta Eye Foundation Hospital",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "clinic": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "Guwahati Neuro Clinic"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "GUWAHATI NEURO CLINIC"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Dr. S. J. Saikia's"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "SHRISTHI DIAGNOSTICS"
+          }
+        ],
+        "reason": null
+      },
+      "school": {
+        "candidates": [
+          {
+            "distanceKm": 3.4,
+            "name": "Bengali Higher Secondary School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 9.1,
+            "name": "DAKSHIN GANESH NAGAR LPS",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "MARIA MONTESSORI HOUSE OF CHILDEN",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "BOSSE",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "college": {
+        "candidates": [
+          {
+            "distanceKm": 8.7,
+            "name": "Indian Institute of Technology Guwahati",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 10.1,
+            "name": "University of Science and Technology Meghalaya",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 11.5,
+            "name": "Gauhati University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "S.K. Hazarika College",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "police": {
+        "candidates": [
+          {
+            "distanceKm": 1.6,
+            "name": "state police accountability commission, assam"
+          },
+          {
+            "distanceKm": 3.6,
+            "name": "Latasil Police Station"
+          },
+          {
+            "distanceKm": 3.6,
+            "name": "Latasil Police Station"
+          },
+          {
+            "distanceKm": 3.6,
+            "name": "Latasil Police Station"
+          }
+        ],
+        "reason": null
+      },
+      "fire_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "grocery": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "SAGAR VARIETY",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": null,
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "MRP ENTERPRISE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "ARIHANT STORE",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "pharmacy": {
+        "candidates": [
+          {
+            "distanceKm": 1.2,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 3.1,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "SHIVAM MEDICALS",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "WELLCARE MEDICOS",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "atm_bank": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "CANARA BANK"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": null
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Bank of India"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Bank Of India ATM"
+          }
+        ],
+        "reason": null
+      },
+      "bus_stop": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": null
+          },
+          {
+            "distanceKm": 0.6,
+            "name": null
+          },
+          {
+            "distanceKm": 0.7,
+            "name": null
+          },
+          {
+            "distanceKm": 1,
+            "name": "ABC"
+          }
+        ],
+        "reason": null
+      },
+      "metro_station": {
+        "candidates": [
+          {
+            "distanceKm": 2.1,
+            "name": "New Guwahati"
+          },
+          {
+            "distanceKm": 3.2,
+            "name": "Guwahati"
+          }
+        ],
+        "reason": null
+      },
+      "restaurant_cafe": {
+        "candidates": [
+          {
+            "distanceKm": 0,
+            "name": "NIGHT LIFE"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "THE RHAPSODY BISTRO"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "RJ KITCHEN"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": null
+          }
+        ],
+        "reason": null
+      },
+      "park": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Shradhanjali Kanan"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "Shraddhanjali Kanan"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "Shraddhanjali Kanan"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Sudhakantha Dr.Bhupen Hazarika Children's Park"
+          }
+        ],
+        "reason": null
+      },
+      "gym": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "PFC Fitness and Health Care Centre",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "GYM GOLDX",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "NESSFA GYM",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "AFRO FITNESS",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "mall": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "GREAT EASTERN TRADING CO.",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "Central Mall",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "EXOTICA GREEN",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "FIRST CRY",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "worship": {
+        "candidates": [
+          {
+            "distanceKm": 0.4,
+            "name": "LKRB Namghar"
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "SRIMANTRO SANKARDEV NAMGHAR"
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "ALAK NIRANJAN SHIV MANDIR"
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "Ananda Nagar Unnayan Samiti Namghar"
+          }
+        ],
+        "reason": null
+      },
+      "fuel": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "CLUB HP",
+            "wiki": false,
+            "chainMatch": true
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "highway": {
+        "candidates": [
+          {
+            "distanceKm": 0,
+            "name": "Zoo Road Flyover"
+          },
+          {
+            "distanceKm": 0,
+            "name": "Zoo Road Flyover"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": null
+          },
+          {
+            "distanceKm": 0.5,
+            "name": null
+          }
+        ],
+        "reason": null
+      }
+    }
+  },
+  {
+    "name": "Beltola",
+    "city": "guwahati",
+    "places": {
+      "hospital": {
+        "candidates": [
+          {
+            "distanceKm": 3.8,
+            "name": "Apollo Hospitals",
+            "wiki": true,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 5.1,
+            "name": "KIMS HOSPITAL CLINIC",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 5.4,
+            "name": "Name care hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Agile Hospitals Pvt Ltd",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "clinic": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "The Royal Care Clinic"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "New Bongshidhar Clinic"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Disiti Eyecare"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "SUSHRI DOCTORS CLINIC"
+          }
+        ],
+        "reason": null
+      },
+      "school": {
+        "candidates": [
+          {
+            "distanceKm": 4.2,
+            "name": "DAKSHIN GANESH NAGAR LPS",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 8.1,
+            "name": "Bengali Higher Secondary School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "beltola high school",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": null,
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "college": {
+        "candidates": [
+          {
+            "distanceKm": 5.3,
+            "name": "University of Science and Technology Meghalaya",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 12.8,
+            "name": "Indian Institute of Technology Guwahati",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 13.4,
+            "name": "Assam Science and Technology University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "Beltola College",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "police": {
+        "candidates": [
+          {
+            "distanceKm": 1.3,
+            "name": "hatigaon police station"
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "Bashistha Police Station"
+          },
+          {
+            "distanceKm": 3.3,
+            "name": "Khanapara Police Station"
+          },
+          {
+            "distanceKm": 3.5,
+            "name": "Bhagaduttapur Police station"
+          }
+        ],
+        "reason": null
+      },
+      "fire_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "grocery": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "DRISHI KRISHNA MM STORE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "PUTALA STORE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "GANAPATI STORE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "ANUSHKA STORE",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "pharmacy": {
+        "candidates": [
+          {
+            "distanceKm": 5.7,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 7.3,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "JOY DURGA HOMOEO",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "BONGSHIDHAR CLINIC",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "atm_bank": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": null
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Bank of Baroda"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "SBI ATM"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Punjab National Bank"
+          }
+        ],
+        "reason": null
+      },
+      "bus_stop": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "Beltola Tiniali"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Survey"
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Survey"
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "Six mile"
+          }
+        ],
+        "reason": null
+      },
+      "metro_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "restaurant_cafe": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "Souka"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "RUPOHI RESTURANT"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "EAT AND MERRY RESTURANT"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "EAT AND MERRY RESTURANT"
+          }
+        ],
+        "reason": null
+      },
+      "park": {
+        "candidates": [
+          {
+            "distanceKm": 1.4,
+            "name": "sericulture department"
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "KAMALA KANTA BARUAH CHILDREN PARK"
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "Kamala Kanta Baruah Children park"
+          },
+          {
+            "distanceKm": 2.1,
+            "name": "Children Park"
+          }
+        ],
+        "reason": null
+      },
+      "gym": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "BELTOLA WEIGHT LOSS AND GAIN CLUN",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Aerofitness",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "SSK Gym",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "DESI GYM",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "mall": {
+        "candidates": [
+          {
+            "distanceKm": 0.3,
+            "name": "STYLE BAAZAR",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "SSK MART DEPARTMENT STORE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1,
+            "name": "ZUDIO",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.6,
+            "name": "Pantaloons",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "worship": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": null
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "Lakhi Mandir"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "আদিনাথ শিৱ মন্দিৰ"
+          },
+          {
+            "distanceKm": 0.8,
+            "name": null
+          }
+        ],
+        "reason": null
+      },
+      "fuel": {
+        "candidates": [
+          {
+            "distanceKm": 1.3,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.4,
+            "name": null,
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "highway": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "Pir Azan Fakir Road"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Pir Azan Fakir Road"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "B N Sakia Road"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "B N Sakia Road"
+          }
+        ],
+        "reason": null
+      }
+    }
+  },
+  {
+    "name": "Six Mile",
+    "city": "guwahati",
+    "places": {
+      "hospital": {
+        "candidates": [
+          {
+            "distanceKm": 3.6,
+            "name": "Apollo Hospitals",
+            "wiki": true,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 4.8,
+            "name": "KIMS HOSPITAL CLINIC",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 5.3,
+            "name": "Name care hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Gnrc Six-mile Hospital",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "clinic": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "DR. DAWKA'S CHAMBER"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "NORTH EAST HEART CENTER"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "State Dispensary, Khanapara"
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "Guwahati Gastroentrology and Liver Clinic"
+          }
+        ],
+        "reason": null
+      },
+      "school": {
+        "candidates": [
+          {
+            "distanceKm": 5.1,
+            "name": "DAKSHIN GANESH NAGAR LPS",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 8.1,
+            "name": "Bengali Higher Secondary School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "beltola high school",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "Kendriya vidyalaya khanapara",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "college": {
+        "candidates": [
+          {
+            "distanceKm": 5.1,
+            "name": "University of Science and Technology Meghalaya",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 13,
+            "name": "Indian Institute of Technology Guwahati",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 14.1,
+            "name": "Assam Science and Technology University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "Assam Administrative Staff College",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "police": {
+        "candidates": [
+          {
+            "distanceKm": 2.1,
+            "name": "hatigaon police station"
+          },
+          {
+            "distanceKm": 2.4,
+            "name": "Bashistha Police Station"
+          },
+          {
+            "distanceKm": 2.9,
+            "name": "Khanapara Police Station"
+          },
+          {
+            "distanceKm": 4.1,
+            "name": "Bhagaduttapur Police station"
+          }
+        ],
+        "reason": null
+      },
+      "fire_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "grocery": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "Nayantara Supermarket1",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "ANUSHKA STORE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "GANAPATI STORE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "PUTALA STORE",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "pharmacy": {
+        "candidates": [
+          {
+            "distanceKm": 5.6,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 7.4,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "NETRA MEDICO",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "AXOM MEDICO'S",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "atm_bank": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "CENTRAL BANK OF INDIA SIXMILE BRANCH"
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "HDFC Bank"
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "Canara Bank"
+          },
+          {
+            "distanceKm": 1,
+            "name": "ICICI Bank"
+          }
+        ],
+        "reason": null
+      },
+      "bus_stop": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "Six mile"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Rukminigaon"
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "DOWNTOWN BUS STOP"
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "Down Town"
+          }
+        ],
+        "reason": null
+      },
+      "metro_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "restaurant_cafe": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "Restaurant1"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Cafe1"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "NAWAZISH"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Confucius"
+          }
+        ],
+        "reason": null
+      },
+      "park": {
+        "candidates": [
+          {
+            "distanceKm": 1.1,
+            "name": "KAMALA KANTA BARUAH CHILDREN PARK"
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "Kamala Kanta Baruah Children park"
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "sericulture department"
+          },
+          {
+            "distanceKm": 1.6,
+            "name": "Kalakshetra"
+          }
+        ],
+        "reason": null
+      },
+      "gym": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "DESI GYM",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "LIVESTRONG FITNESS GYM",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "BELTOLA WEIGHT LOSS AND GAIN CLUN",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "SSK Gym",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "mall": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "SSK MART DEPARTMENT STORE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "Pantaloons",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "STYLE BAAZAR",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "ZUDIO",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "worship": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "Dwaranda Masjid"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Laymen's Evangelical Fellewship Guwahati"
+          },
+          {
+            "distanceKm": 1,
+            "name": "আদিনাথ শিৱ মন্দিৰ"
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "NAMGHAR"
+          }
+        ],
+        "reason": null
+      },
+      "fuel": {
+        "candidates": [
+          {
+            "distanceKm": 0.8,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.6,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2.2,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "NRL PETROL PUMP",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "highway": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": null
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Sixmile Flyover"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Sixmile Flyover"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Panjabari Flyover"
+          }
+        ],
+        "reason": null
+      }
+    }
+  },
+  {
+    "name": "Ganeshguri",
+    "city": "guwahati",
+    "places": {
+      "hospital": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "Apollo Hospitals",
+            "wiki": true,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2,
+            "name": "KIMS HOSPITAL CLINIC",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2.2,
+            "name": "Name care hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Nightingale Hospital",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "clinic": {
+        "candidates": [
+          {
+            "distanceKm": 0.3,
+            "name": "BLISS DIAGNOSTIC CENTRE"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "KUNJA HOMEO"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "Dr. Twinkle Daulaguphu"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "Dispur Polyclinic and Nursing Home"
+          }
+        ],
+        "reason": null
+      },
+      "school": {
+        "candidates": [
+          {
+            "distanceKm": 5,
+            "name": "Bengali Higher Secondary School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 6.8,
+            "name": "DAKSHIN GANESH NAGAR LPS",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "Gopal Boro Govt HS School",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "St. Stephen's School",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "college": {
+        "candidates": [
+          {
+            "distanceKm": 8.2,
+            "name": "University of Science and Technology Meghalaya",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 10,
+            "name": "Indian Institute of Technology Guwahati",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 11.7,
+            "name": "Assam Science and Technology University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Dispur College",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "police": {
+        "candidates": [
+          {
+            "distanceKm": 2.4,
+            "name": "Bhagaduttapur Police station"
+          },
+          {
+            "distanceKm": 2.5,
+            "name": "hatigaon police station"
+          },
+          {
+            "distanceKm": 3,
+            "name": "4th APBn"
+          },
+          {
+            "distanceKm": 3.3,
+            "name": "state police accountability commission, assam"
+          }
+        ],
+        "reason": null
+      },
+      "fire_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "grocery": {
+        "candidates": [
+          {
+            "distanceKm": 0.3,
+            "name": "Vishal Mega Mart",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "Madhu Enterprise",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "R.I STORE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "shop",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "pharmacy": {
+        "candidates": [
+          {
+            "distanceKm": 2.6,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 4.3,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Lushi Medicos",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "S.M. MEDICOS",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "atm_bank": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "THE CO OPERATIVE CITY BANK LIMITED"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "Punjab National Bank"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": null
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "AXIS BANK"
+          }
+        ],
+        "reason": null
+      },
+      "bus_stop": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "NBS-1"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": null
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "WALFORD"
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "Ganeshguri"
+          }
+        ],
+        "reason": null
+      },
+      "metro_station": {
+        "candidates": [
+          {
+            "distanceKm": 3.8,
+            "name": "New Guwahati"
+          },
+          {
+            "distanceKm": 5,
+            "name": "Guwahati"
+          }
+        ],
+        "reason": null
+      },
+      "restaurant_cafe": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "MISISIPI RESTAURANT"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Domino's Pizza"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "Rice N' More"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "Gam’s Deliciacy"
+          }
+        ],
+        "reason": null
+      },
+      "park": {
+        "candidates": [
+          {
+            "distanceKm": 1.2,
+            "name": null
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "Children Park"
+          },
+          {
+            "distanceKm": 1.8,
+            "name": "Shraddhanjali Kanan"
+          },
+          {
+            "distanceKm": 1.8,
+            "name": "Shraddhanjali Kanan"
+          }
+        ],
+        "reason": null
+      },
+      "gym": {
+        "candidates": [
+          {
+            "distanceKm": 0.3,
+            "name": "Biofit Gym",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "SAF FITNESS",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "AFE GYM",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "Mini gym",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "mall": {
+        "candidates": [
+          {
+            "distanceKm": 0.7,
+            "name": "City Centre Mall, Guwahati",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "Central Mall",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "Times Square Mall",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.7,
+            "name": "Ginn & Jony",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "worship": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Ganesh Mandir"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "Shree Hanuman Ji Temple"
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "Rajdhani Masjid"
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "Rajdhani Masjid"
+          }
+        ],
+        "reason": null
+      },
+      "fuel": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "Indian Oil Petrol Pump",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Bharat petroleum jatia",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Petrol Pump",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "highway": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "Kalaguru Bishnuprasad Rabha Flyover"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Radha Gobinda Baruah Road"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Zoo road"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Radha Gobinda Baruah Road"
+          }
+        ],
+        "reason": null
+      }
+    }
+  },
+  {
+    "name": "Dispur",
+    "city": "guwahati",
+    "places": {
+      "hospital": {
+        "candidates": [
+          {
+            "distanceKm": 1.8,
+            "name": "Apollo Hospitals",
+            "wiki": true,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 3.1,
+            "name": "KIMS HOSPITAL CLINIC",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 3.4,
+            "name": "Name care hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "G N R C Heart Institute",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "clinic": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "Capital State Dispensary"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "AYONEXT HEALTHCARE"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "Ganga Clinic"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "Child and Women Health Clinic"
+          }
+        ],
+        "reason": null
+      },
+      "school": {
+        "candidates": [
+          {
+            "distanceKm": 5.9,
+            "name": "DAKSHIN GANESH NAGAR LPS",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 6.2,
+            "name": "Bengali Higher Secondary School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "Shrimanta Shankar Academy",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "DISPUR GOVT. HIGHER SECONDARY SCHOOL",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "college": {
+        "candidates": [
+          {
+            "distanceKm": 7,
+            "name": "University of Science and Technology Meghalaya",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 11.1,
+            "name": "Indian Institute of Technology Guwahati",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 12.4,
+            "name": "Assam Science and Technology University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "DISPUR LAW COLLEGE",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "police": {
+        "candidates": [
+          {
+            "distanceKm": 1.6,
+            "name": "hatigaon police station"
+          },
+          {
+            "distanceKm": 2.6,
+            "name": "Bhagaduttapur Police station"
+          },
+          {
+            "distanceKm": 3.2,
+            "name": "Bashistha Police Station"
+          },
+          {
+            "distanceKm": 3.6,
+            "name": "4th APBn"
+          }
+        ],
+        "reason": null
+      },
+      "fire_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "grocery": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "SAMAHAR",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "BAKER'S MART",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Madhu Enterprise",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Amul",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "pharmacy": {
+        "candidates": [
+          {
+            "distanceKm": 3.7,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 5.4,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "P.J. MEDICO'S",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "OM SHANTI MEDICOS",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "atm_bank": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "State Bank of India"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "State Bank of India"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": null
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "Union Bank of India"
+          }
+        ],
+        "reason": null
+      },
+      "bus_stop": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "Last Gate"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "Last Gate"
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "Secretariat Bus Stop"
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "Supermarket"
+          }
+        ],
+        "reason": null
+      },
+      "metro_station": {
+        "candidates": [
+          {
+            "distanceKm": 4.6,
+            "name": "New Guwahati"
+          }
+        ],
+        "reason": null
+      },
+      "restaurant_cafe": {
+        "candidates": [
+          {
+            "distanceKm": 0.4,
+            "name": "GOKUL BHAI HOTEL & RESTURANT"
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "AIMONI HOTEL"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "kolkata biryani house"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "al zaika"
+          }
+        ],
+        "reason": null
+      },
+      "park": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "Children Park"
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Kamala Kanta Baruah Children park"
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "KAMALA KANTA BARUAH CHILDREN PARK"
+          },
+          {
+            "distanceKm": 2.3,
+            "name": null
+          }
+        ],
+        "reason": null
+      },
+      "gym": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "GYMNEXIA GYM",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "LIVESTRONG FITNESS GYM",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "SAF FITNESS",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "Mini gym",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "mall": {
+        "candidates": [
+          {
+            "distanceKm": 0.9,
+            "name": "Pantaloons",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.7,
+            "name": "STYLE BAAZAR",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.7,
+            "name": "GALAXY",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.7,
+            "name": "Anmol Store",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "worship": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Rajdhani Masjid"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "Rajdhani Masjid"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "Rajdhani Masjid"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "Shree Hanuman Ji Temple"
+          }
+        ],
+        "reason": null
+      },
+      "fuel": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Indian Oil Petrol Pump",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "Bharat petroleum jatia",
+            "wiki": false,
+            "chainMatch": true
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "highway": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": null
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Supermarket Flyover"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Supermarket Flyover"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": null
+          }
+        ],
+        "reason": null
+      }
+    }
+  },
+  {
+    "name": "Kahilipara",
+    "city": "guwahati",
+    "places": {
+      "hospital": {
+        "candidates": [
+          {
+            "distanceKm": 1.4,
+            "name": "Apollo Hospitals",
+            "wiki": true,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2.2,
+            "name": "Name care hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2.6,
+            "name": "KIMS HOSPITAL CLINIC",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1,
+            "name": "Eye care medico",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "clinic": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "K.D Dental clinic"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Physiotheraphy centre"
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "Dermacity"
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "Aksi Advanced Eye Centre"
+          }
+        ],
+        "reason": null
+      },
+      "school": {
+        "candidates": [
+          {
+            "distanceKm": 4.7,
+            "name": "Bengali Higher Secondary School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 6.6,
+            "name": "DAKSHIN GANESH NAGAR LPS",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1,
+            "name": "Jatiya Vidyalaya Kahilipara",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "TAB Mamorial Jatiya Vidyalaya",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "college": {
+        "candidates": [
+          {
+            "distanceKm": 8.8,
+            "name": "University of Science and Technology Meghalaya",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 9.2,
+            "name": "Indian Institute of Technology Guwahati",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 10.5,
+            "name": "Assam Science and Technology University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "Guwahati Medical College",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "police": {
+        "candidates": [
+          {
+            "distanceKm": 1.3,
+            "name": "Bhagaduttapur Police station"
+          },
+          {
+            "distanceKm": 1.7,
+            "name": "4th APBn"
+          },
+          {
+            "distanceKm": 2.5,
+            "name": "hatigaon police station"
+          },
+          {
+            "distanceKm": 3.3,
+            "name": "state police accountability commission, assam"
+          }
+        ],
+        "reason": null
+      },
+      "fire_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "grocery": {
+        "candidates": [
+          {
+            "distanceKm": 1.5,
+            "name": "Vishal Mega Mart",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.6,
+            "name": "Madhu Enterprise",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.7,
+            "name": "R.I STORE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.8,
+            "name": "K.D.STORE",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "pharmacy": {
+        "candidates": [
+          {
+            "distanceKm": 2.5,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 3.8,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "Lushi Medicos",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "LIFESTYLE MEDICOS",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "atm_bank": {
+        "candidates": [
+          {
+            "distanceKm": 0.7,
+            "name": null
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "SBI BANK"
+          },
+          {
+            "distanceKm": 0.9,
+            "name": null
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "ICICI BANK"
+          }
+        ],
+        "reason": null
+      },
+      "bus_stop": {
+        "candidates": [
+          {
+            "distanceKm": 0,
+            "name": "Sarbasiksha"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "DPI"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": "Forensic"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "10th APBn Bus Stop"
+          }
+        ],
+        "reason": null
+      },
+      "metro_station": {
+        "candidates": [
+          {
+            "distanceKm": 4.7,
+            "name": "New Guwahati"
+          },
+          {
+            "distanceKm": 4.7,
+            "name": "Guwahati"
+          }
+        ],
+        "reason": null
+      },
+      "restaurant_cafe": {
+        "candidates": [
+          {
+            "distanceKm": 1.3,
+            "name": null
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "BHARAYIYA JAIPAN"
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "MISISIPI RESTAURANT"
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "DJ 3 Restaurant"
+          }
+        ],
+        "reason": null
+      },
+      "park": {
+        "candidates": [
+          {
+            "distanceKm": 1.9,
+            "name": "Bishnu Rabha udyan"
+          },
+          {
+            "distanceKm": 1.9,
+            "name": null
+          },
+          {
+            "distanceKm": 2,
+            "name": null
+          },
+          {
+            "distanceKm": 2,
+            "name": null
+          }
+        ],
+        "reason": null
+      },
+      "gym": {
+        "candidates": [
+          {
+            "distanceKm": 0.9,
+            "name": "Mini gym",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1,
+            "name": "SAF FITNESS",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "UFC Gym",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.6,
+            "name": "AFE GYM",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "mall": {
+        "candidates": [
+          {
+            "distanceKm": 1.6,
+            "name": "City Centre Mall, Guwahati",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.6,
+            "name": "Central Mall",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.8,
+            "name": "Ginn & Jony",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.8,
+            "name": "Raja Enterprises",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "worship": {
+        "candidates": [
+          {
+            "distanceKm": 1.4,
+            "name": "Dispur Baptist Church"
+          },
+          {
+            "distanceKm": 1.4,
+            "name": null
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "Ganesh Mandir"
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "Rajdhani Masjid"
+          }
+        ],
+        "reason": null
+      },
+      "fuel": {
+        "candidates": [
+          {
+            "distanceKm": 0.7,
+            "name": "Bharat petroleum jatia",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.7,
+            "name": "Indian Oil Petrol Pump",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2.1,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2.2,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "highway": {
+        "candidates": [
+          {
+            "distanceKm": 0,
+            "name": "Kahilipara Road"
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "G.S. Road"
+          },
+          {
+            "distanceKm": 1.4,
+            "name": null
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "G.S. Road"
+          }
+        ],
+        "reason": null
+      }
+    }
+  },
+  {
+    "name": "Jalukbari",
+    "city": "guwahati",
+    "places": {
+      "hospital": {
+        "candidates": [
+          {
+            "distanceKm": 3.2,
+            "name": "Apollo Excelcare Hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 7.1,
+            "name": "Critical Care Hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 9.8,
+            "name": "Name care hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "GU Hospital",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "clinic": {
+        "candidates": [
+          {
+            "distanceKm": 0.4,
+            "name": "Super Special Dental Clinic"
+          },
+          {
+            "distanceKm": 1.1,
+            "name": "Nidaan Health and Dental Care"
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "Lakshya J Basumatary"
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "State Dispensary, Garigaon"
+          }
+        ],
+        "reason": null
+      },
+      "school": {
+        "candidates": [
+          {
+            "distanceKm": 8.2,
+            "name": "Bengali Higher Secondary School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 14,
+            "name": "DAKSHIN GANESH NAGAR LPS",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "SUNDARBARI MADHYA/UCCHA ENGLISH SCHOOL",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "SUNDARBARI PRATHAMIK VIDYALAY",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "college": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "Gauhati University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "Assam Engineering College",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.7,
+            "name": "Assam Science and Technology University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 4.4,
+            "name": "Indian Institute of Technology Guwahati",
+            "wiki": true,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "police": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "fire_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "grocery": {
+        "candidates": [
+          {
+            "distanceKm": 0.7,
+            "name": "Haji Tamizuddin Ahmed Complex",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "The Grocer Supermarket",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 2.6,
+            "name": "SK store",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 2.8,
+            "name": "Niharika enterprise",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "pharmacy": {
+        "candidates": [
+          {
+            "distanceKm": 7.8,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 9.6,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "Better Care Pharmacy",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Ryan Medicos",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "atm_bank": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "SBI ATM"
+          },
+          {
+            "distanceKm": 1.2,
+            "name": null
+          },
+          {
+            "distanceKm": 1.3,
+            "name": null
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "ICICI Bank"
+          }
+        ],
+        "reason": null
+      },
+      "bus_stop": {
+        "candidates": [
+          {
+            "distanceKm": 0.3,
+            "name": "Jalukbari"
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "City Bus Stand, Jalukbari, Ghy-14"
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "Adabari Bus Stop"
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "Adabari Tinali Bus Stop"
+          }
+        ],
+        "reason": null
+      },
+      "metro_station": {
+        "candidates": [
+          {
+            "distanceKm": 2.1,
+            "name": "Kamakhya Junction"
+          }
+        ],
+        "reason": null
+      },
+      "restaurant_cafe": {
+        "candidates": [
+          {
+            "distanceKm": 0.4,
+            "name": "J.B. Resturant"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "KALPANA FAMILY RESTAURANT"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "BURGS & FRIES"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "CLAY OVEN"
+          }
+        ],
+        "reason": null
+      },
+      "park": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "Dr. Bhupen Hazarika Samadhi Kshetra"
+          },
+          {
+            "distanceKm": 2.1,
+            "name": null
+          },
+          {
+            "distanceKm": 2.2,
+            "name": "College Gate Park"
+          },
+          {
+            "distanceKm": 2.2,
+            "name": "garden"
+          }
+        ],
+        "reason": null
+      },
+      "gym": {
+        "candidates": [
+          {
+            "distanceKm": 0.7,
+            "name": "PRO LIFE FITNESS GYM",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 2,
+            "name": "Saraighat gym",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 2.6,
+            "name": "The fitness hub",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 2.6,
+            "name": "LION HOUSE UNISEX GYM",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "mall": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Quality Shoppe superstore",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "MOROM A DEPARTMENTAL STORE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1,
+            "name": "NCS Square Mall",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "Bazar India",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "worship": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "SHIV MANDIR"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "DURGA MANDIR"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "SUNDARBORI NAMGHAR"
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Sundarbari Mosque"
+          }
+        ],
+        "reason": null
+      },
+      "fuel": {
+        "candidates": [
+          {
+            "distanceKm": 1.1,
+            "name": "HP",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 4.3,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 5.7,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 8,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "highway": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "NH17"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "NH17"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "NH17"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "NH17"
+          }
+        ],
+        "reason": null
+      }
+    }
+  },
+  {
+    "name": "Narengi",
+    "city": "guwahati",
+    "places": {
+      "hospital": {
+        "candidates": [
+          {
+            "distanceKm": 5.1,
+            "name": "KIMS HOSPITAL CLINIC",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 5.4,
+            "name": "Apollo Hospitals",
+            "wiki": true,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 5.6,
+            "name": "APOLLO HOSPITAL",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2.5,
+            "name": "Gate Hospitals",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "clinic": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "CGHS Dispensary No.II"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "CGHS Dispensary No.I"
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "A.B. Polyclinic"
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "Dr. Ashok Kumar, Guwahati"
+          }
+        ],
+        "reason": null
+      },
+      "school": {
+        "candidates": [
+          {
+            "distanceKm": 8.1,
+            "name": "Bengali Higher Secondary School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 10.6,
+            "name": "DAKSHIN GANESH NAGAR LPS",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 14.8,
+            "name": "KMC School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "Maria's Public School",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "college": {
+        "candidates": [
+          {
+            "distanceKm": 8.6,
+            "name": "University of Science and Technology Meghalaya",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 13.5,
+            "name": "Indian Institute of Technology Guwahati",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 5.1,
+            "name": "S.K. Hazarika College",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 5.3,
+            "name": "Gauhati Commerce College",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "police": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "fire_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "grocery": {
+        "candidates": [
+          {
+            "distanceKm": 0.3,
+            "name": "D K Associates",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Sumitra Store",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Blinkit",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Madhu Varities",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "pharmacy": {
+        "candidates": [
+          {
+            "distanceKm": 6.3,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 8.2,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Saikia Medicos",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "Dent medicos",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "atm_bank": {
+        "candidates": [
+          {
+            "distanceKm": 1.4,
+            "name": null
+          },
+          {
+            "distanceKm": 2.2,
+            "name": "Central Bank of India"
+          },
+          {
+            "distanceKm": 2.7,
+            "name": null
+          },
+          {
+            "distanceKm": 4.3,
+            "name": null
+          }
+        ],
+        "reason": null
+      },
+      "bus_stop": {
+        "candidates": [
+          {
+            "distanceKm": 2.2,
+            "name": "Shared taxis and rickshaws to Dispur station and Six mil"
+          }
+        ],
+        "reason": null
+      },
+      "metro_station": {
+        "candidates": [
+          {
+            "distanceKm": 0.8,
+            "name": "Narangi"
+          },
+          {
+            "distanceKm": 3.6,
+            "name": "New Guwahati"
+          }
+        ],
+        "reason": null
+      },
+      "restaurant_cafe": {
+        "candidates": [
+          {
+            "distanceKm": 1,
+            "name": "Juhal Restaurant"
+          },
+          {
+            "distanceKm": 1,
+            "name": null
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "alberts kitchen"
+          },
+          {
+            "distanceKm": 1.6,
+            "name": "Hotel EL Paradiso"
+          }
+        ],
+        "reason": null
+      },
+      "park": {
+        "candidates": [
+          {
+            "distanceKm": 4.1,
+            "name": "Bagharbari Children's Park"
+          }
+        ],
+        "reason": null
+      },
+      "gym": {
+        "candidates": [
+          {
+            "distanceKm": 1.2,
+            "name": "The Gymyard",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 2.2,
+            "name": "Mind Muscle",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 3.3,
+            "name": "TFF GYM",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 4.8,
+            "name": "the raw gym",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "mall": {
+        "candidates": [
+          {
+            "distanceKm": 0.3,
+            "name": "Rajlaxmi  Store",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.7,
+            "name": null,
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.8,
+            "name": "BHARATI MART",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 2.6,
+            "name": "11:11 Mini Mart",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "worship": {
+        "candidates": [
+          {
+            "distanceKm": 1.6,
+            "name": "Mathghoria Masjid"
+          },
+          {
+            "distanceKm": 1.6,
+            "name": "SHRI SHRI LAKHI MANDIR"
+          },
+          {
+            "distanceKm": 1.8,
+            "name": "DURGA TEMPLE"
+          },
+          {
+            "distanceKm": 1.8,
+            "name": "Mathgharia Sri Sri Shani Mandir"
+          }
+        ],
+        "reason": null
+      },
+      "fuel": {
+        "candidates": [
+          {
+            "distanceKm": 1,
+            "name": "HP",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2.7,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 5.1,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 5.1,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "highway": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "VIP Road"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "VIP Road"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": null
+          },
+          {
+            "distanceKm": 0.2,
+            "name": null
+          }
+        ],
+        "reason": null
+      }
+    }
+  },
+  {
+    "name": "Chandmari",
+    "city": "guwahati",
+    "places": {
+      "hospital": {
+        "candidates": [
+          {
+            "distanceKm": 1.1,
+            "name": "APOLLO HOSPITAL",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2,
+            "name": "KIMS HOSPITAL CLINIC",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2.3,
+            "name": "Name care hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 3.4,
+            "name": "Apollo Hospitals",
+            "wiki": true,
+            "chainMatch": true
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "clinic": {
+        "candidates": [
+          {
+            "distanceKm": 0.4,
+            "name": "Dristi Eye Clinic"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "Reiki Clinic"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Dr Jayanta KR Goswami's Clinic"
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Save Sight Eye Centre"
+          }
+        ],
+        "reason": null
+      },
+      "school": {
+        "candidates": [
+          {
+            "distanceKm": 2.6,
+            "name": "Bengali Higher Secondary School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 10.8,
+            "name": "DAKSHIN GANESH NAGAR LPS",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "BROOKLYN PUBLIC SCHOOL",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "JNANDEEP ACADEMY",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "college": {
+        "candidates": [
+          {
+            "distanceKm": 8,
+            "name": "Indian Institute of Technology Guwahati",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 11.4,
+            "name": "Gauhati University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 11.7,
+            "name": "University of Science and Technology Meghalaya",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "AEI Field",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "police": {
+        "candidates": [
+          {
+            "distanceKm": 1.6,
+            "name": "state police accountability commission, assam"
+          },
+          {
+            "distanceKm": 2.3,
+            "name": "Latasil Police Station"
+          },
+          {
+            "distanceKm": 2.3,
+            "name": "Latasil Police Station"
+          },
+          {
+            "distanceKm": 2.3,
+            "name": "Latasil Police Station"
+          }
+        ],
+        "reason": null
+      },
+      "fire_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "grocery": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": null,
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "S1",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "joy guru",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "M/S Biraja Enterprise",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "pharmacy": {
+        "candidates": [
+          {
+            "distanceKm": 2.1,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 3.1,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0,
+            "name": "MAZUNDAR PHARMACY",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "GENUINE MEDI SHOP",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "atm_bank": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": null
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Union Bank"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Punjab National Bank"
+          },
+          {
+            "distanceKm": 0.4,
+            "name": "State Bank of India"
+          }
+        ],
+        "reason": null
+      },
+      "bus_stop": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": null
+          },
+          {
+            "distanceKm": 0.1,
+            "name": null
+          },
+          {
+            "distanceKm": 0.3,
+            "name": null
+          },
+          {
+            "distanceKm": 0.4,
+            "name": null
+          }
+        ],
+        "reason": null
+      },
+      "metro_station": {
+        "candidates": [
+          {
+            "distanceKm": 2,
+            "name": "New Guwahati"
+          },
+          {
+            "distanceKm": 2.4,
+            "name": "Guwahati"
+          }
+        ],
+        "reason": null
+      },
+      "restaurant_cafe": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "NEW SPICY HUT"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Yadav Mishtana Bhandar"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "house of thukaa"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Urban Pizza"
+          }
+        ],
+        "reason": null
+      },
+      "park": {
+        "candidates": [
+          {
+            "distanceKm": 1,
+            "name": "Silpukhuri Park"
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "Sudhakantha Dr.Bhupen Hazarika Children's Park"
+          },
+          {
+            "distanceKm": 2.2,
+            "name": "Shradhanjali Kanan"
+          },
+          {
+            "distanceKm": 2.3,
+            "name": "Shraddhanjali Kanan"
+          }
+        ],
+        "reason": null
+      },
+      "gym": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Ayush Yoga 24",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "Aero fitness",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.9,
+            "name": "AFRO FITNESS",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "NESSFA GYM",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "mall": {
+        "candidates": [
+          {
+            "distanceKm": 0.3,
+            "name": "Pahi Store",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Rgarh Shoping Corner",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "Moksha Events",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "FIRST CRY",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "worship": {
+        "candidates": [
+          {
+            "distanceKm": 0.3,
+            "name": "Shiv Mandir"
+          },
+          {
+            "distanceKm": 1.2,
+            "name": "Navagraha Temple"
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "ALAK NIRANJAN SHIV MANDIR"
+          },
+          {
+            "distanceKm": 1.5,
+            "name": "Islampur majid,guwahati club"
+          }
+        ],
+        "reason": null
+      },
+      "fuel": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "HP",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.4,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "highway": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "Maniram Dewan Road"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Radha Gobinda Baruah Road"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Maniram Dewan Road"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "Radha Gobinda Baruah Road"
+          }
+        ],
+        "reason": null
+      }
+    }
+  },
+  {
+    "name": "Pan Bazar",
+    "city": "guwahati",
+    "places": {
+      "hospital": {
+        "candidates": [
+          {
+            "distanceKm": 2.8,
+            "name": "APOLLO HOSPITAL",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 3.2,
+            "name": "Name care hospital",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 3.8,
+            "name": "KIMS HOSPITAL CLINIC",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Mahendra Mohan Choudhury Hospital",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "clinic": {
+        "candidates": [
+          {
+            "distanceKm": 0.6,
+            "name": "KERALA AYURVEDA CLINIC"
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Orthopaedic Clinic"
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Nawab Clinic"
+          },
+          {
+            "distanceKm": 0.8,
+            "name": "Gurucharan Polyclinic Cum Nursing Home"
+          }
+        ],
+        "reason": null
+      },
+      "school": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Bengali Higher Secondary School",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 11.6,
+            "name": "DAKSHIN GANESH NAGAR LPS",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "Guwahati High School",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "Pragjyotish English Higher Secondary School",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "college": {
+        "candidates": [
+          {
+            "distanceKm": 5.3,
+            "name": "Indian Institute of Technology Guwahati",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 8.9,
+            "name": "Gauhati University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 9.4,
+            "name": "Assam Science and Technology University",
+            "wiki": true,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Cotton University Department of English",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "police": {
+        "candidates": [
+          {
+            "distanceKm": 0.7,
+            "name": "Latasil Police Station"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Latasil Police Station"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Latasil Police Station"
+          },
+          {
+            "distanceKm": 1,
+            "name": "Fancy bazaar police out post"
+          }
+        ],
+        "reason": null
+      },
+      "fire_station": {
+        "candidates": [],
+        "reason": "no_match_found"
+      },
+      "grocery": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "QUICK SHOPPE EXPRESS",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "Quick Shoppe Express",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "Chandan Variety Store",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Shree Siddhi Enterprise",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "pharmacy": {
+        "candidates": [
+          {
+            "distanceKm": 1.7,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 2.9,
+            "name": "Apollo Pharmacy",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "M/S Maa drugs and surgical",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Universal Medical Store",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "atm_bank": {
+        "candidates": [
+          {
+            "distanceKm": 0.4,
+            "name": null
+          },
+          {
+            "distanceKm": 0.5,
+            "name": "State Bank of India"
+          },
+          {
+            "distanceKm": 0.5,
+            "name": null
+          },
+          {
+            "distanceKm": 0.5,
+            "name": null
+          }
+        ],
+        "reason": null
+      },
+      "bus_stop": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "Guwahati Station"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Bus to Kamakhya temple (bottom of the hill)"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Iitg busstop"
+          },
+          {
+            "distanceKm": 0.3,
+            "name": null
+          }
+        ],
+        "reason": null
+      },
+      "metro_station": {
+        "candidates": [
+          {
+            "distanceKm": 0.4,
+            "name": "Guwahati"
+          },
+          {
+            "distanceKm": 4.7,
+            "name": "New Guwahati"
+          }
+        ],
+        "reason": null
+      },
+      "restaurant_cafe": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": "SOUNDARYA LAHAREE"
+          },
+          {
+            "distanceKm": 0.1,
+            "name": "KAMAKHYA TEA HOUSE"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "Sugarcane stalls"
+          },
+          {
+            "distanceKm": 0.2,
+            "name": "ZAKH CAFE"
+          }
+        ],
+        "reason": null
+      },
+      "park": {
+        "candidates": [
+          {
+            "distanceKm": 0.4,
+            "name": "Nehru Park"
+          },
+          {
+            "distanceKm": 0.4,
+            "name": null
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "Dighalipukhuri War Memorial"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "War Memorial"
+          }
+        ],
+        "reason": null
+      },
+      "gym": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Dojang",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "Fitness Feel The Difference",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "FITNESS FEEL THE DIFFERENCE",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 1,
+            "name": "Rajyoga Meditation Centre",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "mall": {
+        "candidates": [
+          {
+            "distanceKm": 0.2,
+            "name": "MUSKAN",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "M.S Plaza",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "SNV",
+            "wiki": false,
+            "chainMatch": false
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Grand Plaza",
+            "wiki": false,
+            "chainMatch": false
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "worship": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Paltan Masjid"
+          },
+          {
+            "distanceKm": 0.6,
+            "name": "The Praise Church"
+          },
+          {
+            "distanceKm": 0.7,
+            "name": null
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Sukreshwar Mandir"
+          }
+        ],
+        "reason": null
+      },
+      "fuel": {
+        "candidates": [
+          {
+            "distanceKm": 0.5,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 0.7,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          },
+          {
+            "distanceKm": 1.3,
+            "name": "Indian Oil",
+            "wiki": false,
+            "chainMatch": true
+          }
+        ],
+        "reason": null,
+        "radiusKm": 15
+      },
+      "highway": {
+        "candidates": [
+          {
+            "distanceKm": 0.1,
+            "name": null
+          },
+          {
+            "distanceKm": 0.2,
+            "name": null
+          },
+          {
+            "distanceKm": 0.2,
+            "name": null
+          },
+          {
+            "distanceKm": 0.2,
+            "name": null
+          }
+        ],
+        "reason": null
+      }
+    }
   }
 ]
