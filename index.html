@@ -1344,23 +1344,160 @@
       return parseFloat(Math.max(0, Math.min(10, 10 - (tds / 100))).toFixed(1));
     }
 
+    // The original 9 literal weights, now also DEFAULT_WEIGHTS below —
+    // computeFinalScore's own default parameter is this exact object, so
+    // every existing call site (none of which pass a second argument)
+    // stays byte-for-byte unchanged.
+    const DEFAULT_WEIGHTS = {
+      aqi: 0.22, ndvi: 0.18, water: 0.15, heat: 0.10,
+      noise: 0.07, infra: 0.10, walk: 0.08, safety: 0.06, traffic: 0.04
+    };
+
+    // Personalized weighting profiles — designed against real computed
+    // examples (Bandra/Rohini/Koramangala) before being wired in, not
+    // hand-tuned per profile. Each weight set is DEFAULT_WEIGHTS with a
+    // reasoned per-parameter multiplier (boost/reduce/neutral, documented
+    // below), then renormalized so it sums to exactly 1.000 — same
+    // transparent method for all four, not arbitrary numbers per profile.
+    // `phrase` (not just `label`) exists because "as a elderly: X" is bad
+    // English — grammar varies per profile in a way a generic "as a
+    // {label}" template can't produce correctly.
+    const SCORE_PROFILES = {
+      default: { label: "Default", phrase: null, weights: DEFAULT_WEIGHTS },
+      family: {
+        label: "Family with young kids",
+        phrase: "As a family with young kids",
+        // ↑safety x1.8 (child safety), ↑infra x1.5 (schools/pediatric
+        // care), ↑aqi x1.3, ↑water x1.3 (child health), ↑ndvi x1.2 (play
+        // space), ↑heat x1.2, ↑noise x1.2 (naps/sleep); ↓walk x0.7,
+        // ↓traffic x0.6 (less commute-critical than health/safety)
+        weights: { aqi: 0.232, ndvi: 0.174, water: 0.157, heat: 0.097, noise: 0.068, infra: 0.121, walk: 0.045, safety: 0.087, traffic: 0.019 }
+      },
+      remote: {
+        label: "Remote worker",
+        phrase: "As a remote worker",
+        // ↑↑noise x1.8 (calls/focus — home all day), ↑ndvi x1.3, ↑aqi
+        // x1.2 (windows open at home); ↓↓traffic x0.3 (no commute),
+        // ↓walk x0.8, ↓infra x0.9
+        weights: { aqi: 0.239, ndvi: 0.213, water: 0.136, heat: 0.091, noise: 0.115, infra: 0.082, walk: 0.058, safety: 0.055, traffic: 0.011 }
+      },
+      elderly: {
+        label: "Elderly",
+        phrase: "For elderly residents",
+        // ↑↑infra x1.8 (healthcare access), ↑safety x1.6 (mobility/
+        // lighting), ↑heat x1.4 (documented heat vulnerability), ↑aqi
+        // x1.3 (respiratory), ↑water x1.2, ↑walk x1.1 (transit matters
+        // more if not driving); ↓traffic x0.5
+        weights: { aqi: 0.230, ndvi: 0.144, water: 0.144, heat: 0.112, noise: 0.062, infra: 0.144, walk: 0.071, safety: 0.077, traffic: 0.016 }
+      },
+      youngPro: {
+        label: "Young professional",
+        phrase: "As a young professional",
+        // ↑↑walk x1.6 (transit/nightlife/car-free lifestyle), ↑traffic
+        // x1.3 (commute matters); ↓infra x0.7 (less family-infra need),
+        // ↓noise x0.8, ↓safety x0.9, ↓ndvi x0.9
+        weights: { aqi: 0.223, ndvi: 0.163, water: 0.151, heat: 0.101, noise: 0.056, infra: 0.071, walk: 0.129, safety: 0.054, traffic: 0.052 }
+      }
+    };
+
+    // Which profile is currently selected — one shared value, not per-
+    // card, since Compare mode applies the same lens to both sides (a
+    // family comparing two areas wants both scored the same way). Changed
+    // only by setActiveProfile below.
+    let activeProfile = "default";
+
+    // Registry of currently-rendered score cards, keyed by chartId, so
+    // setActiveProfile can update just the personalized-score line for
+    // whichever card(s) are visible right now — a direct, targeted DOM
+    // update, not a re-render of the whole card. Re-rendering the whole
+    // card via its original innerHTML assignment would also re-trigger
+    // loadAqiTrend/loadExactLocationNdvi (both fire as a side effect right
+    // after that assignment at every call site), silently re-fetching data
+    // that hasn't changed just because the profile did — exactly what "no
+    // new data fetching" rules out. Populated as a deliberate side effect
+    // inside buildScoreCard itself (see there) rather than repeated at
+    // every one of its 6 call sites.
+    let renderedScoreCards = {};
+
     // Extracted out of fetchAreaData so the 9 weight constants exist in
     // exactly one place — needed once Hyderabad grid-hit addresses can
     // recompute finalScore client-side with exact-point infraScore/
     // walkScore substituted in (see selectAddressSuggestion/locateMe),
-    // rather than duplicating this weighted sum a second time.
-    function computeFinalScore(s) {
+    // rather than duplicating this weighted sum a second time. `weights`
+    // defaults to DEFAULT_WEIGHTS so every pre-existing call site (none of
+    // which pass a second argument) is byte-for-byte unchanged — this is
+    // the same weighted sum as before, just with the literals promoted to
+    // a lookup so computeProfileScore below can reuse it unmodified.
+    function computeFinalScore(s, weights) {
+      weights = weights || DEFAULT_WEIGHTS;
       return parseFloat((
-        (s.aqiScore     * 0.22) +
-        (s.ndviScore    * 0.18) +
-        (s.waterScore   * 0.15) +
-        (s.heatScore    * 0.10) +
-        (s.noiseScore   * 0.07) +
-        (s.infraScore   * 0.10) +
-        (s.walkScore    * 0.08) +
-        (s.safetyScore  * 0.06) +
-        (s.trafficScore * 0.04)
+        (s.aqiScore     * weights.aqi) +
+        (s.ndviScore    * weights.ndvi) +
+        (s.waterScore   * weights.water) +
+        (s.heatScore    * weights.heat) +
+        (s.noiseScore   * weights.noise) +
+        (s.infraScore   * weights.infra) +
+        (s.walkScore    * weights.walk) +
+        (s.safetyScore  * weights.safety) +
+        (s.trafficScore * weights.traffic)
       ).toFixed(1));
+    }
+
+    // Recombines the SAME already-computed 9 sub-scores already sitting on
+    // d under a different profile's weights — no new data, no new
+    // fetches, purely a different weighted average via the same
+    // computeFinalScore used everywhere else.
+    function computeProfileScore(d, profileKey) {
+      const profile = SCORE_PROFILES[profileKey];
+      if (!profile) return null;
+      return computeFinalScore({
+        aqiScore: d.aqiScore, ndviScore: d.ndviScore, waterScore: d.waterScore,
+        heatScore: d.heatScore, noiseScore: d.noiseScore, infraScore: d.infraScore,
+        walkScore: d.walkScore, safetyScore: d.safetyScore, trafficScore: d.trafficScore
+      }, profile.weights);
+    }
+
+    // Inner content only (not the wrapping div) — buildScoreCard always
+    // renders the wrapping div with a stable id so this can be swapped in
+    // place via .innerHTML on a profile change, in both directions
+    // (default -> profile and profile -> default), without the container
+    // ever needing to be created or destroyed.
+    function personalizedScoreContent(d) {
+      if (activeProfile === "default") return "";
+      const profile = SCORE_PROFILES[activeProfile];
+      const personalizedScore = computeProfileScore(d, activeProfile);
+      return `Overall: ${Math.round(d.finalScore * 10)} &middot; ${profile.phrase}: ${Math.round(personalizedScore * 10)}`;
+    }
+
+    // `show`: false for the second side of a Compare pair, so the shared
+    // selector appears once per view (near the first card), not once per
+    // side — see the two checkCompare-family functions below.
+    function buildProfileSelector(chartId, show) {
+      if (!show) return "";
+      const options = Object.entries(SCORE_PROFILES).map(([key, p]) =>
+        `<option value="${key}" ${activeProfile === key ? "selected" : ""}>${p.label}</option>`
+      ).join("");
+      return `
+        <div class="flex items-center justify-center gap-2 mb-3">
+          <label class="text-xs text-gray-400" for="profile-select-${chartId}">View as</label>
+          <select id="profile-select-${chartId}" onchange="setActiveProfile(this.value)"
+            class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white">
+            ${options}
+          </select>
+        </div>`;
+    }
+
+    // Updates every currently-rendered score card's personalized-score
+    // line in place (see renderedScoreCards above) — a pure client-side
+    // recombination of data already on each card's own d, no re-fetch.
+    function setActiveProfile(profileKey) {
+      activeProfile = profileKey;
+      Object.entries(renderedScoreCards).forEach(([chartId, d]) => {
+        const el = document.getElementById(`personalized-score-${chartId}`);
+        if (el) el.innerHTML = personalizedScoreContent(d);
+        const selectEl = document.getElementById(`profile-select-${chartId}`);
+        if (selectEl) selectEl.value = profileKey;
+      });
     }
 
     function getScoreColor(score) {
@@ -2229,8 +2366,15 @@ let finalScore = computeFinalScore({
     // halved card would cramp both - this parameter keeps that pairing
     // stacked in Compare mode at every viewport width, full-width-only in
     // Single mode where the card has the whole wide container to itself.
-    function buildScoreCard(d, highlight, chartId, isAreaEstimate, nearbyPlacesSource, wideEnvLive) {
+    function buildScoreCard(d, highlight, chartId, isAreaEstimate, nearbyPlacesSource, wideEnvLive, showProfileSelector) {
       chartId = chartId || "single";
+      if (showProfileSelector === undefined) showProfileSelector = true;
+      // Side effect, deliberate: registers this card so setActiveProfile
+      // can find its `d` again later and update just its personalized-
+      // score line — see renderedScoreCards' own comment for why that's
+      // preferable to a full re-render. Centralizing this here means the
+      // 6 call sites don't each need to remember to do it themselves.
+      renderedScoreCards[chartId] = d;
       let ringClass    = highlight ? "ring-2 ring-green-400 ring-offset-2" : "";
       let badge        = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Better area</span>' : "";
       let band         = getBandInfo(d.finalScore);
@@ -2243,6 +2387,7 @@ let finalScore = computeFinalScore({
           <div class="text-center mb-5">
             <div class="text-lg font-bold text-gray-800">${d.exactAddressTitle || d.name}</div>
             <div class="text-sm text-gray-400">${cityName}</div>
+            ${buildProfileSelector(chartId, showProfileSelector)}
             <div class="flex items-center justify-center gap-2 mt-3">
               <span class="text-7xl lg:text-8xl font-bold ${band.text}">${Math.round(d.finalScore * 10)}</span>
               ${infoBtn('score')}
@@ -2250,6 +2395,7 @@ let finalScore = computeFinalScore({
             </div>
             <div class="text-base font-medium ${band.text}">${band.label}</div>
             <div class="text-xs text-gray-400 mt-2">Better than ${benchmarkPct}% of neighbourhoods in ${cityName}</div>
+            <div class="text-sm text-gray-600 mt-1" id="personalized-score-${chartId}">${personalizedScoreContent(d)}</div>
             ${d.infraWalkExactCity ? `<div class="text-xs text-gray-400 mt-1">Score reflects your exact location, which may differ slightly from ${d.name}'s general score.</div>` : ""}
             ${buildInsightLine(d)}
           </div>
@@ -2625,7 +2771,7 @@ let finalScore = computeFinalScore({
         resultEl.innerHTML = summary +
           '<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">' +
           '<div>' + distanceNote(resA) + buildScoreCard(dA, aWins && !tie, "compare-a", true, resA.nearbyPlacesSource) + exactNdviBlock("exact-ndvi-compare-a") + '</div>' +
-          '<div>' + distanceNote(resB) + buildScoreCard(dB, !aWins && !tie, "compare-b", true, resB.nearbyPlacesSource) + exactNdviBlock("exact-ndvi-compare-b") + '</div>' +
+          '<div>' + distanceNote(resB) + buildScoreCard(dB, !aWins && !tie, "compare-b", true, resB.nearbyPlacesSource, undefined, false) + exactNdviBlock("exact-ndvi-compare-b") + '</div>' +
           '</div>';
         resultEl.classList.remove("hidden");
         loadAqiTrend(dA.name, dA.city, "compare-a");
@@ -2692,7 +2838,7 @@ let finalScore = computeFinalScore({
         resultEl.innerHTML = summary +
           '<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">' +
           buildScoreCard(dA, aWins && !tie, "browse-compare-a") +
-          buildScoreCard(dB, !aWins && !tie, "browse-compare-b") +
+          buildScoreCard(dB, !aWins && !tie, "browse-compare-b", undefined, undefined, undefined, false) +
           '</div>';
         resultEl.classList.remove("hidden");
         loadAqiTrend(dA.name, dA.city, "browse-compare-a");
