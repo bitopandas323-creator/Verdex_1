@@ -454,6 +454,20 @@
     </div>
   </div>
 
+  <!-- Safety Rating Modal — separate shell from the read-only info-modal
+       above (same chrome: white rounded card, × close) since this one
+       holds live form state (selected answers, submitting/error/success),
+       not static text. -->
+  <div id="safety-rating-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="font-semibold text-gray-800">Rate this area's safety</h3>
+        <button onclick="closeSafetyRatingModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+      </div>
+      <div id="safety-rating-body" class="text-sm text-gray-600"></div>
+    </div>
+  </div>
+
   <script>
 
     // --- SUPABASE (read-only, client-side) ---
@@ -873,6 +887,7 @@
         resultEl.classList.remove('hidden');
         resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         loadAqiTrend(d.name, d.city, 'single');
+        loadSafetyRatings(d.name, d.city, 'safety-rating-agg-single');
         loadExactLocationNdvi(s.lat, s.lon, ndviContainerId);
       } catch (err) {
         statusEl.innerHTML = 'Could not load data. Check console (F12).';
@@ -1016,6 +1031,186 @@
 
     function closeModal() {
       document.getElementById("info-modal").classList.add("hidden");
+    }
+
+    // --- SAFETY CROWDSOURCED RATINGS ---
+    //
+    // v1: a 3-question anonymous form (overall 1-5, well-lit, would-walk-
+    // alone-after-dark), submitted through api/submit-safety-rating.js
+    // (the only write path — see supabase/safety_ratings.sql for why anon
+    // can't insert directly), aggregated and shown once a neighbourhood
+    // has SAFETY_RATING_MIN_COUNT+ real submissions. Deliberately never
+    // feeds into computeFinalScore/d.safetyScore — this is a distinct,
+    // clearly-labeled signal alongside the existing built-environment
+    // proxy, not a replacement for it (same honest-distinction spirit as
+    // that field's own info-modal text: "not crime statistics... should
+    // not be treated as a definitive safety assessment").
+
+    const SAFETY_RATING_MIN_COUNT = 5;
+    // Client-side throttle only — a UX nicety (skip the form entirely if
+    // this browser already submitted for this area recently), NOT the
+    // real anti-spam layer. Trivially bypassed (clear storage, incognito,
+    // different browser) - the actual enforcement is server-side, per-IP,
+    // in api/submit-safety-rating.js. Matches that endpoint's own 24h
+    // per-area cooldown so the UI's "already rated" message and the
+    // server's actual rule agree.
+    const SAFETY_RATING_THROTTLE_MS = 24 * 60 * 60 * 1000;
+
+    const WELL_LIT_OPTIONS = [["yes", "Yes"], ["somewhat", "Somewhat"], ["no", "No"]];
+    const WALK_ALONE_OPTIONS = [["yes", "Yes"], ["with_caution", "With caution"], ["no", "No"]];
+
+    let safetyRatingState = null;
+
+    function safetyRatingThrottleKey(city, neighbourhood) {
+      return `safety-rated:${city}|${neighbourhood}`;
+    }
+
+    function markSafetyRatingSubmittedLocally(city, neighbourhood) {
+      try { localStorage.setItem(safetyRatingThrottleKey(city, neighbourhood), String(Date.now())); }
+      catch (e) { /* localStorage unavailable (private browsing, quota) - the server-side limit still applies, this is only the UX nicety */ }
+    }
+
+    function safetyRatingButtonClass(selected) {
+      return selected
+        ? "bg-blue-600 text-white border-blue-600"
+        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50";
+    }
+
+    function renderSafetyRatingForm() {
+      const s = safetyRatingState;
+      const allAnswered = s.overall_rating !== null && s.well_lit !== null && s.walk_alone_comfort !== null;
+      const cityLabel = s.city.charAt(0).toUpperCase() + s.city.slice(1);
+      return `
+        <div class="text-sm text-gray-500 mb-4">${s.neighbourhood}, ${cityLabel}</div>
+        <div class="mb-4">
+          <div class="text-sm font-medium text-gray-700 mb-2">Overall safety</div>
+          <div class="flex gap-2">
+            ${[1, 2, 3, 4, 5].map(n => `<button onclick="setSafetyRatingField('overall_rating', ${n})" class="flex-1 py-2 rounded-lg border text-sm font-medium ${safetyRatingButtonClass(s.overall_rating === n)}">${n}</button>`).join("")}
+          </div>
+        </div>
+        <div class="mb-4">
+          <div class="text-sm font-medium text-gray-700 mb-2">Well-lit at night?</div>
+          <div class="flex gap-2">
+            ${WELL_LIT_OPTIONS.map(([val, label]) => `<button onclick="setSafetyRatingField('well_lit', '${val}')" class="flex-1 py-2 rounded-lg border text-sm font-medium ${safetyRatingButtonClass(s.well_lit === val)}">${label}</button>`).join("")}
+          </div>
+        </div>
+        <div class="mb-5">
+          <div class="text-sm font-medium text-gray-700 mb-2">Would you walk alone here after dark?</div>
+          <div class="flex gap-2">
+            ${WALK_ALONE_OPTIONS.map(([val, label]) => `<button onclick="setSafetyRatingField('walk_alone_comfort', '${val}')" class="flex-1 py-2 rounded-lg border text-sm font-medium ${safetyRatingButtonClass(s.walk_alone_comfort === val)}">${label}</button>`).join("")}
+          </div>
+        </div>
+        ${s.errorMessage ? `<div class="text-sm text-red-600 mb-3">${s.errorMessage}</div>` : ""}
+        <button onclick="submitSafetyRating()" ${allAnswered && !s.submitting ? "" : "disabled"}
+          class="w-full py-2.5 rounded-lg font-medium text-white ${allAnswered && !s.submitting ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-300 cursor-not-allowed"}">
+          ${s.submitting ? "Submitting…" : "Submit rating"}
+        </button>
+        <div class="text-xs text-gray-400 mt-3 text-center">Anonymous — no account, no personal data collected.</div>`;
+    }
+
+    function openSafetyRatingModal(neighbourhood, city) {
+      const modalBody = document.getElementById("safety-rating-body");
+      const lastSubmitted = localStorage.getItem(safetyRatingThrottleKey(city, neighbourhood));
+      if (lastSubmitted && Date.now() - parseInt(lastSubmitted, 10) < SAFETY_RATING_THROTTLE_MS) {
+        modalBody.innerHTML = `<div class="text-center py-4">You've already rated this area recently — thanks for contributing!</div>`;
+      } else {
+        safetyRatingState = { neighbourhood, city, overall_rating: null, well_lit: null, walk_alone_comfort: null, submitting: false, errorMessage: null };
+        modalBody.innerHTML = renderSafetyRatingForm();
+      }
+      document.getElementById("safety-rating-modal").classList.remove("hidden");
+    }
+
+    function closeSafetyRatingModal() {
+      document.getElementById("safety-rating-modal").classList.add("hidden");
+    }
+
+    function setSafetyRatingField(field, value) {
+      safetyRatingState[field] = value;
+      safetyRatingState.errorMessage = null;
+      document.getElementById("safety-rating-body").innerHTML = renderSafetyRatingForm();
+    }
+
+    // Refreshes the aggregation line on every currently-rendered card that
+    // happens to show this exact neighbourhood — reuses renderedScoreCards
+    // (already populated by buildScoreCard for the personalized-scoring
+    // feature) rather than keeping a second registry just for this.
+    async function refreshSafetyRatingDisplays(neighbourhood, city) {
+      for (const [chartId, d] of Object.entries(renderedScoreCards)) {
+        if (d.name !== neighbourhood || d.city !== city) continue;
+        const containerId = `safety-rating-agg-${chartId}`;
+        if (document.getElementById(containerId)) await loadSafetyRatings(neighbourhood, city, containerId);
+      }
+    }
+
+    async function submitSafetyRating() {
+      const s = safetyRatingState;
+      if (!s || s.overall_rating === null || s.well_lit === null || s.walk_alone_comfort === null || s.submitting) return;
+      s.submitting = true;
+      document.getElementById("safety-rating-body").innerHTML = renderSafetyRatingForm();
+      try {
+        const res = await fetch("/api/submit-safety-rating", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            neighbourhood: s.neighbourhood, city: s.city,
+            overall_rating: s.overall_rating, well_lit: s.well_lit, walk_alone_comfort: s.walk_alone_comfort
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          s.submitting = false;
+          s.errorMessage = data.error || "Could not submit — try again.";
+          document.getElementById("safety-rating-body").innerHTML = renderSafetyRatingForm();
+          return;
+        }
+        markSafetyRatingSubmittedLocally(s.city, s.neighbourhood);
+        document.getElementById("safety-rating-body").innerHTML = `
+          <div class="text-center py-4">
+            <div class="text-2xl mb-2 text-green-600">✓</div>
+            <div>Thanks — your rating helps others.</div>
+          </div>`;
+        refreshSafetyRatingDisplays(s.neighbourhood, s.city);
+        setTimeout(closeSafetyRatingModal, 1800);
+      } catch (err) {
+        s.submitting = false;
+        s.errorMessage = "Network error — try again.";
+        document.getElementById("safety-rating-body").innerHTML = renderSafetyRatingForm();
+        console.error("submitSafetyRating failed", err);
+      }
+    }
+
+    // Direct client-side read against Supabase's REST API — same read-only
+    // pattern as loadAqiTrend (score_snapshots), same anon key, gated by
+    // safety_ratings' own SELECT-only-for-anon RLS policy. Aggregates the
+    // raw rows in JS (count, average, well-lit/walk-alone yes-percentages)
+    // rather than a server-side aggregation endpoint, since this is a
+    // small, cheap, already-filtered-by-area query at v1 scale.
+    async function loadSafetyRatings(name, city, containerId) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      try {
+        const url = SUPABASE_URL + "/rest/v1/safety_ratings"
+          + "?neighbourhood=eq." + encodeURIComponent(name)
+          + "&city=eq." + encodeURIComponent(city)
+          + "&select=overall_rating,well_lit,walk_alone_comfort";
+        const res = await fetch(url, {
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY }
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const rows = await res.json();
+        if (!Array.isArray(rows) || rows.length < SAFETY_RATING_MIN_COUNT) {
+          const count = Array.isArray(rows) ? rows.length : 0;
+          el.innerHTML = `Not enough community ratings yet (${count}/${SAFETY_RATING_MIN_COUNT}).`;
+          return;
+        }
+        const avg = rows.reduce((sum, r) => sum + r.overall_rating, 0) / rows.length;
+        const wellLitYesPct = Math.round(100 * rows.filter(r => r.well_lit === "yes").length / rows.length);
+        const walkAloneYesPct = Math.round(100 * rows.filter(r => r.walk_alone_comfort === "yes").length / rows.length);
+        el.innerHTML = `Community rating: <span class="font-semibold text-gray-700">${avg.toFixed(1)}/5</span> (${rows.length} ratings) · Well-lit: ${wellLitYesPct}% yes · Would walk alone after dark: ${walkAloneYesPct}% yes`;
+      } catch (err) {
+        el.innerHTML = `Community ratings unavailable right now.`;
+        console.warn("loadSafetyRatings failed", err.message);
+      }
     }
 
     // --- CITY DATA ---
@@ -1873,6 +2068,21 @@ let finalScore = computeFinalScore({
         </div>`;
     }
 
+    // Sits directly under the Safety row — a lazy-loaded aggregation
+    // (filled in by loadSafetyRatings after this HTML is actually in the
+    // DOM, same "Loading…" placeholder + async-fill lifecycle as the AQI
+    // trend chart) plus an always-visible "Rate this area" link. The two
+    // are deliberately separate: the aggregation text never carries its
+    // own call-to-action, so there's exactly one way to open the rating
+    // modal, not a redundant second button when the count is still low.
+    function buildSafetyRatingLine(d, chartId) {
+      return `
+        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-black/5 py-2 text-sm">
+          <span id="safety-rating-agg-${chartId}" class="text-gray-400">Loading community ratings…</span>
+          <button onclick="openSafetyRatingModal('${d.name}','${d.city}')" class="text-blue-600 hover:underline font-medium shrink-0">Rate this area →</button>
+        </div>`;
+    }
+
     // bgClass: fixed per-card-type identity color (Environmental=green,
     // Liveability=blue — see call sites), NOT score-band-driven. Previously
     // this card's whole background came from getBandInfo(subScore10).bg,
@@ -1964,7 +2174,8 @@ let finalScore = computeFinalScore({
         </div>`;
     }
 
-    function buildLiveabilityCard(d, isAreaEstimate) {
+    function buildLiveabilityCard(d, isAreaEstimate, chartId) {
+      chartId = chartId || "single";
       let areaTag = isAreaEstimate ? precisionTag("area estimate") : "";
       // d.infraWalkExactCity: the matched grid's city slug (e.g.
       // "hyderabad", "bangalore"), set only for grid-hit addresses where
@@ -1988,7 +2199,8 @@ let finalScore = computeFinalScore({
         buildParamRow("ti-building-hospital", "Infrastructure" + infraWalkTag, `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}`, "infrastructure", "text-blue-500"),
         buildParamRow("ti-bus", "Transit & Amenity Access" + infraWalkTag, `${Math.round(d.walkScore * 10)} · ${getWalkLabel(d.walkScore)}`, "walkability", "text-blue-500"),
         buildParamRow("ti-car", "Traffic" + areaTag, `${Math.round(d.trafficScore * 10)} · ${getTrafficLabel(d.trafficScore)}`, "traffic", "text-blue-500"),
-        buildParamRow("ti-shield", "Safety" + areaTag, `${Math.round(d.safetyScore * 10)} · ${getSafetyLabel(d.safetyScore)}`, "safety", "text-blue-500")
+        buildParamRow("ti-shield", "Safety" + areaTag, `${Math.round(d.safetyScore * 10)} · ${getSafetyLabel(d.safetyScore)}`, "safety", "text-blue-500"),
+        buildSafetyRatingLine(d, chartId)
       ].join("");
       let summary = `${getWalkLabel(d.walkScore)}, ${getTrafficLabel(d.trafficScore).toLowerCase()}, ${getSafetyLabel(d.safetyScore).toLowerCase()}.`;
       return buildLayerCardShell("ti-bus", "Liveability", liveSubScore, summary, rows, "bg-blue-50");
@@ -2401,7 +2613,7 @@ let finalScore = computeFinalScore({
           </div>
           <div class="${envLiveClass} mb-4">
             ${buildEnvironmentalCard(d, chartId, isAreaEstimate)}
-            ${buildLiveabilityCard(d, isAreaEstimate)}
+            ${buildLiveabilityCard(d, isAreaEstimate, chartId)}
           </div>
           <div class="space-y-4">
             ${buildNearbyPlacesSection(d.nearbyPlaces, chartId, nearbyPlacesSource)}
@@ -2776,6 +2988,8 @@ let finalScore = computeFinalScore({
         resultEl.classList.remove("hidden");
         loadAqiTrend(dA.name, dA.city, "compare-a");
         loadAqiTrend(dB.name, dB.city, "compare-b");
+        loadSafetyRatings(dA.name, dA.city, "safety-rating-agg-compare-a");
+        loadSafetyRatings(dB.name, dB.city, "safety-rating-agg-compare-b");
         loadExactLocationNdvi(resA.lat, resA.lon, "exact-ndvi-compare-a");
         loadExactLocationNdvi(resB.lat, resB.lon, "exact-ndvi-compare-b");
       } catch (err) {
@@ -2802,6 +3016,7 @@ let finalScore = computeFinalScore({
         resultEl.innerHTML = buildScoreCard(d, false, "browse-single", false, undefined, true);
         resultEl.classList.remove("hidden");
         loadAqiTrend(d.name, d.city, "browse-single");
+        loadSafetyRatings(d.name, d.city, "safety-rating-agg-browse-single");
       } catch (err) {
         statusEl.innerHTML = "Could not load data. Check console (F12).";
         console.error(err);
@@ -2843,6 +3058,8 @@ let finalScore = computeFinalScore({
         resultEl.classList.remove("hidden");
         loadAqiTrend(dA.name, dA.city, "browse-compare-a");
         loadAqiTrend(dB.name, dB.city, "browse-compare-b");
+        loadSafetyRatings(dA.name, dA.city, "safety-rating-agg-browse-compare-a");
+        loadSafetyRatings(dB.name, dB.city, "safety-rating-agg-browse-compare-b");
       } catch (err) {
         statusEl.innerHTML = "Could not load data. Check console (F12).";
         console.error(err);
@@ -3236,6 +3453,7 @@ let finalScore = computeFinalScore({
         const d = await fetchAreaData(city, value);
         resultEl.innerHTML = buildScoreCard(d, false, "map", false, undefined, true);
         loadAqiTrend(d.name, d.city, "map");
+        loadSafetyRatings(d.name, d.city, "safety-rating-agg-map");
         resultEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
       } catch (err) {
         resultEl.innerHTML = '<div class="text-sm text-gray-400 text-center">Could not load data. Check console (F12).</div>';
@@ -3415,6 +3633,7 @@ let finalScore = computeFinalScore({
             resultEl.innerHTML = distanceNote + buildScoreCard(d, false, "single", true, nearbyPlacesSource, true) + exactNdviBlock;
             resultEl.classList.remove("hidden");
             loadAqiTrend(d.name, d.city, "single");
+            loadSafetyRatings(d.name, d.city, "safety-rating-agg-single");
             loadExactLocationNdvi(latitude, longitude, ndviContainerId);
             resultEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
           } catch (err) {
