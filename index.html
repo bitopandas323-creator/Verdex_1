@@ -218,6 +218,19 @@
       <div class="grid grid-cols-2 gap-4 mb-6">
         <div>
           <div class="text-sm font-medium text-gray-600 mb-3">Area 1</div>
+          <label class="block text-xs text-gray-400 mb-1">Prioritize results in</label>
+          <select id="compare-a-city-bias"
+            class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-600 bg-white mb-2">
+            <option value="hyderabad">Hyderabad</option>
+            <option value="mumbai">Mumbai</option>
+            <option value="delhi">Delhi</option>
+            <option value="bangalore">Bangalore</option>
+            <option value="chennai">Chennai</option>
+            <option value="pune">Pune</option>
+            <option value="kolkata">Kolkata</option>
+            <option value="ahmedabad">Ahmedabad</option>
+            <option value="guwahati">Guwahati</option>
+          </select>
           <div class="mb-2 relative">
             <input
               id="address-search-input-compare-a"
@@ -238,6 +251,19 @@
         </div>
         <div>
           <div class="text-sm font-medium text-gray-600 mb-3">Area 2</div>
+          <label class="block text-xs text-gray-400 mb-1">Prioritize results in</label>
+          <select id="compare-b-city-bias"
+            class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-600 bg-white mb-2">
+            <option value="hyderabad">Hyderabad</option>
+            <option value="mumbai">Mumbai</option>
+            <option value="delhi">Delhi</option>
+            <option value="bangalore">Bangalore</option>
+            <option value="chennai">Chennai</option>
+            <option value="pune">Pune</option>
+            <option value="kolkata">Kolkata</option>
+            <option value="ahmedabad">Ahmedabad</option>
+            <option value="guwahati">Guwahati</option>
+          </select>
           <div class="mb-2 relative">
             <input
               id="address-search-input-compare-b"
@@ -567,16 +593,17 @@
       "compare-b":  { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] }
     };
     // Which element's value biases each box's Nominatim query (see
-    // handleAddressSearch) — only "single" has one (the "Prioritize
-    // results in" picker). Address Search > Compare has no dropdown of
-    // any kind on its head at all (see the head-selector's comment), so
-    // its two boxes have nothing to bias from — they search unbiased,
-    // which is fine in practice since a compare-mode query typically
-    // already names its own city in the text (e.g. "Vidhana Soudha,
-    // Bangalore"). searchId's not in this map (compare-a/compare-b) get
-    // undefined here, handled explicitly below rather than throwing on a
-    // getElementById(undefined) miss.
-    const ADDRESS_SEARCH_CITY_BIAS_ID = { "single": "city-select" };
+    // handleAddressSearch). All three boxes now have their own picker —
+    // Compare mode's two used to search unbiased on the assumption that a
+    // compare-mode query "typically already names its own city in the
+    // text" (e.g. "Vidhana Soudha, Bangalore"), but that assumption was
+    // wrong: a live test searching "Pista House" (a real Hyderabad chain
+    // that's since expanded to Bangalore) with no bias ranked a Bangalore
+    // branch first, purely on Nominatim's own importance score. Same
+    // 9-city picker as Single mode's, just two independent instances
+    // since Compare mode's whole point is comparing across potentially
+    // different cities.
+    const ADDRESS_SEARCH_CITY_BIAS_ID = { "single": "city-select", "compare-a": "compare-a-city-bias", "compare-b": "compare-b-city-bias" };
     // Address Search > Compare only: the staged exact point for each
     // side once a suggestion's been picked there. See
     // stageCompareAddress/clearCompareAddress and checkCompare's
@@ -609,6 +636,36 @@
       return results.slice(0, 6);
     }
 
+    // Nominatim's usage policy requires an absolute max of 1 request/sec,
+    // sustained — confirmed against operations.osmfoundation.org's actual
+    // policy text, not assumed. A flat 1000ms debounce used to BE the
+    // entire enforcement mechanism, which is safe for continuous typing
+    // (only one request ever fires per unbroken burst, regardless of the
+    // debounce length) but not for real typing patterns that pause
+    // mid-query while composing it (e.g. "Pista" <pause> "House") — a
+    // debounce alone can't tell "quiet because they're thinking" from
+    // "quiet because they're done," so shortening it on its own risks
+    // firing a real request on every such pause, exceeding 1/sec if
+    // sustained.
+    //
+    // Splitting this into two separate numbers fixes that without giving
+    // up either property: NOMINATIM_DEBOUNCE_MS is how long to wait for
+    // quiet before checking at all (now genuinely responsive), and
+    // NOMINATIM_MIN_REQUEST_SPACING_MS is the actual rate-limit floor,
+    // enforced completely separately and unconditionally — see the
+    // wait-loop in handleAddressSearch below. Together these can never
+    // produce two real Nominatim requests less than 1 second apart, even
+    // for someone pausing every 400ms while composing a query.
+    const NOMINATIM_DEBOUNCE_MS = 400;
+    const NOMINATIM_MIN_REQUEST_SPACING_MS = 1000;
+    // Global, not per-searchId: the rate limit is about requests actually
+    // leaving this app, which is a shared resource across all three boxes
+    // — Compare mode's two boxes can genuinely both be typed into around
+    // the same moment, and a per-box throttle would let each
+    // independently respect its own 1/sec pace while still producing 2
+    // real requests inside the same second in aggregate.
+    let lastNominatimRequestAt = 0;
+
     async function handleAddressSearch(searchId) {
       const state = addressSearchState[searchId];
       const query = document.getElementById(`address-search-input-${searchId}`).value.trim();
@@ -626,14 +683,19 @@
       const requestId = ++state.requestId;
       clearTimeout(state.timeout);
 
-      if (query.length < 3) { box.classList.add('hidden'); return; }
+      if (query.length < 3) {
+        box.classList.add('hidden');
+        spin.classList.add('hidden');
+        return;
+      }
 
-      // Instant, zero-network check against the 80 known neighbourhoods
+      // Instant, zero-network check against the known neighbourhoods
       // first — same local-array-filter approach the old Smart Search
       // used. Short-circuits entirely on a match: no debounce, no
       // Nominatim call, matching the old box's exact behavior.
       const localResults = searchLocalData(query);
       if (localResults.length > 0) {
+        spin.classList.add('hidden'); // defensive: a prior keystroke may have already scheduled the Nominatim path and shown this
         showAddressSuggestions(searchId, localResults.map(r => ({
           displayName: `${r.name}, ${r.detail}`,
           lat: r.lat,
@@ -642,19 +704,37 @@
         return;
       }
 
-      // Nominatim's usage policy requires >=1 request/second spacing —
-      // longer than the old Smart Search's 400ms debounce, deliberately.
+      // Shown the moment a query falls through to the Nominatim path —
+      // before the debounce timer even starts counting, not after the
+      // network call begins — so there's real, immediate feedback rather
+      // than the silent ~1-2s gap a live test measured with the old
+      // "spinner only appears inside the fired callback" placement.
+      spin.classList.remove('hidden');
+
       state.timeout = setTimeout(async () => {
-        spin.classList.remove('hidden');
+        if (requestId !== state.requestId) return; // superseded while waiting out the debounce
+
+        // Debounce settled — now separately enforce the real rate-limit
+        // floor before sending anything. Loops (re-checking the shared
+        // timestamp each time) rather than computing one fixed wait,
+        // since another box's request could claim the slot while this
+        // one is asleep — a single fixed-wait computation would let two
+        // waiting requests both target the same reopening instant.
+        while (true) {
+          const waitMs = NOMINATIM_MIN_REQUEST_SPACING_MS - (Date.now() - lastNominatimRequestAt);
+          if (waitMs <= 0) { lastNominatimRequestAt = Date.now(); break; }
+          await new Promise(r => setTimeout(r, waitMs));
+          if (requestId !== state.requestId) return; // superseded while waiting out the throttle
+        }
+
         try {
           // Bias/restrict to whichever city is currently selected in this
-          // box's own bias picker — without this, a query like "Wipro
-          // Circle" with no city name in it ranks purely on Nominatim's
+          // box's own bias picker — without this, a query like "Pista
+          // House" with no city name in it ranks purely on Nominatim's
           // own importance score, which can surface a same-named place in
           // a totally different city ahead of the one actually being
-          // browsed. searchIds with no bias picker at all (compare-a/
-          // compare-b — see ADDRESS_SEARCH_CITY_BIAS_ID) search unbiased
-          // rather than throwing on a missing element.
+          // browsed (confirmed live: an unbiased search ranked a
+          // Bangalore branch of a Hyderabad chain first).
           const biasElementId = ADDRESS_SEARCH_CITY_BIAS_ID[searchId];
           const selectedCity = biasElementId ? document.getElementById(biasElementId).value : "";
           const url = "/api/geocode?q=" + encodeURIComponent(query)
@@ -678,7 +758,7 @@
           console.warn("Address search request failed.", e.message);
         }
         if (requestId === state.requestId) spin.classList.add('hidden');
-      }, 1000);
+      }, NOMINATIM_DEBOUNCE_MS);
     }
 
     function showAddressSuggestions(searchId, results) {
