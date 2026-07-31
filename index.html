@@ -666,6 +666,55 @@
     // real requests inside the same second in aggregate.
     let lastNominatimRequestAt = 0;
 
+    // Waits until it's safe to send a real Nominatim request — used both for
+    // the initial request and the zero-result fallback retry below, since a
+    // second real request needs the exact same 1/sec guarantee as the first,
+    // not "well the first one already waited so this one's free." Returns
+    // false if this box's query was superseded while waiting (caller should
+    // bail without sending anything), true if it claimed the slot.
+    async function waitForNominatimThrottle(state, requestId) {
+      while (true) {
+        const waitMs = NOMINATIM_MIN_REQUEST_SPACING_MS - (Date.now() - lastNominatimRequestAt);
+        if (waitMs <= 0) { lastNominatimRequestAt = Date.now(); return true; }
+        await new Promise(r => setTimeout(r, waitMs));
+        if (requestId !== state.requestId) return false;
+      }
+    }
+
+    async function fetchGeocode(query, selectedCity) {
+      const url = "/api/geocode?q=" + encodeURIComponent(query)
+        + "&city=" + encodeURIComponent(selectedCity);
+      const res = await fetch(url);
+      const data = await res.json();
+      return data.results || [];
+    }
+
+    // Category words that describe a TYPE of place rather than identifying
+    // a specific one — stripped for a one-shot fallback retry when the
+    // literal query returns zero results. Confirmed live: Nominatim indexes
+    // Hyderabad's real Shell stations under "Shell" and under bare "petrol
+    // pump", but the combined phrase "Shell petrol pump" matches neither,
+    // even hard-bounded to the exact neighbourhood — so retrying with just
+    // the brand/proper-noun tokens left over ("Shell") finds what the literal
+    // query couldn't. Longest phrases first so "petrol pump" strips as one
+    // unit before a lone "pump" match could leave "petrol" dangling.
+    const GENERIC_CATEGORY_WORDS = [
+      "petrol pump", "gas station", "fuel station",
+      "restaurant", "hotel", "cafe", "bakery",
+      "hospital", "clinic", "pharmacy",
+      "school", "college", "university",
+      "mall", "supermarket", "market",
+      "gym", "bank", "atm", "temple", "park"
+    ];
+
+    function stripGenericCategoryWords(query) {
+      let simplified = query;
+      for (const word of GENERIC_CATEGORY_WORDS) {
+        simplified = simplified.replace(new RegExp(`\\b${word}\\b`, "gi"), " ");
+      }
+      return simplified.replace(/\s+/g, " ").trim();
+    }
+
     async function handleAddressSearch(searchId) {
       const state = addressSearchState[searchId];
       const query = document.getElementById(`address-search-input-${searchId}`).value.trim();
@@ -715,17 +764,8 @@
         if (requestId !== state.requestId) return; // superseded while waiting out the debounce
 
         // Debounce settled — now separately enforce the real rate-limit
-        // floor before sending anything. Loops (re-checking the shared
-        // timestamp each time) rather than computing one fixed wait,
-        // since another box's request could claim the slot while this
-        // one is asleep — a single fixed-wait computation would let two
-        // waiting requests both target the same reopening instant.
-        while (true) {
-          const waitMs = NOMINATIM_MIN_REQUEST_SPACING_MS - (Date.now() - lastNominatimRequestAt);
-          if (waitMs <= 0) { lastNominatimRequestAt = Date.now(); break; }
-          await new Promise(r => setTimeout(r, waitMs));
-          if (requestId !== state.requestId) return; // superseded while waiting out the throttle
-        }
+        // floor before sending anything (see waitForNominatimThrottle).
+        if (!(await waitForNominatimThrottle(state, requestId))) return;
 
         try {
           // Bias/restrict to whichever city is currently selected in this
@@ -737,20 +777,38 @@
           // Bangalore branch of a Hyderabad chain first).
           const biasElementId = ADDRESS_SEARCH_CITY_BIAS_ID[searchId];
           const selectedCity = biasElementId ? document.getElementById(biasElementId).value : "";
-          const url = "/api/geocode?q=" + encodeURIComponent(query)
-            + "&city=" + encodeURIComponent(selectedCity);
-          const res  = await fetch(url);
-          const data = await res.json();
+          let results = await fetchGeocode(query, selectedCity);
 
           // A newer keystroke already fired another request while this one
           // was in flight — drop this now-stale response so a slow older
           // reply can't clobber fresher suggestions on screen.
           if (requestId !== state.requestId) return;
 
-          if (data.results && data.results.length > 0) {
-            showAddressSuggestions(searchId, data.results);
+          // Zero-result fallback: the literal query (brand + category words,
+          // e.g. "Shell petrol pump") can fail to match even when the place
+          // is genuinely indexed under a shorter name (confirmed live:
+          // Nominatim finds Hyderabad's real Shell stations under "Shell"
+          // alone, not the combined phrase). Retry once with generic
+          // category words stripped — only on this zero-result branch, not
+          // on every keystroke, so it stays within the 1/sec throttle
+          // (the retry re-enforces its own wait via waitForNominatimThrottle
+          // rather than assuming the first request already covered it).
+          if (results.length === 0) {
+            const simplifiedQuery = stripGenericCategoryWords(query);
+            if (simplifiedQuery.length >= 3 && simplifiedQuery.toLowerCase() !== query.toLowerCase()) {
+              if (!(await waitForNominatimThrottle(state, requestId))) return;
+              results = await fetchGeocode(simplifiedQuery, selectedCity);
+              if (requestId !== state.requestId) return;
+            }
+          }
+
+          if (results.length > 0) {
+            showAddressSuggestions(searchId, results);
           } else {
-            box.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">No results found</div>';
+            // Honest, not blaming — a genuine data gap (e.g. a small/new
+            // building Nominatim simply hasn't indexed) looks identical to
+            // this from the user's side, and isn't something retyping fixes.
+            box.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">We couldn\'t find that — try a nearby landmark or road name instead.</div>';
             box.classList.remove('hidden');
           }
         } catch (e) {
