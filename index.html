@@ -715,6 +715,27 @@
       return simplified.replace(/\s+/g, " ").trim();
     }
 
+    // A soft viewbox bias can rank a same-named place in a totally
+    // different city ahead of the one actually being browsed WITHOUT ever
+    // hitting zero results — confirmed in production: "Shell petrol pump"
+    // with Hyderabad bias active returns 5 real results, just all in
+    // Bangalore/Ahmedabad/Puducherry/Assam/Pune, none anywhere near
+    // Hyderabad. 50km is generous enough to cover a real metro area
+    // (matching the padding api/geocode.js's own CITY_BBOXES already use)
+    // without being so wide it never flags an obviously-wrong-city result.
+    const NEARBY_BIAS_RADIUS_KM = 50;
+
+    // No bias selected, or the bias city has no known center (shouldn't
+    // happen with the current 9-city pickers, but not assumed) — nothing
+    // to compare against, so results are trusted as-is rather than
+    // flagged as "not near" a city that was never actually selected.
+    function hasResultNearCity(results, selectedCity) {
+      if (!selectedCity) return true;
+      const center = getCityCenter(selectedCity);
+      if (!center) return true;
+      return results.some(r => haversineKm(r.lat, r.lon, center[0], center[1]) <= NEARBY_BIAS_RADIUS_KM);
+    }
+
     async function handleAddressSearch(searchId) {
       const state = addressSearchState[searchId];
       const query = document.getElementById(`address-search-input-${searchId}`).value.trim();
@@ -784,26 +805,49 @@
           // reply can't clobber fresher suggestions on screen.
           if (requestId !== state.requestId) return;
 
-          // Zero-result fallback: the literal query (brand + category words,
-          // e.g. "Shell petrol pump") can fail to match even when the place
-          // is genuinely indexed under a shorter name (confirmed live:
-          // Nominatim finds Hyderabad's real Shell stations under "Shell"
-          // alone, not the combined phrase). Retry once with generic
-          // category words stripped — only on this zero-result branch, not
-          // on every keystroke, so it stays within the 1/sec throttle
-          // (the retry re-enforces its own wait via waitForNominatimThrottle
-          // rather than assuming the first request already covered it).
-          if (results.length === 0) {
+          // Zero-result fallback, ALSO triggered when Nominatim returns real
+          // results but none are actually near the bias city (not just a
+          // true zero-result response) — see hasResultNearCity/
+          // NEARBY_BIAS_RADIUS_KM above for why that's a distinct, real case.
+          // The literal query (brand + category words, e.g. "Shell petrol
+          // pump") can fail to match even when the place is genuinely
+          // indexed under a shorter name (confirmed live: Nominatim finds
+          // Hyderabad's real Shell stations under "Shell" alone, not the
+          // combined phrase). Retry once with generic category words
+          // stripped — only on this branch, not on every keystroke, so it
+          // stays within the 1/sec throttle (the retry re-enforces its own
+          // wait via waitForNominatimThrottle rather than assuming the
+          // first request already covered it).
+          if (results.length === 0 || !hasResultNearCity(results, selectedCity)) {
             const simplifiedQuery = stripGenericCategoryWords(query);
             if (simplifiedQuery.length >= 3 && simplifiedQuery.toLowerCase() !== query.toLowerCase()) {
               if (!(await waitForNominatimThrottle(state, requestId))) return;
-              results = await fetchGeocode(simplifiedQuery, selectedCity);
+              const retryResults = await fetchGeocode(simplifiedQuery, selectedCity);
               if (requestId !== state.requestId) return;
+              // Replace the original results when either: the original was
+              // truly empty (the retry's results are strictly better than
+              // showing nothing, even if still not near the bias city), or
+              // the retry actually found something near the bias city (the
+              // real fix for the wrong-city-ranking case). Otherwise — the
+              // original had real, non-zero results that just weren't near
+              // the bias city, and the retry didn't improve on that either
+              // — keep the original results rather than discarding a
+              // relevant-but-far set for an equally-far, less specific one.
+              if (retryResults.length > 0 && (results.length === 0 || hasResultNearCity(retryResults, selectedCity))) {
+                results = retryResults;
+              }
             }
           }
 
           if (results.length > 0) {
-            showAddressSuggestions(searchId, results);
+            // Every remaining result is genuinely far from the selected
+            // city (fallback didn't find anything closer either) — say so
+            // rather than presenting a distant result as if it were local.
+            const nearBias = hasResultNearCity(results, selectedCity);
+            const note = (!nearBias && selectedCity)
+              ? `No exact match found near ${selectedCity.charAt(0).toUpperCase() + selectedCity.slice(1)} — showing the closest available results:`
+              : null;
+            showAddressSuggestions(searchId, results, note);
           } else {
             // Honest, not blaming — a genuine data gap (e.g. a small/new
             // building Nominatim simply hasn't indexed) looks identical to
@@ -819,12 +863,19 @@
       }, NOMINATIM_DEBOUNCE_MS);
     }
 
-    function showAddressSuggestions(searchId, results) {
+    function showAddressSuggestions(searchId, results, note) {
       const state = addressSearchState[searchId];
       state.suggestions = results;
       state.selectedIndex = -1;
       const box = document.getElementById(`address-suggestions-box-${searchId}`);
-      box.innerHTML = results.map((r, i) => `
+      // note is advisory-only text, not a suggestion — deliberately not
+      // given the .suggestion-item class so it's invisible to
+      // handleAddressKeydown's arrow-key navigation and doesn't shift the
+      // index each onclick below uses to look up state.suggestions.
+      const noteHtml = note
+        ? `<div class="px-4 py-2 text-xs text-gray-400 border-b border-gray-100 bg-gray-50">${note}</div>`
+        : '';
+      box.innerHTML = noteHtml + results.map((r, i) => `
         <div class="suggestion-item px-4 py-3 cursor-pointer border-b border-gray-100 last:border-0 hover:bg-gray-50"
           onclick="selectAddressSuggestion('${searchId}', ${i})">
           <div class="text-sm font-medium text-gray-800">${r.displayName}</div>
