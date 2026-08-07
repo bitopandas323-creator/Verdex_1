@@ -78,6 +78,16 @@
           Locate me
         </button>
         <div id="locate-me-status" class="mt-2 text-xs text-gray-400"></div>
+
+        <!-- Off by default, always — never auto-started, never remembered
+             across page loads. toggleFollowMe is the only way to flip
+             this; see its own comment for the full stop-following
+             conditions (this button, or leaving this view entirely). -->
+        <label class="mt-3 flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+          <input type="checkbox" id="follow-me-toggle" onchange="toggleFollowMe()" class="accent-green-600">
+          Follow my location (live)
+        </label>
+        <div id="follow-me-status" class="mt-1 text-xs text-gray-400"></div>
       </div>
 
       <!-- Top-level heads: "Address search" vs "Browse areas" are chosen
@@ -1670,6 +1680,16 @@
         ? (currentHead === "address" ? currentSubTab.address : "browse-" + currentSubTab.browse)
         : currentHead;
 
+      // Follow mode's toggle lives inside single-search-block, which is
+      // only visible for leaf === "single" (see that div's own visibility
+      // toggle just below) — so navigating anywhere else means the person
+      // can no longer even see or reach the control that's supposedly
+      // tracking them. Stop watching GPS the instant that happens, not
+      // just when they remember to flip the toggle off themselves.
+      if (followState.active && leaf !== "single") {
+        stopFollowing();
+      }
+
       NAV_LEAVES.forEach(m => {
         document.getElementById(m + "-mode").classList.toggle("hidden", m !== leaf);
       });
@@ -2037,6 +2057,21 @@
       let lat   = parts[0];
       let lon   = parts[1];
       let name  = parts[2];
+
+      // Checked as early as possible, before the live NDVI fetch below —
+      // moved here from its original position just after that fetch, where
+      // a cache hit still let the live Sentinel Hub call fire unconditionally
+      // every time, wasting a real request on every lookup regardless of
+      // whether the cached result was about to replace it a few lines later.
+      // Harmless waste for occasional manual searches; a real cost problem
+      // once something calls this repeatedly (confirmed live: Follow mode
+      // was invoking fetchAreaData every ~150m of movement, and this
+      // ordering meant every single tick fired its own uncached NDVI call
+      // regardless of the separate exact-point throttle around it).
+      let cacheKey = city + "|" + lat + "|" + lon;
+      let cached   = getCached(cacheKey);
+      if (cached) return cached;
+
       let ndvi    = parseFloat(parts[3]);
 let noise   = parseFloat(parts[4]) || 5.0;
 let water   = parseFloat(parts[5]) || 400;
@@ -2072,10 +2107,6 @@ let walk    = parseFloat(parts[9]) || 6.0;
       } catch (e) {
         console.warn("Live NDVI fetch threw an exception (network/parse error) — using baseline value.", e.message);
       }
-
-      let cacheKey = city + "|" + lat + "|" + lon;
-      let cached   = getCached(cacheKey);
-      if (cached) return cached;
 
       // temp/windSpeed/feelsLike/humidity have no per-neighbourhood or even
       // per-city baseline anywhere in this app — unlike ndvi/aqi, these four
@@ -2815,6 +2846,180 @@ let finalScore = computeFinalScore({
             <div class="mt-1">Air Quality Index data provided by the World Air Quality Index Project (waqi.info), aggregating official government monitoring stations (EPA and equivalent agencies).</div>
           </div>
         </div>`;
+    }
+
+    // Shareable report card — Canvas API only, no library, entirely
+    // client-side. Reuses the exact score/band/label logic and copy the
+    // on-screen card already computes (getBandInfo, getAQILabel,
+    // getInfraLabel, computeInsight, computeBenchmarkPercentile) rather
+    // than deriving new numbers or wording for this second surface.
+    const SHARE_CARD_WIDTH = 1080;
+    const SHARE_CARD_HEIGHT = 1350;
+
+    // getBandInfo()/precisionTag() already emit these exact Tailwind class
+    // names as strings — Canvas can't read CSS, so this is a literal hex
+    // translation of those class names, not a second copy of the score
+    // thresholds. If getBandInfo's banding ever changes, this keeps
+    // working unchanged since it's driven by whatever class name comes
+    // back from it, not a duplicated set of numeric cutoffs.
+    const TAILWIND_HEX = {
+      "text-emerald-600": "#059669", "bg-emerald-50": "#ecfdf5",
+      "text-blue-600": "#2563eb",    "bg-blue-50": "#eff6ff",
+      "text-amber-600": "#d97706",   "bg-amber-50": "#fffbeb",
+      "text-red-600": "#dc2626",     "bg-red-50": "#fef2f2"
+    };
+
+    // Draws left-aligned wrapped text starting at (x, y) and returns the y
+    // position just below the last line drawn, so callers can stack the
+    // next block without hardcoding how many lines a given sentence wraps
+    // to (Canvas has no built-in text wrapping).
+    function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
+      const words = text.split(" ");
+      let line = "";
+      for (const word of words) {
+        const testLine = line ? line + " " + word : word;
+        if (ctx.measureText(testLine).width > maxWidth && line) {
+          ctx.fillText(line, x, y);
+          line = word;
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      if (line) { ctx.fillText(line, x, y); y += lineHeight; }
+      return y;
+    }
+
+    // Reuses the exact same precision facts already computed for the
+    // on-screen card (d.infraWalkExactCity / isAreaEstimate — see
+    // buildScoreCard/buildEnvironmentalCard's own comments for what these
+    // mean) instead of inventing new wording — just recombined into one
+    // standalone line, since a share card doesn't have per-field tags next
+    // to each row it could attach to individually the way the on-screen
+    // card does. Returns null (no caveat shown) for plain dropdown/
+    // compare/map results, exactly matching when the on-screen card shows
+    // no area-estimate tag either — the neighbourhood IS the search target
+    // there, so there's nothing to caveat.
+    function getSharePrecisionNote(d, isAreaEstimate) {
+      if (d.infraWalkExactCity) {
+        const cityLabel = GRID_CITY_LABELS[d.infraWalkExactCity] || d.infraWalkExactCity;
+        return `Exact for this point — ${cityLabel} grid`;
+      }
+      if (isAreaEstimate) {
+        return `Area estimate — nearest matched neighbourhood`;
+      }
+      return null;
+    }
+
+    // Renders a shareable PNG report card for the given score data onto a
+    // fresh off-screen canvas and returns the canvas (caller decides
+    // whether to download it, share it, or preview it — kept separate so
+    // this stays a pure render function).
+    function renderShareCard(d, isAreaEstimate) {
+      const canvas = document.createElement("canvas");
+      canvas.width = SHARE_CARD_WIDTH;
+      canvas.height = SHARE_CARD_HEIGHT;
+      const ctx = canvas.getContext("2d");
+
+      const band = getBandInfo(d.finalScore);
+      const colors = { text: TAILWIND_HEX[band.text], bg: TAILWIND_HEX[band.bg] };
+      const cityName = d.city.charAt(0).toUpperCase() + d.city.slice(1);
+      const title = d.exactAddressTitle || d.name;
+      const precisionNote = getSharePrecisionNote(d, isAreaEstimate);
+      const insightSentences = computeInsight(d);
+      const benchmarkPct = computeBenchmarkPercentile(d);
+
+      ctx.fillStyle = colors.bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const pad = 64;
+      let y = 90;
+
+      ctx.fillStyle = "#16a34a";
+      ctx.font = "bold 32px Arial";
+      ctx.textAlign = "left";
+      ctx.fillText("🌿 Verdex", pad, y);
+      y += 84;
+
+      ctx.fillStyle = "#1f2937";
+      ctx.font = "bold 52px Arial";
+      y = drawWrappedText(ctx, title, pad, y, canvas.width - pad * 2, 58);
+      ctx.fillStyle = "#6b7280";
+      ctx.font = "32px Arial";
+      ctx.fillText(cityName, pad, y + 8);
+      y += 50;
+
+      if (precisionNote) {
+        ctx.fillStyle = "#9ca3af";
+        ctx.font = "italic 26px Arial";
+        ctx.fillText(precisionNote, pad, y + 8);
+        y += 44;
+      }
+
+      y += 30;
+
+      ctx.fillStyle = colors.text;
+      ctx.font = "bold 220px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(String(Math.round(d.finalScore * 10)), canvas.width / 2, y + 180);
+      ctx.font = "bold 40px Arial";
+      ctx.fillText(band.label, canvas.width / 2, y + 240);
+      y += 300;
+
+      ctx.fillStyle = "#6b7280";
+      ctx.font = "28px Arial";
+      ctx.fillText(`Better than ${benchmarkPct}% of neighbourhoods in ${cityName}`, canvas.width / 2, y);
+      ctx.textAlign = "left";
+      y += 60;
+
+      ctx.strokeStyle = "rgba(0,0,0,0.08)";
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(canvas.width - pad, y); ctx.stroke();
+      y += 50;
+
+      ctx.fillStyle = "#9ca3af";
+      ctx.font = "bold 24px Arial";
+      ctx.fillText("QUICK READ", pad, y);
+      y += 40;
+      ctx.fillStyle = "#374151";
+      ctx.font = "30px Arial";
+      y = drawWrappedText(ctx, insightSentences.join(" "), pad, y, canvas.width - pad * 2, 42);
+      y += 30;
+
+      ctx.strokeStyle = "rgba(0,0,0,0.08)";
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(canvas.width - pad, y); ctx.stroke();
+      y += 50;
+
+      // Reuses the exact same row copy buildEnvironmentalCard/
+      // buildLiveabilityCard already compute for these fields (AQI label,
+      // green cover %, infra label) rather than writing new descriptive
+      // text for them here.
+      const facts = [
+        { label: "Air Quality",    value: `${d.aqi} · ${getAQILabel(d.aqi)}` },
+        { label: "Green Cover",    value: `${Math.round(d.ndvi * 100)}%` },
+        { label: "Infrastructure", value: `${Math.round(d.infraScore * 10)} · ${getInfraLabel(d.infraScore)}` }
+      ];
+      ctx.fillStyle = "#9ca3af";
+      ctx.font = "bold 24px Arial";
+      ctx.fillText("STANDOUT FACTS", pad, y);
+      y += 44;
+      for (const f of facts) {
+        ctx.fillStyle = "#374151";
+        ctx.font = "bold 30px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(f.label, pad, y);
+        ctx.fillStyle = "#111827";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "right";
+        ctx.fillText(f.value, canvas.width - pad, y);
+        y += 46;
+      }
+
+      ctx.fillStyle = "#9ca3af";
+      ctx.font = "24px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("verdex-1.vercel.app · Green Scores for Indian Cities", canvas.width / 2, canvas.height - 40);
+
+      return canvas;
     }
 
     const AQI_TREND_MIN_POINTS = 12;
@@ -3729,9 +3934,14 @@ let finalScore = computeFinalScore({
       }
     }
 
+    // Returns the fetched ndvi number (or null on any failure) in addition
+    // to rendering it — existing callers (locateMe, selectAddressSuggestion)
+    // ignore the return value, so this stays backward-compatible; Follow
+    // mode (below) needs it to cache the last live reading for reuse on
+    // throttled ticks where it deliberately skips a fresh Sentinel Hub call.
     async function loadExactLocationNdvi(lat, lon, containerId) {
       const statusEl = document.getElementById(containerId + "-status");
-      if (!statusEl) return;
+      if (!statusEl) return null;
 
       const showUnavailable = () => {
         statusEl.textContent = "Green cover reading unavailable for this exact point right now.";
@@ -3744,17 +3954,19 @@ let finalScore = computeFinalScore({
         if (!res.ok) {
           console.warn(`Exact-location NDVI request failed (HTTP ${res.status}). Reason: ${data.reason || data.error || "unknown"}`);
           showUnavailable();
-          return;
+          return null;
         }
         if (typeof data.ndvi !== "number") {
           console.warn(`Exact-location NDVI returned no usable reading. Reason: ${data.reason || "unknown"}`);
           showUnavailable();
-          return;
+          return null;
         }
         statusEl.textContent = `NDVI ${data.ndvi} · ${getNDVILabel(data.ndvi)}`;
+        return data.ndvi;
       } catch (err) {
         console.warn("Exact-location NDVI fetch threw an exception (network/parse error).", err.message);
         showUnavailable();
+        return null;
       }
     }
 
@@ -3838,6 +4050,244 @@ let finalScore = computeFinalScore({
           }
         }
       );
+    }
+
+    // --- FOLLOW MY LOCATION (continuous tracking) ---
+    //
+    // Extends locateMe() from a one-time lookup into a watchPosition-driven
+    // loop, opt-in only (the checkbox defaults unchecked and is never
+    // remembered across page loads — see the toggle's own comment).
+    // Deliberately reuses locateMe/selectAddressSuggestion's exact lookup
+    // chain (findNearestNeighbourhood, fetchExactAreaData, buildScoreCard)
+    // rather than introducing a second data path — the only new logic here
+    // is WHEN to call that chain and how much of it to re-run each time.
+    //
+    // Two independent thresholds, deliberately not the same number:
+    //  - FOLLOW_MOVEMENT_DEBOUNCE_KM gates the general lookup chain
+    //    (nearest-neighbourhood, grid-lookup, AQI, weather) — none of which
+    //    are metered, so this is tuned purely for feel: comfortably above
+    //    typical watchPosition GPS noise (5-20m in the open, 50m+ in dense
+    //    areas) so a stationary person's jitter can't spuriously retrigger
+    //    it, and finer than the ~500m spacing between Hyderabad/Bangalore
+    //    grid cells (measured directly from data/pilot-grid-hyderabad-
+    //    core.json) so crossing into a new cell is caught promptly.
+    //  - FOLLOW_NDVI_MIN_DISTANCE_KM/FOLLOW_NDVI_MIN_INTERVAL_MS gate ONLY
+    //    the exact-point Sentinel Hub call, much more conservatively, since
+    //    that's the one genuinely metered external call in this chain
+    //    (fetchAreaData's own internal NDVI fetch is already cached 10min
+    //    per matched-neighbourhood coordinate — see CACHE_DURATION — so
+    //    Follow mode adds real new cost only here). Confirmed against
+    //    Copernicus Data Space Ecosystem's own docs: the free account tier
+    //    is 10,000 processing units/month, and this endpoint's Statistical
+    //    API call costs at most 1 PU — a single careless "live NDVI on
+    //    every GPS tick" implementation could plausibly burn through a
+    //    meaningful share of that SHARED, app-wide budget from just a
+    //    handful of regular users, degrading NDVI (to "a slower interface",
+    //    per Copernicus's stated overage policy) for every visitor, not
+    //    just Follow-mode ones. Both conditions must hold (not either) —
+    //    "whichever is later" — before a second live fetch is allowed.
+    const FOLLOW_MOVEMENT_DEBOUNCE_KM  = 0.15;
+    const FOLLOW_NDVI_MIN_DISTANCE_KM  = 1;
+    const FOLLOW_NDVI_MIN_INTERVAL_MS  = 5 * 60 * 1000;
+    // maximumAge: 10000 lets the OS/browser hand back a fix it already has
+    // (up to 10s old) instead of forcing a brand-new high-accuracy GPS
+    // acquisition on every single callback — meaningfully less battery
+    // drain for a feature that's explicitly opt-in and may run for a while.
+    const FOLLOW_WATCH_OPTIONS = { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 };
+
+    let followState = {
+      active: false,
+      watchId: null,
+      lastLookupPosition: null,   // {lat, lon} that produced the last completed lookup — movement debounce
+      lastMatchedKey: null,       // "city|name" of the last matched neighbourhood — decides full vs light update
+      lastNdviAt: 0,
+      lastNdviPosition: null,     // {lat, lon} at the time of the last successful LIVE Sentinel Hub fetch
+      lastNdviReading: null,      // {ndvi} cached so throttled ticks can still show a real (if slightly stale) number
+      updateSeq: 0                // bumped per triggered update; an in-flight async update checks this before
+                                   // applying its result, same staleness-guard pattern handleAddressSearch uses
+    };
+
+    function updateFollowToggleUI() {
+      const statusEl = document.getElementById("follow-me-status");
+      statusEl.textContent = followState.active ? "● Following your location — updates as you move." : "";
+    }
+
+    function toggleFollowMe() {
+      const checkbox = document.getElementById("follow-me-toggle");
+      if (checkbox.checked) startFollowing(); else stopFollowing();
+    }
+
+    function startFollowing() {
+      const checkbox = document.getElementById("follow-me-toggle");
+      if (!navigator.geolocation) {
+        document.getElementById("follow-me-status").textContent = "Geolocation isn't supported in this browser.";
+        checkbox.checked = false;
+        return;
+      }
+      followState.active = true;
+      followState.lastLookupPosition = null;
+      followState.lastMatchedKey = null;
+      followState.lastNdviAt = 0;
+      followState.lastNdviPosition = null;
+      followState.lastNdviReading = null;
+      checkbox.checked = true;
+      updateFollowToggleUI();
+      selectSubTab("address", "single");
+      followState.watchId = navigator.geolocation.watchPosition(
+        handleFollowPositionUpdate,
+        handleFollowPositionError,
+        FOLLOW_WATCH_OPTIONS
+      );
+    }
+
+    // The only function that actually calls clearWatch — every stop path
+    // (toggle switched off, or applyNav() detecting navigation away from
+    // this view) routes through here, so GPS watching can never keep
+    // running somewhere the person can no longer see or control it.
+    function stopFollowing() {
+      if (followState.watchId !== null) {
+        navigator.geolocation.clearWatch(followState.watchId);
+        followState.watchId = null;
+      }
+      followState.active = false;
+      const checkbox = document.getElementById("follow-me-toggle");
+      if (checkbox) checkbox.checked = false;
+      updateFollowToggleUI();
+    }
+
+    function handleFollowPositionError(error) {
+      const statusEl = document.getElementById("follow-me-status");
+      if (error.code === error.PERMISSION_DENIED) {
+        statusEl.textContent = "Location access declined — stopped following.";
+        stopFollowing();
+      } else {
+        // Transient (signal loss, timeout) — stay active, watchPosition
+        // keeps calling back on its own; no need to tear the whole thing
+        // down over one bad fix.
+        statusEl.textContent = "Having trouble getting a location fix — still trying…";
+      }
+    }
+
+    async function handleFollowPositionUpdate(position) {
+      if (!followState.active) return; // a callback that fired just after stopFollowing()
+      const { latitude, longitude } = position.coords;
+
+      if (followState.lastLookupPosition) {
+        const movedKm = haversineKm(latitude, longitude, followState.lastLookupPosition.lat, followState.lastLookupPosition.lon);
+        if (movedKm < FOLLOW_MOVEMENT_DEBOUNCE_KM) return; // hasn't moved enough since the last update yet
+      }
+      followState.lastLookupPosition = { lat: latitude, lon: longitude };
+
+      const nearest = findNearestNeighbourhood(latitude, longitude);
+      if (!nearest || nearest.distanceKm > LOCATE_ME_MAX_DISTANCE_KM) {
+        document.getElementById("follow-me-status").textContent =
+          "● Following — no closely-matched neighbourhood at your current location.";
+        return;
+      }
+
+      const { entry, city, distanceKm } = nearest;
+      const matchedKey = city + "|" + entry.name;
+      const isNewNeighbourhood = matchedKey !== followState.lastMatchedKey;
+      followState.lastMatchedKey = matchedKey;
+
+      const seq = ++followState.updateSeq;
+      try {
+        const { d, nearbyPlacesSource } = await fetchExactAreaData(entry, city, latitude, longitude);
+        if (seq !== followState.updateSeq || !followState.active) return; // superseded by a newer tick, or stopped mid-fetch
+
+        mapState.userLocation = { lat: latitude, lon: longitude, city, matchedName: d.name, distanceKm };
+        updateFollowToggleUI();
+
+        let doLiveNdvi = !followState.lastNdviPosition; // always true for the first fix after switching Follow on
+        if (!doLiveNdvi) {
+          const sinceNdviKm = haversineKm(latitude, longitude, followState.lastNdviPosition.lat, followState.lastNdviPosition.lon);
+          const sinceNdviMs = Date.now() - followState.lastNdviAt;
+          doLiveNdvi = sinceNdviKm >= FOLLOW_NDVI_MIN_DISTANCE_KM && sinceNdviMs >= FOLLOW_NDVI_MIN_INTERVAL_MS;
+        }
+
+        renderFollowUpdate(d, nearbyPlacesSource, distanceKm, isNewNeighbourhood, doLiveNdvi, latitude, longitude, seq);
+      } catch (err) {
+        console.error("Follow-mode lookup failed.", err);
+      }
+    }
+
+    // Renders one Follow-mode update. isNewNeighbourhood decides the
+    // full-vs-light tier (re-fetch the Supabase-backed trend chart/safety
+    // ratings only when the matched neighbourhood actually changed — those
+    // are per-neighbourhood historical data that doesn't meaningfully shift
+    // tick-to-tick, and re-destroying/rebuilding the Chart.js trend chart
+    // on every 150m step would itself be a source of jank). doLiveNdvi
+    // decides whether this tick earns a fresh Sentinel Hub call at all —
+    // see the throttle constants' own comment above for why that's gated
+    // so much more conservatively than everything else here.
+    function renderFollowUpdate(d, nearbyPlacesSource, distanceKm, isNewNeighbourhood, doLiveNdvi, lat, lon, seq) {
+      const resultEl = document.getElementById("single-result");
+      const statusEl = document.getElementById("single-status");
+      statusEl.innerHTML = "";
+
+      const distanceNote = `
+        <div class="text-center text-sm text-gray-500 mb-3">
+          Closest matched area: <span class="font-medium text-gray-700">${d.name}</span>
+          (${distanceKm.toFixed(1)}km from your location)
+        </div>`;
+
+      const ndviContainerId = "exact-ndvi-single";
+      let ndviStatusHtml;
+      if (doLiveNdvi) {
+        ndviStatusHtml = `<div id="${ndviContainerId}-status" class="text-xs text-gray-400">Loading…</div>`;
+      } else if (followState.lastNdviReading) {
+        // Reused, not re-fetched — honest about it rather than presenting a
+        // held-over number as if it were a fresh reading for this exact
+        // spot (see the throttle comment above for why this tick skipped
+        // the real Sentinel Hub call).
+        const r = followState.lastNdviReading;
+        ndviStatusHtml = `<div id="${ndviContainerId}-status" class="text-xs text-gray-500">NDVI ${r.ndvi} · ${getNDVILabel(r.ndvi)}
+          <span class="text-gray-400">(last exact reading — following your general area since)</span></div>`;
+      } else {
+        ndviStatusHtml = `<div id="${ndviContainerId}-status" class="text-xs text-gray-400">Green cover reading unavailable for this exact point right now.</div>`;
+      }
+      const exactNdviBlock = `
+        <div class="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-sm" id="${ndviContainerId}">
+          <div class="text-xs text-gray-500 mb-1">Green cover${precisionTag("exact for this point — works anywhere")}</div>
+          ${ndviStatusHtml}
+        </div>`;
+
+      const newCardHtml = distanceNote + buildScoreCard(d, false, "single", true, nearbyPlacesSource, true) + exactNdviBlock;
+
+      // Short crossfade instead of an instant innerHTML swap — reuses
+      // buildScoreCard's output unchanged (no fine-grained node patching;
+      // the card's nested/conditional structure would make that fragile),
+      // just presents the swap smoothly instead of as a jarring flash.
+      //
+      // loadAqiTrend/loadSafetyRatings/loadExactLocationNdvi all look up
+      // elements BY ID INSIDE newCardHtml (aqi-trend-single-*, exact-ndvi-
+      // single-status, etc.) — they must fire only AFTER the innerHTML
+      // swap below actually lands, not before, or every one of those
+      // lookups silently returns null and no-ops (each defensively checks
+      // for a missing element and bails rather than throwing, so this class
+      // of bug produces no error — confirmed by first shipping it that way
+      // and watching the exact-point NDVI call simply never fire).
+      resultEl.style.transition = "opacity 150ms ease";
+      resultEl.style.opacity = "0.35";
+      setTimeout(() => {
+        if (seq !== followState.updateSeq) return; // a newer tick already landed while this one was fading
+        resultEl.innerHTML = newCardHtml;
+        resultEl.classList.remove("hidden");
+        resultEl.style.opacity = "1";
+
+        if (isNewNeighbourhood) {
+          loadAqiTrend(d.name, d.city, "single");
+          loadSafetyRatings(d.name, d.city, "safety-rating-agg-single");
+        }
+
+        if (doLiveNdvi) {
+          followState.lastNdviAt = Date.now();
+          followState.lastNdviPosition = { lat, lon };
+          loadExactLocationNdvi(lat, lon, ndviContainerId).then(ndvi => {
+            if (typeof ndvi === "number") followState.lastNdviReading = { ndvi };
+          });
+        }
+      }, 150);
     }
 
     updateNeighbourhoods("browse-neighbourhood-select", "browse-city-select");
