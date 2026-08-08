@@ -504,6 +504,34 @@
     </div>
   </div>
 
+  <!-- Share Card Modal — same chrome as the two modals above. Shows a
+       live preview of the Canvas-rendered card (an <img> from a blob URL,
+       not the live <canvas> — the same blob backs both the preview and
+       Download/Share, computed once per open rather than re-rendered per
+       action) plus Download (always available) and native Share (only
+       when the browser supports sharing files, mostly mobile). -->
+  <div id="share-card-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="font-semibold text-gray-800">Share this score card</h3>
+        <button onclick="closeShareCardModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+      </div>
+      <div class="mb-4 rounded-lg overflow-hidden border border-gray-100">
+        <img id="share-card-preview-img" class="w-full block" alt="Score card preview">
+      </div>
+      <div class="flex gap-2">
+        <button id="share-card-download-btn" onclick="downloadShareCard()"
+          class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium text-sm">
+          Download image
+        </button>
+        <button id="share-card-native-btn" onclick="nativeShareCard()"
+          class="hidden flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 font-medium text-sm">
+          Share
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
 
     // --- SUPABASE (read-only, client-side) ---
@@ -2806,6 +2834,10 @@ let finalScore = computeFinalScore({
       // score line — see renderedScoreCards' own comment for why that's
       // preferable to a full re-render. Centralizing this here means the
       // 6 call sites don't each need to remember to do it themselves.
+      // shareScoreCard (below) reuses this same registry, and needs
+      // isAreaEstimate alongside d — stashed directly on d rather than a
+      // second parallel map, since it's cheap and travels with d for free.
+      d.isAreaEstimate = isAreaEstimate;
       renderedScoreCards[chartId] = d;
       let ringClass    = highlight ? "ring-2 ring-green-400 ring-offset-2" : "";
       let badge        = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Better area</span>' : "";
@@ -2817,7 +2849,13 @@ let finalScore = computeFinalScore({
       return `
         <div class="rounded-2xl p-2 ${ringClass}">
           <div class="text-center mb-5">
-            <div class="text-lg font-bold text-gray-800">${d.exactAddressTitle || d.name}</div>
+            <div class="flex items-center justify-center gap-1.5">
+              <div class="text-lg font-bold text-gray-800">${d.exactAddressTitle || d.name}</div>
+              <button onclick="shareScoreCard('${chartId}')" title="Share this score card"
+                class="text-gray-400 hover:text-green-600">
+                <i class="ti ti-share text-base"></i>
+              </button>
+            </div>
             <div class="text-sm text-gray-400">${cityName}</div>
             ${buildProfileSelector(chartId, showProfileSelector)}
             <div class="flex items-center justify-center gap-2 mt-3">
@@ -3020,6 +3058,83 @@ let finalScore = computeFinalScore({
       ctx.fillText("verdex-1.vercel.app · Green Scores for Indian Cities", canvas.width / 2, canvas.height - 40);
 
       return canvas;
+    }
+
+    // Backs both the modal preview and the two action buttons — computed
+    // once per open (canvas.toBlob), not re-rendered per action, since
+    // Download and native Share both just need the same PNG bytes.
+    let shareCardState = { blob: null, filename: null };
+
+    // Renders a fresh card for chartId's currently-displayed data (reusing
+    // the exact d + isAreaEstimate the on-screen card itself was built
+    // with — see buildScoreCard stashing d.isAreaEstimate) and opens the
+    // share modal once the PNG is ready.
+    function shareScoreCard(chartId) {
+      const d = renderedScoreCards[chartId];
+      if (!d) return;
+      const canvas = renderShareCard(d, d.isAreaEstimate);
+      const filenameBase = (d.exactAddressTitle || d.name).replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+
+      canvas.toBlob(blob => {
+        if (!blob) return;
+        shareCardState.blob = blob;
+        shareCardState.filename = `verdex-${filenameBase}.png`;
+
+        const url = URL.createObjectURL(blob);
+        const img = document.getElementById("share-card-preview-img");
+        // Revoke the previous preview's object URL before replacing it —
+        // this modal can be reopened for a different card within the same
+        // page load without a refresh, and object URLs otherwise leak for
+        // the life of the page.
+        if (img.dataset.objectUrl) URL.revokeObjectURL(img.dataset.objectUrl);
+        img.src = url;
+        img.dataset.objectUrl = url;
+
+        // navigator.share existing isn't enough on its own — plenty of
+        // desktop browsers implement it for URLs/text but not files, and
+        // will throw at share-time if files are passed anyway. canShare
+        // with an actual File is the real capability check.
+        const nativeBtn = document.getElementById("share-card-native-btn");
+        const testFile = new File([blob], shareCardState.filename, { type: "image/png" });
+        const canNativeShare = !!(navigator.canShare && navigator.canShare({ files: [testFile] }));
+        nativeBtn.classList.toggle("hidden", !canNativeShare);
+
+        document.getElementById("share-card-modal").classList.remove("hidden");
+      }, "image/png");
+    }
+
+    function closeShareCardModal() {
+      document.getElementById("share-card-modal").classList.add("hidden");
+    }
+
+    function downloadShareCard() {
+      if (!shareCardState.blob) return;
+      const url = URL.createObjectURL(shareCardState.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = shareCardState.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function nativeShareCard() {
+      if (!shareCardState.blob) return;
+      try {
+        const file = new File([shareCardState.blob], shareCardState.filename, { type: "image/png" });
+        await navigator.share({
+          files: [file],
+          title: "Verdex Green Score",
+          text: "Check out this Green Score on Verdex"
+        });
+      } catch (err) {
+        // AbortError is just the person cancelling the native share sheet
+        // — not a real failure, nothing to log or show for it.
+        if (err.name !== "AbortError") {
+          console.warn("Native share failed.", err.message);
+        }
+      }
     }
 
     const AQI_TREND_MIN_POINTS = 12;
