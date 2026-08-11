@@ -117,27 +117,33 @@
            stays text-only/untouched at lg:+. -->
       <div id="head-tabs-bar" class="flex fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)] lg:flex lg:flex-col lg:flex-nowrap lg:gap-2 lg:mb-4 lg:static lg:bottom-auto lg:inset-x-auto lg:z-auto lg:bg-transparent lg:border-t-0 lg:pb-0">
         <button id="btn-head-address" onclick="selectHead('address')"
-          class="flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white">
+          class="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white">
           <i class="ti ti-search text-2xl lg:hidden" aria-hidden="true"></i>
           <span class="text-base font-semibold leading-tight lg:hidden">Address</span>
           <span class="hidden lg:inline lg:text-sm">Address search</span>
         </button>
         <button id="btn-head-browse" onclick="selectHead('browse')"
-          class="flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          class="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
           <i class="ti ti-list text-2xl lg:hidden" aria-hidden="true"></i>
           <span class="text-base font-semibold leading-tight lg:hidden">Browse</span>
           <span class="hidden lg:inline lg:text-sm">Browse areas</span>
         </button>
         <button id="btn-head-map" onclick="selectHead('map')"
-          class="flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          class="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
           <i class="ti ti-map text-2xl lg:hidden" aria-hidden="true"></i>
           <span class="text-base font-semibold leading-tight lg:hidden">Map</span>
           <span class="hidden lg:inline lg:text-sm">Map view</span>
         </button>
         <button id="btn-head-assistant" onclick="selectHead('assistant')"
-          class="flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          class="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
           <i class="ti ti-robot text-2xl lg:hidden" aria-hidden="true"></i>
           <span class="text-base font-semibold leading-tight lg:text-sm lg:font-medium lg:leading-normal">Assistant</span>
+        </button>
+        <button id="btn-head-listings" onclick="selectHead('listings')"
+          class="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
+          <i class="ti ti-home-2 text-2xl lg:hidden" aria-hidden="true"></i>
+          <span class="text-base font-semibold leading-tight lg:hidden">Places</span>
+          <span class="hidden lg:inline lg:text-sm">Find a place</span>
         </button>
       </div>
 
@@ -473,6 +479,42 @@
           than an honest "not built" placeholder.
         </div>
       </div>
+    </div>
+
+    <!-- Find a Place Mode — concept test combining seeded sample listings
+         (data/find-a-place-listings.json — clearly labeled below as
+         samples, not real inventory) with Verdex's REAL scoring: every
+         card's Green Score is fetched live via the exact same
+         findNearestNeighbourhood + fetchExactAreaData chain locateMe/
+         Follow mode/address search already use, not a fabricated or
+         duplicated number. See loadListingsSection() for the load/render
+         flow and buildListingScoreBar() for how the precision label is
+         reused rather than reinvented. -->
+    <div id="listings-mode" class="hidden">
+      <div class="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-6 text-sm text-amber-800">
+        <span class="font-semibold">Sample listings for concept testing.</span>
+        These are illustrative, not real inventory — but every Green Score shown below is
+        real, computed live for that exact address the same way it is everywhere else in Verdex.
+      </div>
+
+      <div class="mb-6 flex flex-col sm:flex-row gap-3">
+        <div class="flex-1">
+          <label class="block text-sm text-gray-500 mb-2">City</label>
+          <select id="listings-city-filter" onchange="applyListingsFilters()"
+            class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
+            <option value="">All cities</option>
+            <option value="hyderabad">Hyderabad</option>
+            <option value="bangalore">Bangalore</option>
+          </select>
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm text-gray-500 mb-2">Tags</label>
+        <div id="listings-tag-filter" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <div id="listings-status" class="text-sm text-gray-400 text-center mb-2"></div>
+      <div id="listings-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </div>
 
     </div>
@@ -1661,13 +1703,20 @@
     // the old, smaller padding the moment applyNav() ran on the first
     // nav click — the static HTML's classes only ever paint for the
     // very first, unclicked render.
-    const HEAD_BTN_ACTIVE   = "flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white";
+    // min-w-0 (both constants below) — 5 head buttons now share the fixed
+    // bottom bar's width (up from 4, since Find a Place was added); flex
+    // items default to min-width:auto, which lets a button's own icon/
+    // label content refuse to shrink below its natural width and force
+    // the whole bar wider than the viewport instead of actually
+    // compressing to fit. min-w-0 is what makes flex-1 actually able to
+    // shrink each button to its fair 1/5 share.
+    const HEAD_BTN_ACTIVE   = "flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white";
     // text-gray-600 (not gray-400) below lg: — gray-400 measured ~2.6:1
     // contrast on white, well under WCAG AA's 4.5:1 for normal text;
     // gray-600 (already what the sidebar itself used at lg:+) is ~7.5:1,
     // legible at a glance without diluting the active tab's green as the
     // "you are here" signal.
-    const HEAD_BTN_INACTIVE = "flex flex-col items-center justify-center gap-1 flex-1 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600";
+    const HEAD_BTN_INACTIVE = "flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600";
     const SUB_BTN_ACTIVE    = "px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white lg:w-full lg:text-left";
     const SUB_BTN_INACTIVE  = "px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 lg:w-full lg:text-left";
 
@@ -1689,7 +1738,7 @@
     // selectSubTab(currentHead, ...)), not passed in ahead of time.
     let currentHead = "address";
     let currentSubTab = { address: "single", browse: "single" };
-    const NAV_LEAVES = ["single", "compare", "browse-single", "browse-compare", "map", "assistant"];
+    const NAV_LEAVES = ["single", "compare", "browse-single", "browse-compare", "map", "assistant", "listings"];
 
     function selectHead(head) {
       currentHead = head;
@@ -1727,7 +1776,7 @@
       // loop above already computes.
       document.getElementById("single-search-block").classList.toggle("hidden", leaf !== "single");
 
-      ["address", "browse", "map", "assistant"].forEach(h => {
+      ["address", "browse", "map", "assistant", "listings"].forEach(h => {
         document.getElementById("btn-head-" + h).className = (h === currentHead) ? HEAD_BTN_ACTIVE : HEAD_BTN_INACTIVE;
       });
 
@@ -1736,6 +1785,14 @@
         const active = currentSubTab[currentHead];
         document.getElementById("btn-sub-single").className  = active === "single"  ? SUB_BTN_ACTIVE : SUB_BTN_INACTIVE;
         document.getElementById("btn-sub-compare").className = active === "compare" ? SUB_BTN_ACTIVE : SUB_BTN_INACTIVE;
+      }
+
+      // Lazy load, same "first-visit-only" pattern Map view's
+      // mapState.initialized already uses — no reason to fetch 8 listings'
+      // worth of live scores until someone actually opens this section.
+      if (currentHead === "listings" && !listingsState.initialized) {
+        listingsState.initialized = true;
+        loadListingsSection();
       }
 
       if (currentHead !== "map") {
@@ -4403,6 +4460,154 @@ let finalScore = computeFinalScore({
           });
         }
       }, 150);
+    }
+
+    // --- FIND A PLACE (concept test: seeded listings + real Verdex scores) ---
+    //
+    // listings themselves are static sample data (data/find-a-place-
+    // listings.json — see the honesty banner in the HTML); the SCORE for
+    // each is never fabricated or duplicated logic — every card runs the
+    // exact same findNearestNeighbourhood + fetchExactAreaData chain
+    // locateMe/selectAddressSuggestion/Follow mode already use for a real
+    // coordinate, fetched once per listing and cached the same 10 minutes
+    // fetchAreaData's own cache already provides everywhere else.
+    let listingsState = { initialized: false, listings: [], cityFilter: "", activeTags: new Set() };
+
+    let listingsData = null;
+    async function getListingsData() {
+      if (listingsData) return listingsData;
+      try {
+        const res = await fetch("/data/find-a-place-listings.json");
+        listingsData = await res.json();
+      } catch (e) {
+        console.warn("Failed to load find-a-place-listings.json.", e.message);
+        listingsData = [];
+      }
+      return listingsData;
+    }
+
+    async function loadListingsSection() {
+      const statusEl = document.getElementById("listings-status");
+      const gridEl   = document.getElementById("listings-grid");
+      statusEl.textContent = "Loading sample listings…";
+
+      const listings = await getListingsData();
+      listingsState.listings = listings;
+      statusEl.textContent = "";
+
+      // Tag filter chips — built from whatever tags actually appear across
+      // the seed data, not a hardcoded list, so this never drifts out of
+      // sync with the listings themselves.
+      const allTags = new Set();
+      listings.forEach(l => { (l.backgroundTags || []).concat(l.lifestyleTags || []).forEach(t => allTags.add(t)); });
+      document.getElementById("listings-tag-filter").innerHTML = [...allTags].sort().map(tag => `
+        <button onclick="toggleListingTag('${tag.replace(/'/g, "\\'")}')" data-tag="${tag}"
+          class="listing-tag-chip text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 bg-white hover:bg-gray-50">
+          ${tag}
+        </button>`).join("");
+
+      // Render every card's static shell immediately (title/price/tags/
+      // location — all local, no fetch needed), each with its own loading
+      // placeholder where the real score will land — then kick off the 8
+      // real fetchExactAreaData calls in parallel rather than serially,
+      // since they're independent reads with no shared rate limit the way
+      // Nominatim address search has.
+      gridEl.innerHTML = listings.map(l => buildListingCardShell(l)).join("");
+      listings.forEach(l => loadListingScore(l));
+      applyListingsFilters();
+    }
+
+    function buildListingCardShell(listing) {
+      const tagsHtml = (tags, cls) => tags.map(t =>
+        `<span class="text-xs px-2 py-1 rounded-full ${cls}">${t}</span>`).join("");
+      return `
+        <div class="listing-card bg-white rounded-2xl p-5 border border-gray-100"
+          data-city="${listing.city}"
+          data-tags="${[...(listing.backgroundTags || []), ...(listing.lifestyleTags || [])].join("|")}">
+          <div class="flex justify-between items-start gap-2 mb-1">
+            <div class="font-semibold text-gray-800 min-w-0">${listing.title}</div>
+            <div class="text-sm font-medium text-gray-700 shrink-0">₹${listing.price.toLocaleString("en-IN")}/mo</div>
+          </div>
+          <div class="text-xs text-gray-400 mb-3">${listing.locationLabel}</div>
+          <div id="listing-score-${listing.id}" class="mb-3">
+            <div class="text-xs text-gray-400">Loading real Green Score…</div>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            ${tagsHtml(listing.backgroundTags || [], "bg-blue-50 text-blue-700")}
+            ${tagsHtml(listing.lifestyleTags || [], "bg-green-50 text-green-700")}
+          </div>
+        </div>`;
+    }
+
+    // Reuses getBandInfo (same banding as every other score display) and
+    // the exact same precision-label logic buildEnvironmentalCard/
+    // buildLiveabilityCard already apply — d.infraWalkExactCity means a
+    // real per-point grid hit ("exact for this point"), otherwise this is
+    // the same area-estimate precision every locateMe/address-search
+    // result carries. Nothing here computes a score or decides precision
+    // on its own; it only reads what fetchExactAreaData already decided.
+    function buildListingScoreBar(d, distanceKm) {
+      const band = getBandInfo(d.finalScore);
+      const precisionLabel = d.infraWalkExactCity
+        ? precisionTag(`exact for this point — ${GRID_CITY_LABELS[d.infraWalkExactCity] || d.infraWalkExactCity} grid`)
+        : precisionTag("area estimate");
+      // Only shown when the listing's own coordinate isn't itself one of
+      // the 90 baseline neighbourhood centers (distanceKm ~0 for those) —
+      // same "closest matched area" framing locateMe/selectAddressSuggestion
+      // use for any real searched point that doesn't land exactly on one.
+      const matchNote = distanceKm > 0.05
+        ? `<div class="text-[11px] text-gray-400 mt-1">Nearest matched area: ${d.name} (${distanceKm.toFixed(1)}km)</div>`
+        : "";
+      return `
+        <div class="rounded-lg ${band.bg} px-3 py-2 flex items-center justify-between gap-2">
+          <span class="text-sm font-medium ${band.text} min-w-0">${band.label}${precisionLabel}</span>
+          <span class="text-lg font-bold ${band.text} shrink-0">${Math.round(d.finalScore * 10)}</span>
+        </div>
+        ${matchNote}`;
+    }
+
+    async function loadListingScore(listing) {
+      const targetEl = document.getElementById(`listing-score-${listing.id}`);
+      if (!targetEl) return;
+      const nearest = findNearestNeighbourhood(listing.lat, listing.lon);
+      if (!nearest || nearest.distanceKm > LOCATE_ME_MAX_DISTANCE_KM) {
+        targetEl.innerHTML = `<div class="text-xs text-gray-400">No closely-matched neighbourhood found for this listing.</div>`;
+        return;
+      }
+      try {
+        const { d } = await fetchExactAreaData(nearest.entry, nearest.city, listing.lat, listing.lon);
+        targetEl.innerHTML = buildListingScoreBar(d, nearest.distanceKm);
+      } catch (err) {
+        targetEl.innerHTML = `<div class="text-xs text-gray-400">Green Score unavailable right now.</div>`;
+        console.warn(`Find a Place: score lookup failed for ${listing.id}.`, err.message);
+      }
+    }
+
+    // Pure client-side show/hide over already-rendered cards — no
+    // re-fetch, no server round-trip, matching "simple filtering" for a
+    // concept test rather than a production query system.
+    function toggleListingTag(tag) {
+      if (listingsState.activeTags.has(tag)) listingsState.activeTags.delete(tag);
+      else listingsState.activeTags.add(tag);
+      applyListingsFilters();
+    }
+
+    function applyListingsFilters() {
+      listingsState.cityFilter = document.getElementById("listings-city-filter").value;
+
+      document.querySelectorAll(".listing-tag-chip").forEach(chip => {
+        const active = listingsState.activeTags.has(chip.dataset.tag);
+        chip.className = "listing-tag-chip text-xs px-3 py-1.5 rounded-full border " +
+          (active ? "border-green-600 bg-green-600 text-white" : "border-gray-200 text-gray-600 bg-white hover:bg-gray-50");
+      });
+
+      document.querySelectorAll(".listing-card").forEach(card => {
+        const matchesCity = !listingsState.cityFilter || card.dataset.city === listingsState.cityFilter;
+        const cardTags = card.dataset.tags.split("|");
+        const matchesTags = listingsState.activeTags.size === 0 ||
+          [...listingsState.activeTags].every(t => cardTags.includes(t));
+        card.classList.toggle("hidden", !(matchesCity && matchesTags));
+      });
     }
 
     updateNeighbourhoods("browse-neighbourhood-select", "browse-city-select");

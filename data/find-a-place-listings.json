@@ -1,0 +1,90 @@
+[
+  {
+    "id": "gachibowli-1",
+    "title": "Room in a 3BHK near the Gachibowli tech corridor",
+    "locationLabel": "Gachibowli, Hyderabad",
+    "city": "hyderabad",
+    "lat": 17.4401,
+    "lon": 78.3489,
+    "price": 14000,
+    "backgroundTags": ["Works in tech", "IIT alumnus"],
+    "lifestyleTags": ["Non-smoker", "Early riser", "Vegetarian"]
+  },
+  {
+    "id": "jubilee-hills-1",
+    "title": "Quiet 2BHK share in Jubilee Hills",
+    "locationLabel": "Jubilee Hills, Hyderabad",
+    "city": "hyderabad",
+    "lat": 17.4325,
+    "lon": 78.4071,
+    "price": 22000,
+    "backgroundTags": ["Startup founder"],
+    "lifestyleTags": ["Non-smoker", "Pet-friendly", "Night owl"]
+  },
+  {
+    "id": "gowlidoddy-1",
+    "title": "Cozy 1BHK near Gowlidoddy, Financial District",
+    "locationLabel": "Gowlidoddy, Hyderabad",
+    "city": "hyderabad",
+    "lat": 17.4259203,
+    "lon": 78.328301,
+    "price": 11500,
+    "backgroundTags": ["Works in tech"],
+    "lifestyleTags": ["Vegetarian", "Early riser"]
+  },
+  {
+    "id": "madhapur-1",
+    "title": "Shared flat close to the Madhapur IT hub",
+    "locationLabel": "Madhapur, Hyderabad",
+    "city": "hyderabad",
+    "lat": 17.4504,
+    "lon": 78.3912,
+    "price": 13000,
+    "backgroundTags": ["Works in tech", "MBA grad"],
+    "lifestyleTags": ["Non-smoker", "Night owl", "Pet-friendly"]
+  },
+  {
+    "id": "koramangala-1",
+    "title": "Bright room in Koramangala, near cafes and startups",
+    "locationLabel": "Koramangala, Bangalore",
+    "city": "bangalore",
+    "lat": 12.9352,
+    "lon": 77.6245,
+    "price": 18000,
+    "backgroundTags": ["IIM-B alumnus", "Works in tech"],
+    "lifestyleTags": ["Non-smoker", "Vegetarian"]
+  },
+  {
+    "id": "indiranagar-1",
+    "title": "1BHK share near Indiranagar metro",
+    "locationLabel": "Indiranagar, Bangalore",
+    "city": "bangalore",
+    "lat": 12.9784,
+    "lon": 77.6408,
+    "price": 20000,
+    "backgroundTags": ["Product manager"],
+    "lifestyleTags": ["Early riser", "Pet-friendly"]
+  },
+  {
+    "id": "hsr-layout-1",
+    "title": "Room in a family-friendly HSR Layout apartment",
+    "locationLabel": "HSR Layout, Bangalore",
+    "city": "bangalore",
+    "lat": 12.9116,
+    "lon": 77.6474,
+    "price": 15500,
+    "backgroundTags": ["Works in tech"],
+    "lifestyleTags": ["Vegetarian", "Non-smoker", "Early riser"]
+  },
+  {
+    "id": "whitefield-1",
+    "title": "Spacious share near Whitefield IT parks",
+    "locationLabel": "Whitefield, Bangalore",
+    "city": "bangalore",
+    "lat": 12.9698,
+    "lon": 77.7499,
+    "price": 12500,
+    "backgroundTags": ["Works in tech", "Recent graduate"],
+    "lifestyleTags": ["Night owl", "Pet-friendly"]
+  }
+]
