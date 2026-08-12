@@ -54,7 +54,7 @@
        paint — HEAD_BTN_ACTIVE/INACTIVE's own py-2.5/gap-1 (see their
        comment) make the bar slightly taller once applyNav() has run at
        least once, which is true for nearly every real visit. -->
-  <div class="max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto mt-12 pt-8 pr-8 pl-8 pb-[calc(2rem_+_5rem_+_env(safe-area-inset-bottom))] lg:pb-8 lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:items-start">
+  <div id="app-dashboard" class="max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto mt-12 pt-8 pr-8 pl-8 pb-[calc(2rem_+_5rem_+_env(safe-area-inset-bottom))] lg:pb-8 lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:items-start">
 
     <!-- Sidebar (desktop only — see the outer div's own comment). Holds
          everything that's a persistent, page-level control rather than a
@@ -527,6 +527,80 @@
 
   </div>
 
+  <!-- Manage Listing Mode — shown INSTEAD of the normal dashboard
+       (#app-dashboard is hidden, not layered under this) whenever a
+       ?edit=<token> URL parameter is present on load. See
+       checkForEditLink(), called before applyNav() ever runs. Reuses the
+       same address-search machinery as every other location field in
+       this app (searchId "manage-listing") and the same
+       validateListingFields rules server-side via api/edit-listing.js —
+       nothing about editing is held to a different standard than posting. -->
+  <div id="manage-listing-mode" class="hidden max-w-md mx-auto mt-12 px-6 pb-16">
+    <h1 class="text-2xl font-bold text-green-700 mb-6">Manage your listing</h1>
+    <div id="manage-listing-status" class="text-sm text-gray-400 text-center py-8">Verifying your link…</div>
+    <div id="manage-listing-body" class="hidden space-y-4 text-sm">
+      <div>
+        <label class="block text-gray-500 mb-1">Title</label>
+        <input id="manage-listing-title" type="text" maxlength="120"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+      </div>
+      <div>
+        <label class="block text-gray-500 mb-1">Price (₹/month)</label>
+        <input id="manage-listing-price" type="number" min="1" max="1000000"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+      </div>
+      <div class="relative">
+        <label class="block text-gray-500 mb-1">Location</label>
+        <input id="address-search-input-manage-listing" type="text" placeholder="Search any area, landmark or city"
+          oninput="handleAddressSearch('manage-listing')" onkeydown="handleAddressKeydown(event, 'manage-listing')"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+        <div id="address-search-spinner-manage-listing" class="hidden absolute right-3 top-8">
+          <div style="width:14px;height:14px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+        </div>
+        <div id="address-suggestions-box-manage-listing"
+          class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden max-h-48 overflow-y-auto"></div>
+        <div id="manage-listing-location-confirm" class="text-xs text-gray-400 mt-1"></div>
+      </div>
+      <div>
+        <label class="block text-gray-500 mb-1">Background tags (comma-separated)</label>
+        <input id="manage-listing-background-tags" type="text"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+      </div>
+      <div>
+        <label class="block text-gray-500 mb-1">Lifestyle tags (comma-separated)</label>
+        <input id="manage-listing-lifestyle-tags" type="text"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+      </div>
+      <div>
+        <label class="block text-gray-500 mb-1">Contact method</label>
+        <select id="manage-listing-contact-method"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white">
+          <option value="email">Email</option>
+          <option value="phone">Phone</option>
+          <option value="whatsapp">WhatsApp</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-gray-500 mb-1">Contact value</label>
+        <input id="manage-listing-contact-value" type="text"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+      </div>
+      <div id="manage-listing-error" class="hidden text-red-600 text-xs"></div>
+      <button id="manage-listing-save-btn" onclick="saveManageListingEdit()"
+        class="w-full bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 font-medium">
+        Save changes
+      </button>
+
+      <div class="pt-4 mt-4 border-t border-gray-100">
+        <div id="manage-listing-delete-area">
+          <button onclick="confirmDeleteManagedListing()" class="w-full text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-lg font-medium text-sm">
+            Delete this listing
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Info Modal -->
   <div id="info-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
@@ -758,10 +832,11 @@
     // results land together — the same reason picking a neighbourhood from
     // Compare's existing <select> doesn't fetch anything by itself either.
     const addressSearchState = {
-      "single":       { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
-      "compare-a":    { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
-      "compare-b":    { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
-      "post-listing": { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] }
+      "single":         { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
+      "compare-a":      { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
+      "compare-b":      { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
+      "post-listing":   { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
+      "manage-listing": { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] }
     };
     // Which element's value biases each box's Nominatim query (see
     // handleAddressSearch). All three boxes now have their own picker —
@@ -1202,6 +1277,23 @@
         }
         postListingState.location = { lat: s.lat, lon: s.lon, city: nearest.city, displayName: s.displayName };
         document.getElementById('post-listing-location-confirm').textContent =
+          `✓ ${s.displayName} (${nearest.city.charAt(0).toUpperCase() + nearest.city.slice(1)})`;
+        return;
+      }
+
+      // Manage Listing's own location field — same reasoning as the
+      // "post-listing" branch just above, writing into
+      // manageListingState instead.
+      if (searchId === 'manage-listing') {
+        const nearest = findNearestNeighbourhood(s.lat, s.lon);
+        if (!nearest || nearest.distanceKm > LOCATE_ME_MAX_DISTANCE_KM) {
+          document.getElementById('manage-listing-location-confirm').textContent =
+            'No closely-matched city found for this address — try a different search.';
+          manageListingState.location = null;
+          return;
+        }
+        manageListingState.location = { lat: s.lat, lon: s.lon, city: nearest.city, displayName: s.displayName };
+        document.getElementById('manage-listing-location-confirm').textContent =
           `✓ ${s.displayName} (${nearest.city.charAt(0).toUpperCase() + nearest.city.slice(1)})`;
         return;
       }
@@ -4793,7 +4885,16 @@ let finalScore = computeFinalScore({
     // second implementation of it.
     let postListingState = { location: null, submitting: false };
 
+    // Captured once, from the real initial markup, before anything ever
+    // mutates post-listing-body — showListingPostedConfirmation below
+    // replaces that div's entire innerHTML with a success screen, so
+    // openPostListingModal must restore the real form first on every
+    // open, not just reset individual field values that might not exist
+    // anymore if the last open ended in that success screen.
+    const POST_LISTING_FORM_HTML = document.getElementById("post-listing-body").innerHTML;
+
     function openPostListingModal() {
+      document.getElementById("post-listing-body").innerHTML = POST_LISTING_FORM_HTML;
       postListingState = { location: null, submitting: false };
       document.getElementById("post-listing-title").value = "";
       document.getElementById("post-listing-price").value = "";
@@ -4865,11 +4966,15 @@ let finalScore = computeFinalScore({
           showError(data.error || "Could not post your listing — try again.");
           return;
         }
-        closePostListingModal();
-        // Full reload of the section rather than splicing one card in —
-        // small dataset, simplest correct way to also pick up the new
-        // listing in the tag-filter chip list.
-        await loadListingsSection();
+        // Deliberately NOT closing the modal or reloading the section
+        // here — the token in data.token is returned exactly this once
+        // and never retrievable again (only its hash is stored), so the
+        // "save this now" screen below has to be seen before anything
+        // else happens. finishPostListing() (wired to the screen's
+        // "Done" button) is what actually closes the modal and reloads.
+        const editUrl = window.location.origin + window.location.pathname
+          + "?edit=" + encodeURIComponent(data.token);
+        showListingPostedConfirmation(editUrl);
       } catch (err) {
         showError("Could not post your listing — check your connection and try again.");
         console.warn("submitListing failed.", err.message);
@@ -4878,6 +4983,62 @@ let finalScore = computeFinalScore({
         submitBtn.disabled = false;
         submitBtn.textContent = "Post listing";
       }
+    }
+
+    // Replaces the whole modal body with a one-time "save this now"
+    // screen — the token is never retrievable again after this render
+    // (see submitListing's own comment), so this is the only moment it
+    // can ever be shown or copied.
+    function showListingPostedConfirmation(editUrl) {
+      document.getElementById("post-listing-body").innerHTML = `
+        <div class="text-center py-2">
+          <div class="text-4xl mb-2">✅</div>
+          <div class="font-semibold text-gray-800 text-lg mb-4">Your listing is live!</div>
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left text-sm text-amber-800 mb-4">
+            <span class="font-semibold">⚠️ Save this link now.</span>
+            It's the only way to edit or delete this listing later — we don't have accounts,
+            so if you lose it, we cannot recover or reissue it for you.
+          </div>
+          <div class="flex gap-2 mb-2">
+            <input id="post-listing-edit-link" type="text" readonly value="${editUrl}"
+              onclick="this.select()"
+              class="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600 bg-gray-50">
+            <button id="post-listing-copy-btn" onclick="copyListingEditLink()"
+              class="shrink-0 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium">
+              Copy link
+            </button>
+          </div>
+          <button onclick="finishPostListing()"
+            class="w-full mt-4 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-200 font-medium">
+            Done
+          </button>
+        </div>`;
+    }
+
+    async function copyListingEditLink() {
+      const input = document.getElementById("post-listing-edit-link");
+      const btn = document.getElementById("post-listing-copy-btn");
+      try {
+        await navigator.clipboard.writeText(input.value);
+        const original = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      } catch (err) {
+        // Clipboard API can fail (permissions, non-HTTPS context) — the
+        // input is readonly and click-to-select (see its onclick above),
+        // so falling back to selecting it still lets a real person copy
+        // manually (Ctrl/Cmd+C) even when the API itself is unavailable.
+        input.select();
+        console.warn("Clipboard write failed, falling back to manual select.", err.message);
+      }
+    }
+
+    async function finishPostListing() {
+      closePostListingModal();
+      // Full reload of the section rather than splicing one card in —
+      // small dataset, simplest correct way to also pick up the new
+      // listing in the tag-filter chip list.
+      await loadListingsSection();
     }
 
     // "I'm interested" — the contact value is NOT in the page until this
@@ -4964,6 +5125,153 @@ let finalScore = computeFinalScore({
       }
     }
 
+    // --- MANAGE LISTING (edit/delete via private token) ---
+    //
+    // token/listingId are set once, by checkForEditLink/loadManageListing,
+    // and read by every action below — none of them re-parse the URL
+    // themselves, so there's exactly one place that ever does.
+    let manageListingState = { token: null, listingId: null, location: null };
+
+    // Called once, at the very top of this script's synchronous startup
+    // (see the bottom of this file) — deliberately BEFORE applyNav() ever
+    // runs, so a ?edit= visit never even flashes the normal dashboard
+    // before switching to the manage view.
+    function checkForEditLink() {
+      const token = new URLSearchParams(window.location.search).get("edit");
+      if (!token) return;
+      document.getElementById("app-dashboard").classList.add("hidden");
+      document.getElementById("manage-listing-mode").classList.remove("hidden");
+      manageListingState.token = token;
+      loadManageListing(token);
+    }
+
+    async function loadManageListing(token) {
+      const statusEl = document.getElementById("manage-listing-status");
+      const bodyEl   = document.getElementById("manage-listing-body");
+      try {
+        const res = await fetch(`/api/edit-listing?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+        if (!res.ok) {
+          // Same generic message the server itself returns — never
+          // distinguishes "rate limited" from "wrong token" from
+          // "already deleted" (see api/_lib/listing-auth.js).
+          statusEl.textContent = data.error || "This link is invalid or has expired.";
+          return;
+        }
+
+        manageListingState.listingId = data.id;
+        manageListingState.location = { lat: data.lat, lon: data.lon, city: data.city, displayName: data.address_text };
+
+        document.getElementById("manage-listing-title").value = data.title;
+        document.getElementById("manage-listing-price").value = data.price;
+        document.getElementById("address-search-input-manage-listing").value = data.address_text;
+        document.getElementById("manage-listing-location-confirm").textContent =
+          `✓ ${data.address_text} (${data.city.charAt(0).toUpperCase() + data.city.slice(1)})`;
+        document.getElementById("manage-listing-background-tags").value = (data.background_tags || []).join(", ");
+        document.getElementById("manage-listing-lifestyle-tags").value = (data.lifestyle_tags || []).join(", ");
+        document.getElementById("manage-listing-contact-method").value = data.contact_method || "email";
+        document.getElementById("manage-listing-contact-value").value = data.contact_value || "";
+
+        statusEl.classList.add("hidden");
+        bodyEl.classList.remove("hidden");
+      } catch (err) {
+        statusEl.textContent = "Could not verify your link — check your connection and try again.";
+        console.warn("loadManageListing failed.", err.message);
+      }
+    }
+
+    async function saveManageListingEdit() {
+      const errorEl = document.getElementById("manage-listing-error");
+      const saveBtn = document.getElementById("manage-listing-save-btn");
+      const showError = (msg) => { errorEl.textContent = msg; errorEl.classList.remove("hidden"); };
+      errorEl.classList.add("hidden");
+
+      const title = document.getElementById("manage-listing-title").value.trim();
+      const price = parseInt(document.getElementById("manage-listing-price").value, 10);
+      const backgroundTags = parseTagsInput(document.getElementById("manage-listing-background-tags").value);
+      const lifestyleTags  = parseTagsInput(document.getElementById("manage-listing-lifestyle-tags").value);
+      const contactMethod = document.getElementById("manage-listing-contact-method").value;
+      const contactValue  = document.getElementById("manage-listing-contact-value").value.trim();
+
+      if (!title) return showError("Please enter a title.");
+      if (!Number.isInteger(price) || price <= 0) return showError("Please enter a valid price.");
+      if (!manageListingState.location) return showError("Please search for and select a location.");
+      if (backgroundTags.length === 0) return showError("Please enter at least one background tag.");
+      if (lifestyleTags.length === 0) return showError("Please enter at least one lifestyle tag.");
+      if (!contactValue) return showError("Please enter your contact details.");
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving…";
+
+      try {
+        const res = await fetch("/api/edit-listing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token: manageListingState.token,
+            title, price,
+            address_text: manageListingState.location.displayName,
+            lat: manageListingState.location.lat, lon: manageListingState.location.lon,
+            city: manageListingState.location.city,
+            background_tags: backgroundTags, lifestyle_tags: lifestyleTags,
+            contact_method: contactMethod, contact_value: contactValue
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.error || "Could not save your changes — try again.");
+          return;
+        }
+        saveBtn.textContent = "Saved ✓";
+        setTimeout(() => { saveBtn.textContent = "Save changes"; }, 2000);
+      } catch (err) {
+        showError("Could not save your changes — check your connection and try again.");
+        console.warn("saveManageListingEdit failed.", err.message);
+      } finally {
+        saveBtn.disabled = false;
+      }
+    }
+
+    function confirmDeleteManagedListing() {
+      document.getElementById("manage-listing-delete-area").innerHTML = `
+        <div class="text-center text-sm">
+          <div class="text-gray-600 mb-3">Delete this listing? This cannot be undone.</div>
+          <div class="flex gap-2">
+            <button onclick="loadManageListing(manageListingState.token)"
+              class="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 font-medium">
+              Cancel
+            </button>
+            <button onclick="deleteManagedListing()"
+              class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium">
+              Yes, delete it
+            </button>
+          </div>
+        </div>`;
+    }
+
+    async function deleteManagedListing() {
+      const deleteAreaEl = document.getElementById("manage-listing-delete-area");
+      deleteAreaEl.innerHTML = `<div class="text-center text-sm text-gray-400">Deleting…</div>`;
+      try {
+        const res = await fetch("/api/delete-listing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: manageListingState.token })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          deleteAreaEl.innerHTML = `<div class="text-center text-sm text-red-500">${data.error || "Could not delete your listing — try again."}</div>`;
+          return;
+        }
+        document.getElementById("manage-listing-body").innerHTML = `
+          <div class="text-center py-6 text-gray-600">Your listing has been deleted.</div>`;
+      } catch (err) {
+        deleteAreaEl.innerHTML = `<div class="text-center text-sm text-red-500">Could not delete your listing — try again.</div>`;
+        console.warn("deleteManagedListing failed.", err.message);
+      }
+    }
+
+    checkForEditLink();
     updateNeighbourhoods("browse-neighbourhood-select", "browse-city-select");
     updateNeighbourhoods("browse-neighbourhood-a", "browse-city-a");
     updateNeighbourhoods("browse-neighbourhood-b", "browse-city-b");

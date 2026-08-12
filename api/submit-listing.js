@@ -15,63 +15,21 @@
 // global cap is the right shape here.
 // Known limitation, stated rather than papered over: doesn't stop
 // someone rotating IPs. Same acceptable-for-v1 posture as safety ratings.
+//
+// Also generates this listing's edit token here, once — see
+// api/_lib/listing-auth.js's own comment for the full reasoning on token
+// size and why only its hash is ever persisted. The raw token is
+// returned in this response and NEVER AGAIN — there is no other way to
+// retrieve it later, by design (the client is responsible for showing a
+// "save this now" warning immediately after this call succeeds).
 
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import { createHash } from "crypto";
+import { randomBytes } from "crypto";
 import { createClient } from "@supabase/supabase-js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const NEIGHBOURHOODS = JSON.parse(
-  readFileSync(join(__dirname, "..", "data", "neighbourhoods.json"), "utf8")
-);
-const KNOWN_CITIES = new Set(NEIGHBOURHOODS.map(n => n.city));
-
-const CONTACT_METHODS = new Set(["email", "phone", "whatsapp"]);
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Loosely permissive — real-world phone/WhatsApp numbers vary a lot in
-// formatting (spaces, dashes, +country code). This just rejects obvious
-// garbage, not a strict E.164 validator.
-const PHONE_RE = /^[+\d][\d\s-]{6,19}$/;
-
-const TITLE_MAX_LEN = 120;
-const ADDRESS_MAX_LEN = 200;
-const TAG_MAX_LEN = 40;
-const TAGS_MAX_COUNT = 6;
-const PRICE_MAX = 1000000;
-// Loose India bounding box — a sanity check against garbage/mistyped
-// coordinates, not a precise per-city boundary (findNearestNeighbourhood
-// on the client already resolved this address against a real
-// neighbourhood before submission; this is a server-side backstop, not a
-// duplicate of that logic).
-const INDIA_LAT_RANGE = [6, 38];
-const INDIA_LON_RANGE = [68, 98];
+import { validateListingFields } from "./_lib/listing-validation.js";
+import { hashIp, hashToken, getClientIp } from "./_lib/listing-auth.js";
 
 const GLOBAL_CAP_PER_DAY = 3;
 const GLOBAL_CAP_WINDOW_HOURS = 24;
-
-function hashIp(ip, secret) {
-  return createHash("sha256").update(ip + secret).digest("hex");
-}
-
-function getClientIp(req) {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return (req.socket && req.socket.remoteAddress) || "unknown";
-}
-
-function cleanTags(tags) {
-  if (!Array.isArray(tags)) return null;
-  const cleaned = tags
-    .filter(t => typeof t === "string")
-    .map(t => t.trim())
-    .filter(t => t.length > 0 && t.length <= TAG_MAX_LEN);
-  if (cleaned.length !== tags.length) return null; // rejects any non-string/empty/oversized entry rather than silently dropping it
-  if (cleaned.length > TAGS_MAX_COUNT) return null;
-  return cleaned;
-}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -86,45 +44,9 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Server not configured" });
   }
 
-  const {
-    title, price, address_text, lat, lon, city,
-    background_tags, lifestyle_tags, contact_method, contact_value
-  } = req.body || {};
-
-  if (typeof title !== "string" || title.trim().length === 0 || title.length > TITLE_MAX_LEN) {
-    return res.status(400).json({ error: "Invalid title" });
-  }
-  if (!Number.isInteger(price) || price <= 0 || price > PRICE_MAX) {
-    return res.status(400).json({ error: "Invalid price" });
-  }
-  if (typeof address_text !== "string" || address_text.trim().length === 0 || address_text.length > ADDRESS_MAX_LEN) {
-    return res.status(400).json({ error: "Invalid address" });
-  }
-  if (typeof lat !== "number" || typeof lon !== "number"
-    || lat < INDIA_LAT_RANGE[0] || lat > INDIA_LAT_RANGE[1]
-    || lon < INDIA_LON_RANGE[0] || lon > INDIA_LON_RANGE[1]) {
-    return res.status(400).json({ error: "Invalid coordinates" });
-  }
-  if (typeof city !== "string" || !KNOWN_CITIES.has(city)) {
-    return res.status(400).json({ error: "Unknown city" });
-  }
-  const cleanBackgroundTags = cleanTags(background_tags || []);
-  const cleanLifestyleTags = cleanTags(lifestyle_tags || []);
-  if (!cleanBackgroundTags || !cleanLifestyleTags) {
-    return res.status(400).json({ error: "Invalid tags" });
-  }
-  if (!CONTACT_METHODS.has(contact_method)) {
-    return res.status(400).json({ error: "Invalid contact method" });
-  }
-  if (typeof contact_value !== "string") {
-    return res.status(400).json({ error: "Invalid contact value" });
-  }
-  const trimmedContact = contact_value.trim();
-  if (contact_method === "email" && !EMAIL_RE.test(trimmedContact)) {
-    return res.status(400).json({ error: "Invalid email address" });
-  }
-  if ((contact_method === "phone" || contact_method === "whatsapp") && !PHONE_RE.test(trimmedContact)) {
-    return res.status(400).json({ error: "Invalid phone number" });
+  const { error: validationError, value: fields } = validateListingFields(req.body);
+  if (validationError) {
+    return res.status(400).json({ error: validationError });
   }
 
   const ip = getClientIp(req);
@@ -148,9 +70,17 @@ export default async function handler(req, res) {
       return res.status(429).json({ error: "You've already posted the maximum of 3 listings today — try again tomorrow." });
     }
 
+    // 256 bits — see api/_lib/listing-auth.js's own comment for why this
+    // is the right size and why a plain (not salted/slow) hash of it is
+    // sufficient. base64url keeps the token URL-safe with no escaping.
+    const editToken = randomBytes(32).toString("base64url");
+    const edit_token_hash = hashToken(editToken);
+
     const { data: inserted, error: insertError } = await supabase.from("listings").insert({
-      title: title.trim(), price, address_text: address_text.trim(), lat, lon, city,
-      background_tags: cleanBackgroundTags, lifestyle_tags: cleanLifestyleTags, ip_hash
+      title: fields.title, price: fields.price, address_text: fields.address_text,
+      lat: fields.lat, lon: fields.lon, city: fields.city,
+      background_tags: fields.background_tags, lifestyle_tags: fields.lifestyle_tags,
+      ip_hash, edit_token_hash
     }).select("id").single();
 
     if (insertError || !inserted) {
@@ -159,7 +89,7 @@ export default async function handler(req, res) {
     }
 
     const { error: contactError } = await supabase.from("listing_contacts").insert({
-      listing_id: inserted.id, contact_method, contact_value: trimmedContact
+      listing_id: inserted.id, contact_method: fields.contact_method, contact_value: fields.contact_value
     });
     if (contactError) {
       // The listing row exists but its contact record doesn't — clean up
@@ -169,7 +99,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Could not save your listing — try again." });
     }
 
-    return res.status(200).json({ ok: true, id: inserted.id });
+    return res.status(200).json({ ok: true, id: inserted.id, token: editToken });
   } catch (err) {
     console.error("submit-listing threw:", err);
     return res.status(500).json({ error: "Unexpected server error" });
