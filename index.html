@@ -4949,10 +4949,15 @@ let finalScore = computeFinalScore({
       submitBtn.textContent = "Posting…";
 
       try {
-        const res = await fetch("/api/submit-listing", {
+        // /api/listings consolidates 5 formerly-separate endpoints behind
+        // one route (see api/listings.js's own comment for why) —
+        // action:"submit" here is what was previously the whole point of
+        // a dedicated /api/submit-listing.
+        const res = await fetch("/api/listings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            action: "submit",
             title, price,
             address_text: postListingState.location.displayName,
             lat: postListingState.location.lat, lon: postListingState.location.lon,
@@ -5051,7 +5056,7 @@ let finalScore = computeFinalScore({
       buttonEl.disabled = true;
       buttonEl.textContent = "Loading…";
       try {
-        const res = await fetch(`/api/get-listing-contact?id=${dbId}`);
+        const res = await fetch(`/api/listings?action=contact&id=${dbId}`);
         const data = await res.json();
         if (!res.ok) {
           targetEl.innerHTML = `<span class="text-red-500">${data.error || "Could not load contact info."}</span>`;
@@ -5108,10 +5113,10 @@ let finalScore = computeFinalScore({
       const bodyEl = document.getElementById("report-listing-body");
       bodyEl.innerHTML = `<div class="text-center py-4 text-gray-400">Submitting…</div>`;
       try {
-        const res = await fetch("/api/report-listing", {
+        const res = await fetch("/api/listings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ listing_id: reportListingState.listingId, reason })
+          body: JSON.stringify({ action: "report", listing_id: reportListingState.listingId, reason })
         });
         const data = await res.json();
         if (!res.ok) {
@@ -5149,7 +5154,7 @@ let finalScore = computeFinalScore({
       const statusEl = document.getElementById("manage-listing-status");
       const bodyEl   = document.getElementById("manage-listing-body");
       try {
-        const res = await fetch(`/api/edit-listing?token=${encodeURIComponent(token)}`);
+        const res = await fetch(`/api/listings?action=edit&token=${encodeURIComponent(token)}`);
         const data = await res.json();
         if (!res.ok) {
           // Same generic message the server itself returns — never
@@ -5204,10 +5209,11 @@ let finalScore = computeFinalScore({
       saveBtn.textContent = "Saving…";
 
       try {
-        const res = await fetch("/api/edit-listing", {
+        const res = await fetch("/api/listings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            action: "edit",
             token: manageListingState.token,
             title, price,
             address_text: manageListingState.location.displayName,
@@ -5253,10 +5259,10 @@ let finalScore = computeFinalScore({
       const deleteAreaEl = document.getElementById("manage-listing-delete-area");
       deleteAreaEl.innerHTML = `<div class="text-center text-sm text-gray-400">Deleting…</div>`;
       try {
-        const res = await fetch("/api/delete-listing", {
+        const res = await fetch("/api/listings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: manageListingState.token })
+          body: JSON.stringify({ action: "delete", token: manageListingState.token })
         });
         const data = await res.json();
         if (!res.ok) {
