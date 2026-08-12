@@ -493,12 +493,14 @@
     <div id="listings-mode" class="hidden">
       <div class="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-6 text-sm text-amber-800">
         <span class="font-semibold">Sample listings for concept testing.</span>
-        These are illustrative, not real inventory — but every Green Score shown below is
-        real, computed live for that exact address the same way it is everywhere else in Verdex.
+        Most of what's below is illustrative, not real inventory — look for the
+        "Posted by a real user" badge to tell real listings apart. Every Green Score shown is
+        real either way, computed live for that exact address the same way it is everywhere
+        else in Verdex.
       </div>
 
-      <div class="mb-6 flex flex-col sm:flex-row gap-3">
-        <div class="flex-1">
+      <div class="mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+        <div class="flex-1 w-full">
           <label class="block text-sm text-gray-500 mb-2">City</label>
           <select id="listings-city-filter" onchange="applyListingsFilters()"
             class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
@@ -507,6 +509,10 @@
             <option value="bangalore">Bangalore</option>
           </select>
         </div>
+        <button onclick="openPostListingModal()"
+          class="w-full sm:w-auto bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium whitespace-nowrap">
+          Post your place
+        </button>
       </div>
       <div class="mb-6">
         <label class="block text-sm text-gray-500 mb-2">Tags</label>
@@ -571,6 +577,90 @@
           Share
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Post a Listing Modal — same chrome as the modals above. The
+       location field reuses the SAME address-search machinery as every
+       other search box in this app (handleAddressSearch/
+       showAddressSuggestions/addressSearchState, keyed by searchId
+       "post-listing") — see selectAddressSuggestion's own comment for
+       the one new branch that captures a pick here instead of driving a
+       score card or staging a compare side. -->
+  <div id="post-listing-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="font-semibold text-gray-800">Post your place</h3>
+        <button onclick="closePostListingModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+      </div>
+      <div id="post-listing-body" class="space-y-4 text-sm">
+        <div>
+          <label class="block text-gray-500 mb-1">Title</label>
+          <input id="post-listing-title" type="text" maxlength="120" placeholder="e.g. Room in a 2BHK near HSR Layout"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+        </div>
+        <div>
+          <label class="block text-gray-500 mb-1">Price (₹/month)</label>
+          <input id="post-listing-price" type="number" min="1" max="1000000" placeholder="e.g. 15000"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+        </div>
+        <div class="relative">
+          <label class="block text-gray-500 mb-1">Location</label>
+          <input id="address-search-input-post-listing" type="text" placeholder="Search any area, landmark or city"
+            oninput="handleAddressSearch('post-listing')" onkeydown="handleAddressKeydown(event, 'post-listing')"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+          <div id="address-search-spinner-post-listing" class="hidden absolute right-3 top-8">
+            <div style="width:14px;height:14px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+          </div>
+          <div id="address-suggestions-box-post-listing"
+            class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden max-h-48 overflow-y-auto"></div>
+          <div id="post-listing-location-confirm" class="text-xs text-gray-400 mt-1"></div>
+        </div>
+        <div>
+          <label class="block text-gray-500 mb-1">Background tags (comma-separated)</label>
+          <input id="post-listing-background-tags" type="text" placeholder="e.g. Works in tech, MBA grad"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+        </div>
+        <div>
+          <label class="block text-gray-500 mb-1">Lifestyle tags (comma-separated)</label>
+          <input id="post-listing-lifestyle-tags" type="text" placeholder="e.g. Non-smoker, Early riser"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+        </div>
+        <div>
+          <label class="block text-gray-500 mb-1">Contact method</label>
+          <select id="post-listing-contact-method"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white">
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+            <option value="whatsapp">WhatsApp</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-gray-500 mb-1">Contact value</label>
+          <input id="post-listing-contact-value" type="text" placeholder="e.g. you@example.com"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+        </div>
+        <!-- Never rendered with contact info in it beforehand — see
+             api/get-listing-contact.js's own comment for why this is the
+             one piece of a listing that's genuinely absent from the page
+             until someone explicitly asks for it. -->
+        <div id="post-listing-error" class="hidden text-red-600 text-xs"></div>
+        <button id="post-listing-submit-btn" onclick="submitListing()"
+          class="w-full bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 font-medium">
+          Post listing
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Listing Modal -->
+  <div id="report-listing-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="font-semibold text-gray-800">Report this listing</h3>
+        <button onclick="closeReportListingModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+      </div>
+      <div id="report-listing-body" class="text-sm text-gray-600"></div>
     </div>
   </div>
 
@@ -668,9 +758,10 @@
     // results land together — the same reason picking a neighbourhood from
     // Compare's existing <select> doesn't fetch anything by itself either.
     const addressSearchState = {
-      "single":     { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
-      "compare-a":  { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
-      "compare-b":  { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] }
+      "single":       { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
+      "compare-a":    { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
+      "compare-b":    { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
+      "post-listing": { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] }
     };
     // Which element's value biases each box's Nominatim query (see
     // handleAddressSearch). All three boxes now have their own picker —
@@ -1093,6 +1184,27 @@
       const box   = document.getElementById(`address-suggestions-box-${searchId}`);
       document.getElementById(`address-search-input-${searchId}`).value = s.displayName;
       box.classList.add('hidden');
+
+      // Post a Listing's location field — captures the pick into the
+      // form instead of driving a score card or staging a compare side.
+      // city comes from the same findNearestNeighbourhood lookup every
+      // other exact-coordinate flow already uses (locateMe, Follow mode,
+      // Find a Place's own listing scoring) — not re-derived differently
+      // here, so a posted listing's city is guaranteed to be one of the
+      // 9 known slugs api/submit-listing.js validates against.
+      if (searchId === 'post-listing') {
+        const nearest = findNearestNeighbourhood(s.lat, s.lon);
+        if (!nearest || nearest.distanceKm > LOCATE_ME_MAX_DISTANCE_KM) {
+          document.getElementById('post-listing-location-confirm').textContent =
+            'No closely-matched city found for this address — try a different search.';
+          postListingState.location = null;
+          return;
+        }
+        postListingState.location = { lat: s.lat, lon: s.lon, city: nearest.city, displayName: s.displayName };
+        document.getElementById('post-listing-location-confirm').textContent =
+          `✓ ${s.displayName} (${nearest.city.charAt(0).toUpperCase() + nearest.city.slice(1)})`;
+        return;
+      }
 
       if (searchId !== 'single') {
         stageCompareAddress(searchId, s);
@@ -4489,15 +4601,18 @@ let finalScore = computeFinalScore({
     async function loadListingsSection() {
       const statusEl = document.getElementById("listings-status");
       const gridEl   = document.getElementById("listings-grid");
-      statusEl.textContent = "Loading sample listings…";
+      statusEl.textContent = "Loading listings…";
 
-      const listings = await getListingsData();
+      // Fetched independently and in parallel — a Supabase read failure
+      // shouldn't take the seed listings down with it, or vice versa.
+      const [seedListings, realListings] = await Promise.all([getListingsData(), getRealListings()]);
+      const listings = [...realListings, ...seedListings];
       listingsState.listings = listings;
       statusEl.textContent = "";
 
       // Tag filter chips — built from whatever tags actually appear across
-      // the seed data, not a hardcoded list, so this never drifts out of
-      // sync with the listings themselves.
+      // ALL listings (real + seed), not a hardcoded list, so this never
+      // drifts out of sync with the data itself.
       const allTags = new Set();
       listings.forEach(l => { (l.backgroundTags || []).concat(l.lifestyleTags || []).forEach(t => allTags.add(t)); });
       document.getElementById("listings-tag-filter").innerHTML = [...allTags].sort().map(tag => `
@@ -4508,7 +4623,7 @@ let finalScore = computeFinalScore({
 
       // Render every card's static shell immediately (title/price/tags/
       // location — all local, no fetch needed), each with its own loading
-      // placeholder where the real score will land — then kick off the 8
+      // placeholder where the real score will land — then kick off the
       // real fetchExactAreaData calls in parallel rather than serially,
       // since they're independent reads with no shared rate limit the way
       // Nominatim address search has.
@@ -4517,9 +4632,65 @@ let finalScore = computeFinalScore({
       applyListingsFilters();
     }
 
+    // Direct client-side Supabase REST read on listings, same idiom
+    // loadSafetyRatings/loadAqiTrend already use for reads — writes are
+    // the only thing that go through a server function. Deliberately
+    // does NOT select from listing_contacts/join contact info in any
+    // way: that table has no anon SELECT policy at all (see
+    // supabase/listings.sql), so a request for it would simply come back
+    // empty/denied — contact info is genuinely never part of this read,
+    // not just omitted from the query by convention.
+    async function getRealListings() {
+      try {
+        const res = await fetch(SUPABASE_URL + "/rest/v1/listings?select=id,title,price,address_text,lat,lon,city,background_tags,lifestyle_tags&order=created_at.desc", {
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY }
+        });
+        if (!res.ok) throw new Error("Supabase request failed: " + res.status);
+        const rows = await res.json();
+        // Normalized into the exact same shape buildListingCardShell/
+        // loadListingScore already expect from seed listings — isReal/
+        // dbId are the only new fields, used for the badge and for the
+        // "I'm interested"/"Report" buttons (which seed listings don't get).
+        return rows.map(r => ({
+          id: "real-" + r.id,
+          dbId: r.id,
+          isReal: true,
+          title: r.title,
+          locationLabel: r.address_text,
+          city: r.city,
+          lat: r.lat,
+          lon: r.lon,
+          price: r.price,
+          backgroundTags: r.background_tags || [],
+          lifestyleTags: r.lifestyle_tags || []
+        }));
+      } catch (e) {
+        console.warn("Failed to load real listings.", e.message);
+        return [];
+      }
+    }
+
     function buildListingCardShell(listing) {
       const tagsHtml = (tags, cls) => tags.map(t =>
         `<span class="text-xs px-2 py-1 rounded-full ${cls}">${t}</span>`).join("");
+      const badge = listing.isReal
+        ? `<span class="text-[10px] font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Posted by a real user</span>`
+        : `<span class="text-[10px] font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Sample</span>`;
+      // "I'm interested"/"Report" only make sense for a real listing —
+      // there's no real contact behind a sample, and nothing real to report.
+      const actionsHtml = listing.isReal ? `
+          <div class="flex gap-2 mt-3">
+            <button onclick="revealListingContact(${listing.dbId}, this)"
+              class="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-xs font-medium">
+              I'm interested
+            </button>
+            <button onclick="openReportListingModal(${listing.dbId})"
+              class="text-xs text-gray-400 hover:text-red-600 px-2">
+              Report
+            </button>
+          </div>
+          <div id="listing-contact-${listing.dbId}" class="mt-2 text-xs"></div>`
+        : "";
       return `
         <div class="listing-card bg-white rounded-2xl p-5 border border-gray-100"
           data-city="${listing.city}"
@@ -4528,7 +4699,10 @@ let finalScore = computeFinalScore({
             <div class="font-semibold text-gray-800 min-w-0">${listing.title}</div>
             <div class="text-sm font-medium text-gray-700 shrink-0">₹${listing.price.toLocaleString("en-IN")}/mo</div>
           </div>
-          <div class="text-xs text-gray-400 mb-3">${listing.locationLabel}</div>
+          <div class="flex items-center gap-2 mb-3">
+            <div class="text-xs text-gray-400">${listing.locationLabel}</div>
+            ${badge}
+          </div>
           <div id="listing-score-${listing.id}" class="mb-3">
             <div class="text-xs text-gray-400">Loading real Green Score…</div>
           </div>
@@ -4536,6 +4710,7 @@ let finalScore = computeFinalScore({
             ${tagsHtml(listing.backgroundTags || [], "bg-blue-50 text-blue-700")}
             ${tagsHtml(listing.lifestyleTags || [], "bg-green-50 text-green-700")}
           </div>
+          ${actionsHtml}
         </div>`;
     }
 
@@ -4608,6 +4783,185 @@ let finalScore = computeFinalScore({
           [...listingsState.activeTags].every(t => cardTags.includes(t));
         card.classList.toggle("hidden", !(matchesCity && matchesTags));
       });
+    }
+
+    // --- POST A LISTING ---
+    //
+    // location is populated by selectAddressSuggestion's "post-listing"
+    // branch above — reusing the exact same address-search/geocoding
+    // chain every other search box in this app already uses, not a
+    // second implementation of it.
+    let postListingState = { location: null, submitting: false };
+
+    function openPostListingModal() {
+      postListingState = { location: null, submitting: false };
+      document.getElementById("post-listing-title").value = "";
+      document.getElementById("post-listing-price").value = "";
+      document.getElementById("address-search-input-post-listing").value = "";
+      document.getElementById("post-listing-location-confirm").textContent = "";
+      document.getElementById("post-listing-background-tags").value = "";
+      document.getElementById("post-listing-lifestyle-tags").value = "";
+      document.getElementById("post-listing-contact-method").value = "email";
+      document.getElementById("post-listing-contact-value").value = "";
+      const errorEl = document.getElementById("post-listing-error");
+      errorEl.classList.add("hidden");
+      errorEl.textContent = "";
+      document.getElementById("post-listing-modal").classList.remove("hidden");
+    }
+
+    function closePostListingModal() {
+      document.getElementById("post-listing-modal").classList.add("hidden");
+    }
+
+    // Splits a comma-separated input into clean tags client-side —
+    // mirrors (not duplicates) api/submit-listing.js's own cleanTags,
+    // which is the actual authority; this is just so an obviously-bad
+    // input (empty, one giant unsplit string) doesn't round-trip to the
+    // server before being rejected.
+    function parseTagsInput(value) {
+      return value.split(",").map(t => t.trim()).filter(t => t.length > 0 && t.length <= 40).slice(0, 6);
+    }
+
+    async function submitListing() {
+      const errorEl = document.getElementById("post-listing-error");
+      const submitBtn = document.getElementById("post-listing-submit-btn");
+      const showError = (msg) => { errorEl.textContent = msg; errorEl.classList.remove("hidden"); };
+      errorEl.classList.add("hidden");
+
+      const title = document.getElementById("post-listing-title").value.trim();
+      const price = parseInt(document.getElementById("post-listing-price").value, 10);
+      const backgroundTags = parseTagsInput(document.getElementById("post-listing-background-tags").value);
+      const lifestyleTags  = parseTagsInput(document.getElementById("post-listing-lifestyle-tags").value);
+      const contactMethod = document.getElementById("post-listing-contact-method").value;
+      const contactValue  = document.getElementById("post-listing-contact-value").value.trim();
+
+      if (!title) return showError("Please enter a title.");
+      if (!Number.isInteger(price) || price <= 0) return showError("Please enter a valid price.");
+      if (!postListingState.location) return showError("Please search for and select a location.");
+      if (backgroundTags.length === 0) return showError("Please enter at least one background tag.");
+      if (lifestyleTags.length === 0) return showError("Please enter at least one lifestyle tag.");
+      if (!contactValue) return showError("Please enter your contact details.");
+
+      if (postListingState.submitting) return;
+      postListingState.submitting = true;
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Posting…";
+
+      try {
+        const res = await fetch("/api/submit-listing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title, price,
+            address_text: postListingState.location.displayName,
+            lat: postListingState.location.lat, lon: postListingState.location.lon,
+            city: postListingState.location.city,
+            background_tags: backgroundTags, lifestyle_tags: lifestyleTags,
+            contact_method: contactMethod, contact_value: contactValue
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.error || "Could not post your listing — try again.");
+          return;
+        }
+        closePostListingModal();
+        // Full reload of the section rather than splicing one card in —
+        // small dataset, simplest correct way to also pick up the new
+        // listing in the tag-filter chip list.
+        await loadListingsSection();
+      } catch (err) {
+        showError("Could not post your listing — check your connection and try again.");
+        console.warn("submitListing failed.", err.message);
+      } finally {
+        postListingState.submitting = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Post listing";
+      }
+    }
+
+    // "I'm interested" — the contact value is NOT in the page until this
+    // fetch resolves (see getRealListings' own comment: it was never
+    // part of that read in the first place). Replaces the button with
+    // the revealed contact so a second click can't double-count against
+    // the reveal rate limit for no reason.
+    async function revealListingContact(dbId, buttonEl) {
+      const targetEl = document.getElementById(`listing-contact-${dbId}`);
+      buttonEl.disabled = true;
+      buttonEl.textContent = "Loading…";
+      try {
+        const res = await fetch(`/api/get-listing-contact?id=${dbId}`);
+        const data = await res.json();
+        if (!res.ok) {
+          targetEl.innerHTML = `<span class="text-red-500">${data.error || "Could not load contact info."}</span>`;
+          buttonEl.disabled = false;
+          buttonEl.textContent = "I'm interested";
+          return;
+        }
+        const methodLabel = { email: "Email", phone: "Phone", whatsapp: "WhatsApp" }[data.contact_method] || data.contact_method;
+        targetEl.innerHTML = `<span class="text-gray-600 font-medium">${methodLabel}: ${data.contact_value}</span>`;
+        buttonEl.remove();
+      } catch (err) {
+        targetEl.innerHTML = `<span class="text-red-500">Could not load contact info — try again.</span>`;
+        buttonEl.disabled = false;
+        buttonEl.textContent = "I'm interested";
+        console.warn("revealListingContact failed.", err.message);
+      }
+    }
+
+    // --- REPORT A LISTING ---
+    //
+    // No auto-moderation — this just logs the report (see
+    // api/report-listing.js) for direct review in the Supabase
+    // dashboard. reportListingState.listingId is set on open so the
+    // reason buttons below don't need to thread the id through their
+    // own onclick markup a second time.
+    let reportListingState = { listingId: null };
+
+    const REPORT_REASONS = [
+      { value: "fake_listing", label: "Fake listing" },
+      { value: "inappropriate", label: "Inappropriate content" },
+      { value: "spam", label: "Spam" },
+      { value: "other", label: "Other" }
+    ];
+
+    function openReportListingModal(dbId) {
+      reportListingState.listingId = dbId;
+      document.getElementById("report-listing-body").innerHTML = `
+        <div class="text-gray-500 mb-3">Why are you reporting this listing?</div>
+        <div class="space-y-2">
+          ${REPORT_REASONS.map(r => `
+            <button onclick="submitListingReport('${r.value}')"
+              class="w-full text-left px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700">
+              ${r.label}
+            </button>`).join("")}
+        </div>`;
+      document.getElementById("report-listing-modal").classList.remove("hidden");
+    }
+
+    function closeReportListingModal() {
+      document.getElementById("report-listing-modal").classList.add("hidden");
+    }
+
+    async function submitListingReport(reason) {
+      const bodyEl = document.getElementById("report-listing-body");
+      bodyEl.innerHTML = `<div class="text-center py-4 text-gray-400">Submitting…</div>`;
+      try {
+        const res = await fetch("/api/report-listing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ listing_id: reportListingState.listingId, reason })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          bodyEl.innerHTML = `<div class="text-center py-4 text-red-500">${data.error || "Could not submit report."}</div>`;
+          return;
+        }
+        bodyEl.innerHTML = `<div class="text-center py-4 text-gray-600">Thanks — this listing has been flagged for review.</div>`;
+      } catch (err) {
+        bodyEl.innerHTML = `<div class="text-center py-4 text-red-500">Could not submit report — try again.</div>`;
+        console.warn("submitListingReport failed.", err.message);
+      }
     }
 
     updateNeighbourhoods("browse-neighbourhood-select", "browse-city-select");
