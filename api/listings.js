@@ -14,6 +14,8 @@
 //   POST /api/listings  { action: "edit", token, ... }            — was edit-listing.js (POST)
 //   POST /api/listings  { action: "delete", token }               — was delete-listing.js
 //   POST /api/listings  { action: "report", listing_id, reason }  — was report-listing.js
+//   POST /api/listings  { action: "upload_image", token, image_base64 }
+//   POST /api/listings  { action: "delete_image", token, image_id }
 //   GET  /api/listings?action=edit&token=...                      — was edit-listing.js (GET)
 //   GET  /api/listings?action=contact&id=...                      — was get-listing-contact.js
 //
@@ -22,6 +24,12 @@
 // api/_lib/listing-auth.js). Both now use the shared versions instead —
 // same logic, computed once per request instead of duplicated in two
 // more places; not a behavior change.
+//
+// upload_image/delete_image (see supabase/listings-images.sql for the
+// listing_images table + storage bucket they depend on) are new — added
+// as actions in this same file rather than new files, since this file
+// only exists in its current merged form to stay under Vercel's Hobby
+// 12-function limit; a new upload-image.js would undo that.
 
 import { randomBytes } from "crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -36,6 +44,19 @@ const REPORT_CAP_PER_DAY = 5;
 const REPORT_CAP_WINDOW_HOURS = 24;
 const VALID_REPORT_REASONS = new Set(["fake_listing", "inappropriate", "spam", "other"]);
 
+const IMAGE_STORAGE_BUCKET = "listing-images";
+const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+const IMAGE_MAX_PER_LISTING = 4;
+const IMAGE_UPLOAD_CAP_PER_DAY = 20;
+const IMAGE_UPLOAD_CAP_WINDOW_HOURS = 24;
+// JPEG SOI marker — the client-side compressor (index.html's
+// compressImageToJpeg) always re-encodes to JPEG regardless of the
+// source format, so this is the one and only format the server needs to
+// accept. Checking the actual bytes, not any declared/claimed content
+// type, is what makes this a real content check rather than an
+// extension check.
+const JPEG_MAGIC = [0xff, 0xd8, 0xff];
+
 export default async function handler(req, res) {
   // Method + action validity checked FIRST, before the env-config check
   // below — same precedence every original file had (each checked
@@ -48,7 +69,7 @@ export default async function handler(req, res) {
     }
   } else if (req.method === "POST") {
     action = (req.body || {}).action;
-    if (!["submit", "edit", "delete", "report"].includes(action)) {
+    if (!["submit", "edit", "delete", "report", "upload_image", "delete_image"].includes(action)) {
       return res.status(400).json({ error: "Unknown or missing action" });
     }
   } else {
@@ -73,6 +94,8 @@ export default async function handler(req, res) {
   if (action === "delete") return handleDelete(req, res, supabase, ip_hash);
   if (action === "report") return handleReport(req, res, supabase, ip_hash);
   if (action === "contact") return handleContactGet(req, res, supabase, ip_hash);
+  if (action === "upload_image") return handleUploadImage(req, res, supabase, ip_hash);
+  if (action === "delete_image") return handleDeleteImage(req, res, supabase, ip_hash);
 }
 
 // --- submit (was submit-listing.js) ---
@@ -223,14 +246,38 @@ async function handleEditPost(req, res, supabase, ip_hash) {
 
 // --- delete (was delete-listing.js) ---
 //
-// listing_contacts and listing_reports both reference listings.id with
-// ON DELETE CASCADE (see supabase/listings.sql), so a single delete here
-// removes all three rows together.
+// listing_contacts, listing_reports, and listing_images all reference
+// listings.id with ON DELETE CASCADE (see supabase/listings.sql and
+// listings-images.sql), so the listings delete below removes all four
+// tables' rows together. That cascade only covers Postgres ROWS though —
+// it does nothing to the actual image bytes sitting in Storage, so those
+// have to be removed explicitly, and BEFORE the delete below (once the
+// listings row is gone, cascade has already deleted listing_images too,
+// and there'd be no way left to look up which storage paths belonged to
+// this listing).
 async function handleDelete(req, res, supabase, ip_hash) {
   const token = (req.body || {}).token;
   try {
     const { listing, error, status } = await verifyEditToken(supabase, token, ip_hash);
     if (error) return res.status(status).json({ error });
+
+    const { data: images, error: imagesFetchError } = await supabase.from("listing_images")
+      .select("storage_path")
+      .eq("listing_id", listing.id);
+    if (imagesFetchError) {
+      console.error("Fetching listing images before delete failed:", imagesFetchError);
+      return res.status(500).json({ error: "Could not delete your listing — try again." });
+    }
+    if (images && images.length > 0) {
+      const { error: removeError } = await supabase.storage
+        .from(IMAGE_STORAGE_BUCKET)
+        .remove(images.map(img => img.storage_path));
+      // Non-fatal: an orphaned Storage object is a cleanup annoyance, not
+      // a correctness or security issue, and failing the whole delete
+      // over it would leave the listing (with its now-broken images)
+      // stuck. Logged so it can be cleaned up manually if it ever happens.
+      if (removeError) console.error("Removing listing images from storage failed (non-fatal):", removeError);
+    }
 
     const { error: deleteError } = await supabase.from("listings").delete().eq("id", listing.id);
     if (deleteError) {
@@ -344,6 +391,155 @@ async function handleReport(req, res, supabase, ip_hash) {
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error("listings report threw:", err);
+    return res.status(500).json({ error: "Unexpected server error" });
+  }
+}
+
+// --- upload image ---
+//
+// Token-gated the same way edit/delete are — proof of listing ownership,
+// not just a guessable listing_id, is what authorizes adding a photo to
+// a listing. Bytes arrive base64-encoded in the JSON body (not
+// multipart) since the client always compresses to well under Vercel's
+// 4.5MB request-body ceiling before sending (see index.html's
+// compressImageToJpeg) — base64 fits the same single-file JSON-action
+// pattern every other route here already uses, no new body parsing.
+//
+// Three independent checks before anything is written, in order:
+// decoded size (2MB hard backstop — real content, not the client's
+// claim, since the client already compresses far below this), magic
+// bytes (confirms it's actually a JPEG, not just labeled as one), then
+// the two count-then-compare caps (4 images/listing, 20 uploads/IP/day)
+// every other rate limit in this file uses the same pattern for.
+async function handleUploadImage(req, res, supabase, ip_hash) {
+  const { token, image_base64 } = req.body || {};
+  try {
+    const { listing, error, status } = await verifyEditToken(supabase, token, ip_hash);
+    if (error) return res.status(status).json({ error });
+
+    if (typeof image_base64 !== "string" || image_base64.length === 0) {
+      return res.status(400).json({ error: "No image data provided" });
+    }
+
+    let buffer;
+    try {
+      buffer = Buffer.from(image_base64, "base64");
+    } catch (e) {
+      return res.status(400).json({ error: "Invalid image data" });
+    }
+    if (buffer.length === 0) {
+      return res.status(400).json({ error: "No image data provided" });
+    }
+    if (buffer.length > IMAGE_MAX_BYTES) {
+      return res.status(400).json({ error: "Image is too large (max 2MB)." });
+    }
+    const isJpeg = JPEG_MAGIC.every((byte, i) => buffer[i] === byte);
+    if (!isJpeg) {
+      return res.status(400).json({ error: "File does not appear to be a valid JPEG image." });
+    }
+
+    const { count: perListingCount, error: perListingError } = await supabase.from("listing_images")
+      .select("id", { count: "exact", head: true })
+      .eq("listing_id", listing.id);
+    if (perListingError) {
+      console.error("Per-listing image count check failed:", perListingError);
+      return res.status(500).json({ error: "Could not upload image — try again." });
+    }
+    if (perListingCount >= IMAGE_MAX_PER_LISTING) {
+      return res.status(400).json({ error: "This listing already has the maximum of 4 images." });
+    }
+
+    const capSince = new Date(Date.now() - IMAGE_UPLOAD_CAP_WINDOW_HOURS * 3600 * 1000).toISOString();
+    const { count: dailyCount, error: dailyCapError } = await supabase.from("listing_images")
+      .select("id", { count: "exact", head: true })
+      .eq("ip_hash", ip_hash)
+      .gte("created_at", capSince);
+    if (dailyCapError) {
+      console.error("Daily image-upload rate-limit check failed:", dailyCapError);
+      return res.status(500).json({ error: "Could not upload image — try again." });
+    }
+    if (dailyCount >= IMAGE_UPLOAD_CAP_PER_DAY) {
+      return res.status(429).json({ error: "Too many images uploaded today — try again tomorrow." });
+    }
+
+    const storagePath = `${listing.id}/${randomBytes(16).toString("hex")}.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from(IMAGE_STORAGE_BUCKET)
+      .upload(storagePath, buffer, { contentType: "image/jpeg" });
+    if (uploadError) {
+      console.error("Image storage upload failed:", uploadError);
+      return res.status(500).json({ error: "Could not upload image — try again." });
+    }
+
+    const { data: inserted, error: insertError } = await supabase.from("listing_images").insert({
+      listing_id: listing.id, storage_path: storagePath, ip_hash
+    }).select("id").single();
+    if (insertError || !inserted) {
+      // Row failed after the object landed in Storage — clean up rather
+      // than leave a storage object no DB row ever points to.
+      console.error("Image row insert failed, rolling back storage upload:", insertError);
+      await supabase.storage.from(IMAGE_STORAGE_BUCKET).remove([storagePath]);
+      return res.status(500).json({ error: "Could not upload image — try again." });
+    }
+
+    return res.status(200).json({ ok: true, id: inserted.id, storage_path: storagePath });
+  } catch (err) {
+    console.error("listings upload_image threw:", err);
+    return res.status(500).json({ error: "Unexpected server error" });
+  }
+}
+
+// --- delete image ---
+//
+// Also token-gated. Confirms the image row actually belongs to the
+// token's own listing (not just any image id) before touching anything
+// — otherwise the token would let its holder delete images off any
+// listing, not just their own.
+async function handleDeleteImage(req, res, supabase, ip_hash) {
+  const { token, image_id } = req.body || {};
+  const imageId = parseInt(image_id, 10);
+  try {
+    const { listing, error, status } = await verifyEditToken(supabase, token, ip_hash);
+    if (error) return res.status(status).json({ error });
+
+    if (!Number.isInteger(imageId) || imageId <= 0) {
+      return res.status(400).json({ error: "Invalid image id" });
+    }
+
+    const { data: image, error: fetchError } = await supabase.from("listing_images")
+      .select("id, storage_path, listing_id")
+      .eq("id", imageId)
+      .maybeSingle();
+    if (fetchError) {
+      console.error("Image lookup failed:", fetchError);
+      return res.status(500).json({ error: "Could not delete image — try again." });
+    }
+    if (!image || image.listing_id !== listing.id) {
+      return res.status(404).json({ error: "Image not found" });
+    }
+
+    // Storage removed first, DB row second — if the row delete below
+    // fails, the same request retried finds no storage object left
+    // (remove() on an already-gone path is a no-op) and just cleans up
+    // the row on the next attempt. The reverse order would risk a row
+    // still pointing at bytes that are already gone.
+    const { error: removeError } = await supabase.storage
+      .from(IMAGE_STORAGE_BUCKET)
+      .remove([image.storage_path]);
+    if (removeError) {
+      console.error("Image storage removal failed:", removeError);
+      return res.status(500).json({ error: "Could not delete image — try again." });
+    }
+
+    const { error: deleteError } = await supabase.from("listing_images").delete().eq("id", imageId);
+    if (deleteError) {
+      console.error("Image row delete failed:", deleteError);
+      return res.status(500).json({ error: "Could not delete image — try again." });
+    }
+
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error("listings delete_image threw:", err);
     return res.status(500).json({ error: "Unexpected server error" });
   }
 }
