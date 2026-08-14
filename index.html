@@ -609,6 +609,22 @@
     </div>
   </div>
 
+  <!-- Admin Mode — shown INSTEAD of the normal dashboard, same pattern as
+       Manage Listing Mode, whenever a ?admin=1 URL parameter is present
+       on load (not linked from anywhere in normal navigation — see
+       checkForAdminView()). This URL param is discoverability-only, not
+       a security boundary: the real gate is entirely server-side
+       (ADMIN_SECRET + rate limit + timing-safe compare in
+       api/_lib/listing-auth.js's verifyAdminSecret). The listings shown
+       here are the same public, anon-readable data getRealListings()
+       already fetches everywhere else — nothing privileged is being
+       displayed, only a privileged delete action is being offered. -->
+  <div id="admin-mode" class="hidden max-w-2xl mx-auto mt-12 px-6 pb-16">
+    <h1 class="text-2xl font-bold text-green-700 mb-6">Admin — manage listings</h1>
+    <div id="admin-status" class="text-sm text-gray-400 text-center py-8">Loading…</div>
+    <div id="admin-listings" class="hidden space-y-3"></div>
+  </div>
+
   <!-- Info Modal -->
   <div id="info-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
@@ -5561,7 +5577,107 @@ let finalScore = computeFinalScore({
       }
     }
 
+    // --- ADMIN (delete-only, ?admin=1, not linked anywhere in normal
+    // navigation) ---
+    //
+    // The URL param is discoverability-only, not a security boundary —
+    // the real gate is entirely server-side (ADMIN_SECRET + rate limit +
+    // timing-safe compare, see api/_lib/listing-auth.js's
+    // verifyAdminSecret). sessionStorage here is just a convenience
+    // cache of the raw secret for the rest of this tab's session — nothing
+    // reads or trusts it directly; it's only ever sent as the
+    // admin_secret field on an actual delete request, which is the one
+    // and only place it's ever really checked. A wrong secret (401)
+    // clears it and re-prompts, so there's no separate "verify" step
+    // that would give an attacker a cheaper way to probe it than a real,
+    // rate-limited delete attempt.
+    const ADMIN_SECRET_STORAGE_KEY = "verdexAdminSecret";
+
+    async function initAdminView() {
+      if (!sessionStorage.getItem(ADMIN_SECRET_STORAGE_KEY)) {
+        const secret = prompt("Enter admin secret:");
+        if (!secret) {
+          document.getElementById("admin-status").textContent = "Admin secret required.";
+          return;
+        }
+        sessionStorage.setItem(ADMIN_SECRET_STORAGE_KEY, secret);
+      }
+      await loadAdminListings();
+    }
+
+    // Reuses getRealListings() as-is — that data is already public,
+    // anon-readable everywhere else in the app (Find a Place), so
+    // viewing it here needs no privilege at all. Only the Delete button
+    // below is privileged.
+    async function loadAdminListings() {
+      const statusEl = document.getElementById("admin-status");
+      const listEl = document.getElementById("admin-listings");
+      statusEl.textContent = "Loading…";
+      statusEl.classList.remove("hidden");
+      listEl.classList.add("hidden");
+
+      const listings = await getRealListings();
+
+      statusEl.classList.add("hidden");
+      listEl.classList.remove("hidden");
+      listEl.innerHTML = listings.length === 0
+        ? `<div class="text-sm text-gray-400 text-center py-8">No real listings.</div>`
+        : listings.map(l => `
+            <div id="admin-listing-${l.dbId}" class="flex items-center justify-between gap-3 bg-white rounded-xl border border-gray-100 p-4">
+              <div class="min-w-0">
+                <div class="font-medium text-gray-800 truncate">${l.title}</div>
+                <div class="text-xs text-gray-400">₹${l.price.toLocaleString("en-IN")}/mo · ${l.locationLabel} · id ${l.dbId}</div>
+              </div>
+              <button onclick="adminDeleteListing(${l.dbId})"
+                class="shrink-0 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-medium">
+                Delete
+              </button>
+            </div>`).join("");
+    }
+
+    async function adminDeleteListing(dbId) {
+      if (!confirm("Delete this listing? This cannot be undone.")) return;
+      const rowEl = document.getElementById(`admin-listing-${dbId}`);
+      const secret = sessionStorage.getItem(ADMIN_SECRET_STORAGE_KEY);
+      try {
+        const res = await fetch("/api/listings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete", listing_id: dbId, admin_secret: secret })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (res.status === 401) {
+            sessionStorage.removeItem(ADMIN_SECRET_STORAGE_KEY);
+            alert("Incorrect admin secret — you'll be asked again.");
+            await initAdminView();
+            return;
+          }
+          alert(data.error || "Could not delete listing.");
+          return;
+        }
+        if (rowEl) rowEl.remove();
+      } catch (err) {
+        alert("Could not delete listing — check your connection and try again.");
+        console.warn("adminDeleteListing failed.", err.message);
+      }
+    }
+
+    // checkForEditLink runs first (see the bottom of this file) — if a
+    // URL somehow carried both ?edit= and ?admin=1, checking whether it
+    // already unhid manage-listing-mode here (rather than re-parsing the
+    // URL a second time) keeps the two exclusive views from both ending
+    // up visible at once.
+    function checkForAdminView() {
+      if (!document.getElementById("manage-listing-mode").classList.contains("hidden")) return;
+      if (new URLSearchParams(window.location.search).get("admin") !== "1") return;
+      document.getElementById("app-dashboard").classList.add("hidden");
+      document.getElementById("admin-mode").classList.remove("hidden");
+      initAdminView();
+    }
+
     checkForEditLink();
+    checkForAdminView();
     updateNeighbourhoods("browse-neighbourhood-select", "browse-city-select");
     updateNeighbourhoods("browse-neighbourhood-a", "browse-city-a");
     updateNeighbourhoods("browse-neighbourhood-b", "browse-city-b");

@@ -16,10 +16,13 @@
 // comparison of the raw token, so there's no partial-match signal for a
 // timing attack to exploit in the first place.
 
-import { createHash } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 
 const VERIFY_CAP_PER_DAY = 20;
 const VERIFY_CAP_WINDOW_HOURS = 24;
+
+const ADMIN_VERIFY_CAP_PER_DAY = 10;
+const ADMIN_VERIFY_CAP_WINDOW_HOURS = 24;
 
 export function hashToken(token) {
   return createHash("sha256").update(token).digest("hex");
@@ -80,6 +83,79 @@ export async function verifyEditToken(supabase, token, ip_hash) {
   }
   if (!listing) {
     return { error: "Invalid or expired link", status: 400 };
+  }
+
+  return { listing };
+}
+
+// Admin-delete's own verification — deliberately separate from
+// verifyEditToken above, not a variant of it, because the two have
+// different threat models. verifyEditToken looks up a listing by the
+// HASH of a 256-bit random token via an indexed DB equality match —
+// there's no raw-secret comparison happening in this process at all, so
+// there's nothing for a timing attack to measure. ADMIN_SECRET is the
+// opposite: one static, operator-chosen value that this function
+// compares directly against whatever the caller sent, so a naive `===`
+// (or even a naive Buffer.compare) would leak timing information an
+// attacker could use to recover it byte-by-byte. Hashing both sides
+// first (fixed 32-byte length either way) and comparing with
+// timingSafeEqual is what actually closes that off.
+//
+// Same anti-brute-force ordering as verifyEditToken: rate-limit check,
+// then log the attempt UNCONDITIONALLY, then compare — a guess is
+// charged against the cap whether it's right or wrong. Deliberately no
+// separate "just verify the secret" endpoint exists anywhere in this
+// app; the only way to spend an attempt is via a real delete request
+// naming a real listing_id, via handleDelete below.
+export async function verifyAdminSecret(supabase, providedSecret, listingId, ip_hash) {
+  const ADMIN_SECRET = process.env.ADMIN_SECRET;
+  if (!ADMIN_SECRET) {
+    console.error("ADMIN_SECRET env var is not set.");
+    return { error: "Admin access not configured", status: 500 };
+  }
+  if (typeof providedSecret !== "string" || providedSecret.length === 0) {
+    return { error: "Invalid admin secret", status: 400 };
+  }
+
+  const capSince = new Date(Date.now() - ADMIN_VERIFY_CAP_WINDOW_HOURS * 3600 * 1000).toISOString();
+  const { count, error: capError } = await supabase.from("admin_verify_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("ip_hash", ip_hash)
+    .gte("created_at", capSince);
+
+  if (capError) {
+    console.error("Admin-secret rate-limit check failed:", capError);
+    return { error: "Invalid admin secret", status: 400 };
+  }
+  if (count >= ADMIN_VERIFY_CAP_PER_DAY) {
+    return { error: "Too many attempts today — try again tomorrow.", status: 429 };
+  }
+
+  const { error: logError } = await supabase.from("admin_verify_attempts").insert({ ip_hash });
+  if (logError) console.error("Failed to log admin-secret verify attempt (non-fatal):", logError);
+
+  const providedHash = createHash("sha256").update(providedSecret).digest();
+  const realHash = createHash("sha256").update(ADMIN_SECRET).digest();
+  if (!timingSafeEqual(providedHash, realHash)) {
+    return { error: "Invalid admin secret", status: 401 };
+  }
+
+  const listingIdNum = parseInt(listingId, 10);
+  if (!Number.isInteger(listingIdNum) || listingIdNum <= 0) {
+    return { error: "Invalid listing id", status: 400 };
+  }
+
+  const { data: listing, error: lookupError } = await supabase.from("listings")
+    .select("*")
+    .eq("id", listingIdNum)
+    .maybeSingle();
+
+  if (lookupError) {
+    console.error("Admin listing lookup failed:", lookupError);
+    return { error: "Could not look up listing", status: 500 };
+  }
+  if (!listing) {
+    return { error: "Listing not found", status: 404 };
   }
 
   return { listing };
