@@ -13,6 +13,7 @@
 //   POST /api/listings  { action: "submit", ... }                — was submit-listing.js
 //   POST /api/listings  { action: "edit", token, ... }            — was edit-listing.js (POST)
 //   POST /api/listings  { action: "delete", token }               — was delete-listing.js
+//   POST /api/listings  { action: "delete", listing_id, admin_secret } — admin path, same handler
 //   POST /api/listings  { action: "report", listing_id, reason }  — was report-listing.js
 //   POST /api/listings  { action: "upload_image", token, image_base64 }
 //   POST /api/listings  { action: "delete_image", token, image_id }
@@ -34,7 +35,7 @@
 import { randomBytes } from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { validateListingFields } from "./_lib/listing-validation.js";
-import { hashIp, hashToken, getClientIp, verifyEditToken } from "./_lib/listing-auth.js";
+import { hashIp, hashToken, getClientIp, verifyEditToken, verifyAdminSecret } from "./_lib/listing-auth.js";
 
 const SUBMIT_GLOBAL_CAP_PER_DAY = 3;
 const SUBMIT_GLOBAL_CAP_WINDOW_HOURS = 24;
@@ -246,6 +247,11 @@ async function handleEditPost(req, res, supabase, ip_hash) {
 
 // --- delete (was delete-listing.js) ---
 //
+// Also reachable via the admin view (?admin=1, see index.html) using
+// ADMIN_SECRET + listing_id instead of the listing's own edit token —
+// see the admin_secret branch above. Same function either way, so admin
+// deletes get the exact same Storage cleanup as a normal delete.
+//
 // listing_contacts, listing_reports, and listing_images all reference
 // listings.id with ON DELETE CASCADE (see supabase/listings.sql and
 // listings-images.sql), so the listings delete below removes all four
@@ -256,9 +262,17 @@ async function handleEditPost(req, res, supabase, ip_hash) {
 // and there'd be no way left to look up which storage paths belonged to
 // this listing).
 async function handleDelete(req, res, supabase, ip_hash) {
-  const token = (req.body || {}).token;
+  const { token, listing_id, admin_secret } = req.body || {};
   try {
-    const { listing, error, status } = await verifyEditToken(supabase, token, ip_hash);
+    // Two ways to reach this: the listing's own edit token (normal path),
+    // or ADMIN_SECRET + a listing_id (admin view, see
+    // api/_lib/listing-auth.js's own comment on why this is a separate
+    // function from verifyEditToken, not a variant of it). Whichever
+    // resolves `listing`, everything below — Storage cleanup, then the
+    // row delete — runs exactly once, unchanged either way.
+    const { listing, error, status } = (typeof admin_secret === "string" && admin_secret.length > 0)
+      ? await verifyAdminSecret(supabase, admin_secret, listing_id, ip_hash)
+      : await verifyEditToken(supabase, token, ip_hash);
     if (error) return res.status(status).json({ error });
 
     const { data: images, error: imagesFetchError } = await supabase.from("listing_images")
