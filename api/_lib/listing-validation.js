@@ -29,6 +29,14 @@ export const HOUSEHOLD_FIELDS = [
   { key: "furnishing", options: new Set(["furnished", "semi_furnished", "unfurnished", "not_specified"]) },
   { key: "parking", options: new Set(["two_wheeler", "four_wheeler", "both", "none", "not_specified"]) }
 ];
+
+// Filled listings are never deleted, just marked — see
+// supabase/listings-status.sql and index.html's toggleManageListingStatus.
+// Same "invalid/missing falls back to the safe default" treatment as
+// household fields, not a hard rejection — a plain "Save changes" that
+// doesn't touch status should never be able to corrupt it.
+export const STATUS_OPTIONS = new Set(["active", "filled"]);
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Loosely permissive — real-world phone/WhatsApp numbers vary a lot in
 // formatting (spaces, dashes, +country code). This just rejects obvious
@@ -67,7 +75,7 @@ export function validateListingFields(body) {
   const {
     title, price, address_text, lat, lon, city,
     background_tags, lifestyle_tags, contact_method, contact_value,
-    maid_available, cook_available, kitchen_type, furnishing, parking
+    maid_available, cook_available, kitchen_type, furnishing, parking, status
   } = body || {};
 
   if (typeof title !== "string" || title.trim().length === 0 || title.length > TITLE_MAX_LEN) {
@@ -116,12 +124,15 @@ export function validateListingFields(body) {
     cleanHousehold[field.key] = field.options.has(provided) ? provided : "not_specified";
   }
 
+  const cleanStatus = STATUS_OPTIONS.has(status) ? status : "active";
+
   return {
     value: {
       title: title.trim(), price, address_text: address_text.trim(), lat, lon, city,
       background_tags: cleanBackgroundTags, lifestyle_tags: cleanLifestyleTags,
       contact_method, contact_value: trimmedContact,
-      ...cleanHousehold
+      ...cleanHousehold,
+      status: cleanStatus
     }
   };
 }

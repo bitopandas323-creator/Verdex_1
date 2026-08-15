@@ -609,6 +609,10 @@
         Save changes
       </button>
 
+      <!-- Rendered by renderManageListingStatusToggle — label and
+           action flip based on manageListingState.status. -->
+      <div id="manage-listing-status-toggle" class="pt-2"></div>
+
       <div class="pt-4 mt-4 border-t border-gray-100">
         <div id="manage-listing-delete-area">
           <button onclick="confirmDeleteManagedListing()" class="w-full text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-lg font-medium text-sm">
@@ -4770,6 +4774,20 @@ let finalScore = computeFinalScore({
       return listingsData;
     }
 
+    // Seed listings have no created_at in their JSON at all (they're not
+    // real, timestamped rows) — buildListingCardShell only calls this
+    // when listing.createdAt is present, so there's no "Posted NaN ago"
+    // to guard against here.
+    function formatRelativeTime(isoString) {
+      const minutes = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
+      if (minutes < 1) return "Posted just now";
+      if (minutes < 60) return `Posted ${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `Posted ${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      return `Posted ${days}d ago`;
+    }
+
     async function loadListingsSection() {
       const statusEl = document.getElementById("listings-status");
       const gridEl   = document.getElementById("listings-grid");
@@ -4779,6 +4797,13 @@ let finalScore = computeFinalScore({
       // shouldn't take the seed listings down with it, or vice versa.
       const [seedListings, realListings] = await Promise.all([getListingsData(), getRealListings()]);
       const listings = [...realListings, ...seedListings];
+      // Array.prototype.sort is spec-guaranteed stable (ES2019+), so this
+      // only moves filled listings below active ones — it doesn't disturb
+      // the newest-first order already established above within each
+      // group. Seed listings have no status field at all, so they read as
+      // "active" via the fallback and can never be filled (they're not
+      // real, editable listings).
+      listings.sort((a, b) => (a.status === "filled" ? 1 : 0) - (b.status === "filled" ? 1 : 0));
       listingsState.listings = listings;
       statusEl.textContent = "";
 
@@ -4820,7 +4845,7 @@ let finalScore = computeFinalScore({
         // fields, same anon-open read as everything else here.
         // listing_images.order scopes the ordering to the embedded
         // resource, not the outer listings query.
-        const res = await fetch(SUPABASE_URL + "/rest/v1/listings?select=id,title,price,address_text,lat,lon,city,background_tags,lifestyle_tags,maid_available,cook_available,kitchen_type,furnishing,parking,listing_images(id,storage_path)&listing_images.order=id.asc&order=created_at.desc", {
+        const res = await fetch(SUPABASE_URL + "/rest/v1/listings?select=id,title,price,address_text,lat,lon,city,background_tags,lifestyle_tags,maid_available,cook_available,kitchen_type,furnishing,parking,status,created_at,listing_images(id,storage_path)&listing_images.order=id.asc&order=created_at.desc", {
           headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY }
         });
         if (!res.ok) throw new Error("Supabase request failed: " + res.status);
@@ -4844,6 +4869,7 @@ let finalScore = computeFinalScore({
           lifestyleTags: r.lifestyle_tags || [],
           maid_available: r.maid_available, cook_available: r.cook_available,
           kitchen_type: r.kitchen_type, furnishing: r.furnishing, parking: r.parking,
+          status: r.status, createdAt: r.created_at,
           images: (r.listing_images || []).map(img => img.storage_path)
         }));
       } catch (e) {
@@ -4853,19 +4879,31 @@ let finalScore = computeFinalScore({
     }
 
     function buildListingCardShell(listing) {
+      // Filled listings are never deleted, just marked (see
+      // toggleManageListingStatus) — they stay fully visible with their
+      // score/thumbnail/tap-to-expand intact, only dimmed with a badge
+      // and their "I'm interested" button hidden. "Report" stays
+      // available regardless — reporting isn't about availability.
+      const isFilled = listing.status === "filled";
       const tagsHtml = (tags, cls) => tags.map(t =>
         `<span class="text-xs px-2 py-1 rounded-full ${cls}">${t}</span>`).join("");
       const badge = listing.isReal
         ? `<span class="text-[10px] font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Posted by a real user</span>`
         : `<span class="text-[10px] font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Sample</span>`;
+      const filledBadge = isFilled
+        ? `<span class="text-[10px] font-semibold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Filled</span>`
+        : "";
       // "I'm interested"/"Report" only make sense for a real listing —
-      // there's no real contact behind a sample, and nothing real to report.
+      // there's no real contact behind a sample, and nothing real to
+      // report. "I'm interested" is additionally hidden once filled;
+      // Report is not.
       const actionsHtml = listing.isReal ? `
           <div class="flex gap-2 mt-3">
-            <button onclick="revealListingContact(${listing.dbId}, this)"
-              class="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-xs font-medium">
-              I'm interested
-            </button>
+            ${!isFilled ? `
+              <button onclick="revealListingContact(${listing.dbId}, this)"
+                class="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-xs font-medium">
+                I'm interested
+              </button>` : ""}
             <button onclick="openReportListingModal(${listing.dbId})"
               class="text-xs text-gray-400 hover:text-red-600 px-2">
               Report
@@ -4896,7 +4934,7 @@ let finalScore = computeFinalScore({
       const householdDataAttrs = HOUSEHOLD_FIELDS
         .map(f => `data-${f.key}="${listing[f.key] || "not_specified"}"`).join(" ");
       return `
-        <div class="listing-card bg-white rounded-2xl p-5 border border-gray-100"
+        <div class="listing-card bg-white rounded-2xl p-5 border border-gray-100 ${isFilled ? "opacity-60" : ""}"
           data-city="${listing.city}"
           data-tags="${[...(listing.backgroundTags || []), ...(listing.lifestyleTags || [])].join("|")}"
           ${householdDataAttrs}>
@@ -4905,10 +4943,12 @@ let finalScore = computeFinalScore({
             <div class="font-semibold text-gray-800 min-w-0">${listing.title}</div>
             <div class="text-sm font-medium text-gray-700 shrink-0">₹${listing.price.toLocaleString("en-IN")}/mo</div>
           </div>
-          <div class="flex items-center gap-2 mb-3">
+          <div class="flex items-center gap-2 flex-wrap mb-1">
             <div class="text-xs text-gray-400">${listing.locationLabel}</div>
             ${badge}
+            ${filledBadge}
           </div>
+          ${listing.createdAt ? `<div class="text-[11px] text-gray-400 mb-2">${formatRelativeTime(listing.createdAt)}</div>` : `<div class="mb-2"></div>`}
           ${buildHouseholdFactsHtml(listing)}
           <div id="listing-score-${listing.id}" class="mb-3 mt-3">
             <div class="text-xs text-gray-400">Loading real Green Score…</div>
@@ -5530,7 +5570,7 @@ let finalScore = computeFinalScore({
     // token/listingId are set once, by checkForEditLink/loadManageListing,
     // and read by every action below — none of them re-parse the URL
     // themselves, so there's exactly one place that ever does.
-    let manageListingState = { token: null, listingId: null, location: null, images: [], household: defaultHouseholdState() };
+    let manageListingState = { token: null, listingId: null, location: null, images: [], household: defaultHouseholdState(), status: "active" };
 
     // Called once, at the very top of this script's synchronous startup
     // (see the bottom of this file) — deliberately BEFORE applyNav() ever
@@ -5579,6 +5619,9 @@ let finalScore = computeFinalScore({
         HOUSEHOLD_FIELDS.forEach(f => {
           selectHouseholdOption("manage-listing", f.key, data[f.key] || "not_specified");
         });
+
+        manageListingState.status = data.status || "active";
+        renderManageListingStatusToggle();
 
         statusEl.classList.add("hidden");
         bodyEl.classList.remove("hidden");
@@ -5701,7 +5744,8 @@ let finalScore = computeFinalScore({
             city: manageListingState.location.city,
             background_tags: backgroundTags, lifestyle_tags: lifestyleTags,
             contact_method: contactMethod, contact_value: contactValue,
-            ...manageListingState.household
+            ...manageListingState.household,
+            status: manageListingState.status
           })
         });
         const data = await res.json();
@@ -5717,6 +5761,34 @@ let finalScore = computeFinalScore({
       } finally {
         saveBtn.disabled = false;
       }
+    }
+
+    function renderManageListingStatusToggle() {
+      const isFilled = manageListingState.status === "filled";
+      document.getElementById("manage-listing-status-toggle").innerHTML = `
+        <button id="manage-listing-status-btn" onclick="toggleManageListingStatus()"
+          class="w-full px-4 py-2.5 rounded-lg font-medium text-sm border ${isFilled
+            ? "border-gray-200 text-gray-600 bg-white hover:bg-gray-50"
+            : "border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100"}">
+          ${isFilled ? "Mark as active again" : "Mark as filled"}
+        </button>`;
+    }
+
+    // Flips status, then reuses saveManageListingEdit exactly as-is —
+    // same token verification, same validation, same "edit" action, just
+    // one more field in the payload it already builds from every current
+    // form value (see its own ...manageListingState.household/status
+    // spread). Re-fetching the whole listing afterward, rather than
+    // trusting the save call's own success/failure locally, means a
+    // failed save automatically shows the OLD status again (the server
+    // never changed it) and a successful one confirms the new one —
+    // no separate success/failure bookkeeping needed here.
+    async function toggleManageListingStatus() {
+      const btn = document.getElementById("manage-listing-status-btn");
+      btn.disabled = true;
+      manageListingState.status = manageListingState.status === "filled" ? "active" : "filled";
+      await saveManageListingEdit();
+      await loadManageListing(manageListingState.token);
     }
 
     function confirmDeleteManagedListing() {
