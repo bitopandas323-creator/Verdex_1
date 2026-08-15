@@ -15,6 +15,20 @@ const NEIGHBOURHOODS = JSON.parse(
 export const KNOWN_CITIES = new Set(NEIGHBOURHOODS.map(n => n.city));
 
 export const CONTACT_METHODS = new Set(["email", "phone", "whatsapp"]);
+
+// Household logistics facts (see supabase/listings-household-fields.sql)
+// — unlike contact_method, these are OPTIONAL: a missing or unrecognized
+// value is silently normalized to "not_specified" rather than rejected,
+// since a poster genuinely might not want to say. Exported so
+// index.html's button-group UI can build its own options from the same
+// source rather than a second hardcoded list drifting out of sync.
+export const HOUSEHOLD_FIELDS = [
+  { key: "maid_available", options: new Set(["yes", "no", "not_specified"]) },
+  { key: "cook_available", options: new Set(["yes", "no", "not_specified"]) },
+  { key: "kitchen_type", options: new Set(["veg_only", "mixed", "not_specified"]) },
+  { key: "furnishing", options: new Set(["furnished", "semi_furnished", "unfurnished", "not_specified"]) },
+  { key: "parking", options: new Set(["two_wheeler", "four_wheeler", "both", "none", "not_specified"]) }
+];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Loosely permissive — real-world phone/WhatsApp numbers vary a lot in
 // formatting (spaces, dashes, +country code). This just rejects obvious
@@ -52,7 +66,8 @@ function cleanTags(tags) {
 export function validateListingFields(body) {
   const {
     title, price, address_text, lat, lon, city,
-    background_tags, lifestyle_tags, contact_method, contact_value
+    background_tags, lifestyle_tags, contact_method, contact_value,
+    maid_available, cook_available, kitchen_type, furnishing, parking
   } = body || {};
 
   if (typeof title !== "string" || title.trim().length === 0 || title.length > TITLE_MAX_LEN) {
@@ -91,11 +106,22 @@ export function validateListingFields(body) {
     return { error: "Invalid phone number" };
   }
 
+  // Optional facts — an absent or unrecognized value just falls back to
+  // "not_specified" rather than failing the whole submission, unlike
+  // every required field validated above.
+  const providedHouseholdValues = { maid_available, cook_available, kitchen_type, furnishing, parking };
+  const cleanHousehold = {};
+  for (const field of HOUSEHOLD_FIELDS) {
+    const provided = providedHouseholdValues[field.key];
+    cleanHousehold[field.key] = field.options.has(provided) ? provided : "not_specified";
+  }
+
   return {
     value: {
       title: title.trim(), price, address_text: address_text.trim(), lat, lon, city,
       background_tags: cleanBackgroundTags, lifestyle_tags: cleanLifestyleTags,
-      contact_method, contact_value: trimmedContact
+      contact_method, contact_value: trimmedContact,
+      ...cleanHousehold
     }
   };
 }

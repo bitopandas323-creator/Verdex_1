@@ -519,6 +519,12 @@
         <div id="listings-tag-filter" class="flex flex-wrap gap-2"></div>
       </div>
 
+      <!-- Populated at load time from HOUSEHOLD_FIELDS (see the
+           "HOUSEHOLD LOGISTICS" section of the script) rather than
+           hand-written per field, so the filter options can never drift
+           from the same list the post/manage forms and card display use. -->
+      <div id="listings-household-filters" class="mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"></div>
+
       <div id="listings-status" class="text-sm text-gray-400 text-center mb-2"></div>
       <div id="listings-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </div>
@@ -571,6 +577,10 @@
         <input id="manage-listing-lifestyle-tags" type="text"
           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
       </div>
+      <!-- Populated at load time from HOUSEHOLD_FIELDS, same as the
+           post-listing form's own placeholder — loadManageListing syncs
+           the selected buttons to the fetched listing's actual values. -->
+      <div id="manage-listing-household-fields" class="space-y-4"></div>
       <div>
         <label class="block text-gray-500 mb-1">Contact method</label>
         <select id="manage-listing-contact-method"
@@ -713,6 +723,11 @@
           <div id="address-suggestions-box-post-listing"
             class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden max-h-48 overflow-y-auto"></div>
           <div id="post-listing-location-confirm" class="text-xs text-gray-400 mt-1"></div>
+          <!-- Populated live by selectAddressSuggestion's "post-listing"
+               branch, right after a real address is picked — reuses
+               fetchExactAreaData/buildListingScoreBar exactly as Find a
+               Place's own cards do, not a second implementation. -->
+          <div id="post-listing-live-score"></div>
         </div>
         <div>
           <label class="block text-gray-500 mb-1">Background tags (comma-separated)</label>
@@ -724,6 +739,10 @@
           <input id="post-listing-lifestyle-tags" type="text" placeholder="e.g. Non-smoker, Early riser"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
         </div>
+        <!-- Populated at load time from HOUSEHOLD_FIELDS, one
+             buildSingleSelectGroup per field — see the "HOUSEHOLD
+             LOGISTICS" section of the script. -->
+        <div id="post-listing-household-fields" class="space-y-4"></div>
         <div>
           <label class="block text-gray-500 mb-1">Contact method</label>
           <select id="post-listing-contact-method"
@@ -1306,15 +1325,39 @@
       // 9 known slugs api/submit-listing.js validates against.
       if (searchId === 'post-listing') {
         const nearest = findNearestNeighbourhood(s.lat, s.lon);
+        const liveScoreEl = document.getElementById('post-listing-live-score');
         if (!nearest || nearest.distanceKm > LOCATE_ME_MAX_DISTANCE_KM) {
           document.getElementById('post-listing-location-confirm').textContent =
             'No closely-matched city found for this address — try a different search.';
           postListingState.location = null;
+          liveScoreEl.innerHTML = '';
           return;
         }
         postListingState.location = { lat: s.lat, lon: s.lon, city: nearest.city, displayName: s.displayName };
         document.getElementById('post-listing-location-confirm').textContent =
           `✓ ${s.displayName} (${nearest.city.charAt(0).toUpperCase() + nearest.city.slice(1)})`;
+
+        // Triggered directly by the address pick, no separate button —
+        // same fetchExactAreaData/buildListingScoreBar pair Find a
+        // Place's own cards use (loadListingScore), not a second
+        // implementation. Real network calls under the hood, so this is
+        // "instant" in the sense of "starts immediately," not literally
+        // zero-latency — same honest framing as every other live score
+        // in this app.
+        liveScoreEl.innerHTML = `<div class="text-xs text-gray-400 mt-2">Loading Green Score…</div>`;
+        try {
+          const { d } = await fetchExactAreaData(nearest.entry, nearest.city, s.lat, s.lon);
+          // Guards against a slower-to-resolve fetch from an EARLIER
+          // pick landing after a newer one already changed the location
+          // — without this, a quick re-search could show a stale score
+          // for the address no longer selected.
+          if (postListingState.location && postListingState.location.lat === s.lat && postListingState.location.lon === s.lon) {
+            liveScoreEl.innerHTML = `<div class="mt-2">${buildListingScoreBar(d, nearest.distanceKm)}</div>`;
+          }
+        } catch (err) {
+          liveScoreEl.innerHTML = `<div class="text-xs text-gray-400 mt-2">Green Score unavailable right now.</div>`;
+          console.warn('Post-listing live score failed.', err.message);
+        }
         return;
       }
 
@@ -4777,7 +4820,7 @@ let finalScore = computeFinalScore({
         // fields, same anon-open read as everything else here.
         // listing_images.order scopes the ordering to the embedded
         // resource, not the outer listings query.
-        const res = await fetch(SUPABASE_URL + "/rest/v1/listings?select=id,title,price,address_text,lat,lon,city,background_tags,lifestyle_tags,listing_images(id,storage_path)&listing_images.order=id.asc&order=created_at.desc", {
+        const res = await fetch(SUPABASE_URL + "/rest/v1/listings?select=id,title,price,address_text,lat,lon,city,background_tags,lifestyle_tags,maid_available,cook_available,kitchen_type,furnishing,parking,listing_images(id,storage_path)&listing_images.order=id.asc&order=created_at.desc", {
           headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY }
         });
         if (!res.ok) throw new Error("Supabase request failed: " + res.status);
@@ -4799,6 +4842,8 @@ let finalScore = computeFinalScore({
           price: r.price,
           backgroundTags: r.background_tags || [],
           lifestyleTags: r.lifestyle_tags || [],
+          maid_available: r.maid_available, cook_available: r.cook_available,
+          kitchen_type: r.kitchen_type, furnishing: r.furnishing, parking: r.parking,
           images: (r.listing_images || []).map(img => img.storage_path)
         }));
       } catch (e) {
@@ -4843,10 +4888,18 @@ let finalScore = computeFinalScore({
             <div id="listing-images-strip-${listing.id}" class="hidden flex gap-2 px-5 pt-3 overflow-x-auto"></div>
           </div>`
         : "";
+      // data-* mirrors every HOUSEHOLD_FIELDS key exactly (bracket
+      // access in applyListingsFilters, e.g. card.dataset["maid_available"],
+      // so the underscore in the key is never re-cased) — defaults to
+      // "not_specified" for seed listings, which never set these columns
+      // at all, same fallback getRealListings' own rows use.
+      const householdDataAttrs = HOUSEHOLD_FIELDS
+        .map(f => `data-${f.key}="${listing[f.key] || "not_specified"}"`).join(" ");
       return `
         <div class="listing-card bg-white rounded-2xl p-5 border border-gray-100"
           data-city="${listing.city}"
-          data-tags="${[...(listing.backgroundTags || []), ...(listing.lifestyleTags || [])].join("|")}">
+          data-tags="${[...(listing.backgroundTags || []), ...(listing.lifestyleTags || [])].join("|")}"
+          ${householdDataAttrs}>
           ${thumbnailHtml}
           <div class="flex justify-between items-start gap-2 mb-1">
             <div class="font-semibold text-gray-800 min-w-0">${listing.title}</div>
@@ -4856,7 +4909,8 @@ let finalScore = computeFinalScore({
             <div class="text-xs text-gray-400">${listing.locationLabel}</div>
             ${badge}
           </div>
-          <div id="listing-score-${listing.id}" class="mb-3">
+          ${buildHouseholdFactsHtml(listing)}
+          <div id="listing-score-${listing.id}" class="mb-3 mt-3">
             <div class="text-xs text-gray-400">Loading real Green Score…</div>
           </div>
           <div class="flex flex-wrap gap-1.5">
@@ -4948,13 +5002,130 @@ let finalScore = computeFinalScore({
           (active ? "border-green-600 bg-green-600 text-white" : "border-gray-200 text-gray-600 bg-white hover:bg-gray-50");
       });
 
+      // Seed listings never set these fields at all, so their cards
+      // carry data-* = "not_specified" (see buildListingCardShell) — an
+      // active household filter (anything but "Any") correctly excludes
+      // them, same as it would exclude any real listing that also left
+      // that field unspecified.
+      const householdFilterValues = HOUSEHOLD_FIELDS.map(f => ({
+        key: f.key, value: document.getElementById(`listings-filter-${f.key}`).value
+      }));
+
       document.querySelectorAll(".listing-card").forEach(card => {
         const matchesCity = !listingsState.cityFilter || card.dataset.city === listingsState.cityFilter;
         const cardTags = card.dataset.tags.split("|");
         const matchesTags = listingsState.activeTags.size === 0 ||
           [...listingsState.activeTags].every(t => cardTags.includes(t));
-        card.classList.toggle("hidden", !(matchesCity && matchesTags));
+        const matchesHousehold = householdFilterValues.every(f =>
+          !f.value || card.dataset[f.key] === f.value);
+        card.classList.toggle("hidden", !(matchesCity && matchesTags && matchesHousehold));
       });
+    }
+
+    // --- HOUSEHOLD LOGISTICS (shared by post form, manage form, cards, filters) ---
+    //
+    // One config drives four different UI surfaces — the post/manage
+    // forms' button-groups, the browse card's icon+label facts, and Find
+    // a Place's filter dropdowns — so a field or its options can never
+    // drift out of sync between them. Mirrors the exact option sets
+    // api/_lib/listing-validation.js validates against server-side (kept
+    // in sync by hand, same as parseTagsInput/cleanTags' own pairing).
+    const HOUSEHOLD_FIELDS = [
+      { key: "maid_available", label: "Maid available", icon: "ti-spray",
+        options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }, { value: "not_specified", label: "Not specified" }] },
+      { key: "cook_available", label: "Cook available", icon: "ti-tools-kitchen-2",
+        options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }, { value: "not_specified", label: "Not specified" }] },
+      { key: "kitchen_type", label: "Kitchen", icon: "ti-soup",
+        options: [{ value: "veg_only", label: "Veg only" }, { value: "mixed", label: "Veg & non-veg" }, { value: "not_specified", label: "Not specified" }] },
+      { key: "furnishing", label: "Furnishing", icon: "ti-armchair",
+        options: [{ value: "furnished", label: "Furnished" }, { value: "semi_furnished", label: "Semi-furnished" }, { value: "unfurnished", label: "Unfurnished" }, { value: "not_specified", label: "Not specified" }] },
+      { key: "parking", label: "Parking", icon: "ti-car",
+        options: [{ value: "two_wheeler", label: "2-wheeler" }, { value: "four_wheeler", label: "4-wheeler" }, { value: "both", label: "Both" }, { value: "none", label: "None" }, { value: "not_specified", label: "Not specified" }] }
+    ];
+
+    function householdOptionClasses(active) {
+      return "px-3 py-1.5 rounded-lg text-xs font-medium border " +
+        (active ? "border-green-600 bg-green-600 text-white" : "border-gray-200 text-gray-600 bg-white hover:bg-gray-50");
+    }
+
+    // formPrefix is "post-listing" or "manage-listing" — the ids this
+    // renders match selectHouseholdOption's own lookups below. There's
+    // no existing generic single-select button-group component in this
+    // app to reuse (background/lifestyle tags are free-text inputs, not
+    // buttons) — this is a new small one, styled consistently with the
+    // Single/Compare nav toggle's active/inactive look.
+    function buildSingleSelectGroup(formPrefix, field, selectedValue) {
+      return `
+        <div>
+          <label class="block text-gray-500 mb-1">${field.label}</label>
+          <div id="${formPrefix}-${field.key}-group" class="flex flex-wrap gap-2">
+            ${field.options.map(o => `
+              <button type="button" onclick="selectHouseholdOption('${formPrefix}', '${field.key}', '${o.value}')"
+                data-value="${o.value}" class="${householdOptionClasses(o.value === selectedValue)}">
+                ${o.label}
+              </button>`).join("")}
+          </div>
+        </div>`;
+    }
+
+    function selectHouseholdOption(formPrefix, fieldKey, value) {
+      const state = formPrefix === "post-listing" ? postListingState : manageListingState;
+      state.household[fieldKey] = value;
+      document.getElementById(`${formPrefix}-${fieldKey}-group`).querySelectorAll("button").forEach(btn => {
+        btn.className = householdOptionClasses(btn.dataset.value === value);
+      });
+    }
+
+    // Matches the server's own column default (see
+    // supabase/listings-household-fields.sql) — a poster who touches
+    // none of these five fields submits exactly what that default would
+    // have produced anyway.
+    function defaultHouseholdState() {
+      const state = {};
+      HOUSEHOLD_FIELDS.forEach(f => { state[f.key] = "not_specified"; });
+      return state;
+    }
+
+    // Injected once at load time, BEFORE POST_LISTING_FORM_HTML captures
+    // the post-listing form's pristine markup further down this script —
+    // so every re-open of that modal (which restores that captured HTML)
+    // naturally resets these button-groups to "not_specified" too, the
+    // same way every other field in that form already resets.
+    document.getElementById("post-listing-household-fields").innerHTML =
+      HOUSEHOLD_FIELDS.map(f => buildSingleSelectGroup("post-listing", f, "not_specified")).join("");
+    document.getElementById("manage-listing-household-fields").innerHTML =
+      HOUSEHOLD_FIELDS.map(f => buildSingleSelectGroup("manage-listing", f, "not_specified")).join("");
+
+    // Find a Place's filter row — an "Any" option plus each field's real
+    // values, skipping "not_specified" as a selectable target (nobody
+    // filters FOR "not specified"; "Any" already includes those
+    // listings, seed listings among them).
+    document.getElementById("listings-household-filters").innerHTML = HOUSEHOLD_FIELDS.map(f => `
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">${f.label}</label>
+        <select id="listings-filter-${f.key}" onchange="applyListingsFilters()"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white">
+          <option value="">Any</option>
+          ${f.options.filter(o => o.value !== "not_specified").map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
+        </select>
+      </div>`).join("");
+
+    // Small icon+label facts row for a real listing's card — skips only
+    // "not_specified"; "no"/"none" are real, useful negative facts (e.g.
+    // "No parking"), not the same as "poster didn't say."
+    function buildHouseholdFactsHtml(listing) {
+      const facts = HOUSEHOLD_FIELDS
+        .map(f => {
+          const value = listing[f.key] || "not_specified";
+          if (value === "not_specified") return null;
+          const opt = f.options.find(o => o.value === value);
+          return { icon: f.icon, label: opt ? opt.label : value };
+        })
+        .filter(Boolean);
+      if (facts.length === 0) return "";
+      return `<div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-500">
+        ${facts.map(f => `<span class="flex items-center gap-1"><i class="ti ${f.icon}"></i>${f.label}</span>`).join("")}
+      </div>`;
     }
 
     // --- LISTING IMAGES (shared by post + manage flows) ---
@@ -5045,7 +5216,7 @@ let finalScore = computeFinalScore({
     // branch above — reusing the exact same address-search/geocoding
     // chain every other search box in this app already uses, not a
     // second implementation of it.
-    let postListingState = { location: null, submitting: false, pendingImages: [] };
+    let postListingState = { location: null, submitting: false, pendingImages: [], household: defaultHouseholdState() };
 
     // Captured once, from the real initial markup, before anything ever
     // mutates post-listing-body — showListingPostedConfirmation below
@@ -5059,7 +5230,7 @@ let finalScore = computeFinalScore({
 
     function openPostListingModal() {
       document.getElementById("post-listing-body").innerHTML = POST_LISTING_FORM_HTML;
-      postListingState = { location: null, submitting: false, pendingImages: [] };
+      postListingState = { location: null, submitting: false, pendingImages: [], household: defaultHouseholdState() };
       document.getElementById("post-listing-title").value = "";
       document.getElementById("post-listing-price").value = "";
       document.getElementById("address-search-input-post-listing").value = "";
@@ -5157,7 +5328,8 @@ let finalScore = computeFinalScore({
             lat: postListingState.location.lat, lon: postListingState.location.lon,
             city: postListingState.location.city,
             background_tags: backgroundTags, lifestyle_tags: lifestyleTags,
-            contact_method: contactMethod, contact_value: contactValue
+            contact_method: contactMethod, contact_value: contactValue,
+            ...postListingState.household
           })
         });
         const data = await res.json();
@@ -5358,7 +5530,7 @@ let finalScore = computeFinalScore({
     // token/listingId are set once, by checkForEditLink/loadManageListing,
     // and read by every action below — none of them re-parse the URL
     // themselves, so there's exactly one place that ever does.
-    let manageListingState = { token: null, listingId: null, location: null, images: [] };
+    let manageListingState = { token: null, listingId: null, location: null, images: [], household: defaultHouseholdState() };
 
     // Called once, at the very top of this script's synchronous startup
     // (see the bottom of this file) — deliberately BEFORE applyNav() ever
@@ -5399,6 +5571,14 @@ let finalScore = computeFinalScore({
         document.getElementById("manage-listing-lifestyle-tags").value = (data.lifestyle_tags || []).join(", ");
         document.getElementById("manage-listing-contact-method").value = data.contact_method || "email";
         document.getElementById("manage-listing-contact-value").value = data.contact_value || "";
+
+        // Syncs both the visible button-group state and
+        // manageListingState.household to this listing's actual saved
+        // values — handleEditGet now returns these 5 fields alongside
+        // everything else (see api/listings.js).
+        HOUSEHOLD_FIELDS.forEach(f => {
+          selectHouseholdOption("manage-listing", f.key, data[f.key] || "not_specified");
+        });
 
         statusEl.classList.add("hidden");
         bodyEl.classList.remove("hidden");
@@ -5520,7 +5700,8 @@ let finalScore = computeFinalScore({
             lat: manageListingState.location.lat, lon: manageListingState.location.lon,
             city: manageListingState.location.city,
             background_tags: backgroundTags, lifestyle_tags: lifestyleTags,
-            contact_method: contactMethod, contact_value: contactValue
+            contact_method: contactMethod, contact_value: contactValue,
+            ...manageListingState.household
           })
         });
         const data = await res.json();

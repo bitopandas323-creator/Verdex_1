@@ -144,6 +144,8 @@ async function handleSubmit(req, res, supabase, ip_hash) {
       title: fields.title, price: fields.price, address_text: fields.address_text,
       lat: fields.lat, lon: fields.lon, city: fields.city,
       background_tags: fields.background_tags, lifestyle_tags: fields.lifestyle_tags,
+      maid_available: fields.maid_available, cook_available: fields.cook_available,
+      kitchen_type: fields.kitchen_type, furnishing: fields.furnishing, parking: fields.parking,
       ip_hash, edit_token_hash
     }).select("id").single();
 
@@ -195,6 +197,8 @@ async function handleEditGet(req, res, supabase, ip_hash) {
       id: listing.id, title: listing.title, price: listing.price,
       address_text: listing.address_text, lat: listing.lat, lon: listing.lon, city: listing.city,
       background_tags: listing.background_tags, lifestyle_tags: listing.lifestyle_tags,
+      maid_available: listing.maid_available, cook_available: listing.cook_available,
+      kitchen_type: listing.kitchen_type, furnishing: listing.furnishing, parking: listing.parking,
       contact_method: contact ? contact.contact_method : null,
       contact_value: contact ? contact.contact_value : null
     });
@@ -223,7 +227,9 @@ async function handleEditPost(req, res, supabase, ip_hash) {
     const { error: updateError } = await supabase.from("listings").update({
       title: fields.title, price: fields.price, address_text: fields.address_text,
       lat: fields.lat, lon: fields.lon, city: fields.city,
-      background_tags: fields.background_tags, lifestyle_tags: fields.lifestyle_tags
+      background_tags: fields.background_tags, lifestyle_tags: fields.lifestyle_tags,
+      maid_available: fields.maid_available, cook_available: fields.cook_available,
+      kitchen_type: fields.kitchen_type, furnishing: fields.furnishing, parking: fields.parking
     }).eq("id", listing.id);
     if (updateError) {
       console.error("Listing update failed:", updateError);
