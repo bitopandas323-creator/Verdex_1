@@ -514,6 +514,20 @@
           Post your place
         </button>
       </div>
+      <div class="mb-6 flex gap-3">
+        <div class="flex-1">
+          <label class="block text-sm text-gray-500 mb-2">Min price (₹/mo)</label>
+          <input id="listings-filter-min-price" type="number" min="0" placeholder="No min"
+            oninput="applyListingsFilters()"
+            class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700">
+        </div>
+        <div class="flex-1">
+          <label class="block text-sm text-gray-500 mb-2">Max price (₹/mo)</label>
+          <input id="listings-filter-max-price" type="number" min="0" placeholder="No max"
+            oninput="applyListingsFilters()"
+            class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700">
+        </div>
+      </div>
       <div class="mb-6">
         <label class="block text-sm text-gray-500 mb-2">Tags</label>
         <div id="listings-tag-filter" class="flex flex-wrap gap-2"></div>
@@ -4936,6 +4950,7 @@ let finalScore = computeFinalScore({
       return `
         <div class="listing-card bg-white rounded-2xl p-5 border border-gray-100 ${isFilled ? "opacity-60" : ""}"
           data-city="${listing.city}"
+          data-price="${listing.price}"
           data-tags="${[...(listing.backgroundTags || []), ...(listing.lifestyleTags || [])].join("|")}"
           ${householdDataAttrs}>
           ${thumbnailHtml}
@@ -5051,14 +5066,28 @@ let finalScore = computeFinalScore({
         key: f.key, value: document.getElementById(`listings-filter-${f.key}`).value
       }));
 
+      // Empty/unparseable bound = unbounded on that side, same "no value
+      // means no constraint" convention the household <select>s already
+      // use ("" for their default "Any" option) — not a special case
+      // invented just for price.
+      const minPrice = parseInt(document.getElementById("listings-filter-min-price").value, 10);
+      const maxPrice = parseInt(document.getElementById("listings-filter-max-price").value, 10);
+
       document.querySelectorAll(".listing-card").forEach(card => {
         const matchesCity = !listingsState.cityFilter || card.dataset.city === listingsState.cityFilter;
+        const cardPrice = parseInt(card.dataset.price, 10);
+        const matchesPrice = (isNaN(minPrice) || cardPrice >= minPrice) && (isNaN(maxPrice) || cardPrice <= maxPrice);
         const cardTags = card.dataset.tags.split("|");
         const matchesTags = listingsState.activeTags.size === 0 ||
           [...listingsState.activeTags].every(t => cardTags.includes(t));
         const matchesHousehold = householdFilterValues.every(f =>
           !f.value || card.dataset[f.key] === f.value);
-        card.classList.toggle("hidden", !(matchesCity && matchesTags && matchesHousehold));
+        // Every active filter must hold at once — city, price range, ALL
+        // selected tags (.every above, not .some — genuinely AND, not
+        // OR), and every household filter — a single false anywhere in
+        // this chain hides the card, there is no OR shortcut anywhere in
+        // this expression.
+        card.classList.toggle("hidden", !(matchesCity && matchesPrice && matchesTags && matchesHousehold));
       });
     }
 
