@@ -30,6 +30,17 @@
       border-radius: 50%; width: 36px; height: 36px; border: 3px solid white;
       box-shadow: 0 2px 6px rgba(0,0,0,0.35); background: #16a34a;
     }
+    /* Find a Place's listing pins — deliberately square-ish (not a circle,
+       unlike every other pin above) on top of its own fixed color and
+       house-icon glyph, so a listing pin can never be mistaken for an
+       .aqi-pin/.city-pin/.user-location-pin neighbourhood-score dot even
+       at a glance. */
+    .listing-pin {
+      border-radius: 8px; width: 30px; height: 30px; border: 2px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4); background: #ea580c;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 15px;
+    }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -502,7 +513,7 @@
       <div class="mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
         <div class="flex-1 w-full">
           <label class="block text-sm text-gray-500 mb-2">City</label>
-          <select id="listings-city-filter" onchange="applyListingsFilters()"
+          <select id="listings-city-filter" onchange="onListingsCityFilterChange()"
             class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700 bg-white">
             <option value="">All cities</option>
             <option value="hyderabad">Hyderabad</option>
@@ -528,6 +539,35 @@
             class="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-700">
         </div>
       </div>
+      <!-- Reuses the same address-search/geocoding machinery as every
+           other search box in this app (handleAddressSearch/
+           showAddressSuggestions/addressSearchState, keyed by searchId
+           "find-a-place-distance") — see selectAddressSuggestion's own
+           comment for the branch that captures a pick here instead of
+           driving a score card. -->
+      <div class="mb-6">
+        <label class="block text-sm text-gray-500 mb-2">Filter by distance from an address</label>
+        <div class="flex gap-2">
+          <div class="flex-1 relative">
+            <input id="address-search-input-find-a-place-distance" type="text" placeholder="Search any area, landmark or city"
+              oninput="handleAddressSearch('find-a-place-distance')" onkeydown="handleAddressKeydown(event, 'find-a-place-distance')"
+              class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-700">
+            <div id="address-search-spinner-find-a-place-distance" class="hidden absolute right-3 top-2.5">
+              <div style="width:14px;height:14px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+            </div>
+            <div id="address-suggestions-box-find-a-place-distance"
+              class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden max-h-48 overflow-y-auto"></div>
+          </div>
+          <select id="listings-filter-distance-radius" onchange="applyListingsFilters()"
+            class="border border-gray-200 rounded-lg px-3 py-2.5 text-gray-700 bg-white">
+            <option value="2">Within 2km</option>
+            <option value="5" selected>Within 5km</option>
+            <option value="10">Within 10km</option>
+          </select>
+        </div>
+        <div id="listings-distance-filter-confirm" class="text-xs text-gray-400 mt-1"></div>
+      </div>
+
       <div class="mb-6">
         <label class="block text-sm text-gray-500 mb-2">Tags</label>
         <div id="listings-tag-filter" class="flex flex-wrap gap-2"></div>
@@ -539,8 +579,43 @@
            from the same list the post/manage forms and card display use. -->
       <div id="listings-household-filters" class="mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"></div>
 
+      <!-- List/Map toggle — deliberately its own small independent
+           mechanism (own state, own button ids), NOT wired into
+           subtab-bar/selectSubTab/currentSubTab: those are hardcoded to
+           exactly the Single/Compare pair and applyNav's NAV_LEAVES
+           list, not generic enough to extend with a third option
+           without touching that shared mechanism. Same visual styling
+           (SUB_BTN_ACTIVE/INACTIVE's class strings) applied independently
+           by setListingsViewMode below. -->
+      <div class="flex gap-2 mb-4">
+        <button id="btn-listings-view-list" onclick="setListingsViewMode('list')"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 text-white">
+          List
+        </button>
+        <button id="btn-listings-view-map" onclick="setListingsViewMode('map')"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
+          Map
+        </button>
+      </div>
+
       <div id="listings-status" class="text-sm text-gray-400 text-center mb-2"></div>
       <div id="listings-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+      <!-- Map view — a SEPARATE Leaflet instance/container from the main
+           Map view's #map-container (see listingsMapState's own comment
+           for why: there's no precedent anywhere in this app for two
+           concurrent Leaflet instances, and the main map view's own
+           mapState/#map-container are singletons that a second L.map()
+           call on the same id would either throw against or corrupt). -->
+      <div id="listings-map-view" class="hidden">
+        <div id="listings-map-city-prompt" class="hidden text-sm text-gray-400 text-center py-12 bg-gray-50 rounded-2xl">
+          Select a city above to see its listings on the map.
+        </div>
+        <div id="listings-map-wrap" class="hidden">
+          <div id="listings-map-container" class="h-80 md:h-[450px] rounded-2xl overflow-hidden border border-gray-100 mb-3"></div>
+          <div id="listings-map-preview" class="hidden bg-white rounded-2xl p-4 border border-gray-100"></div>
+        </div>
+      </div>
     </div>
 
     </div>
@@ -910,7 +985,8 @@
       "compare-a":      { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
       "compare-b":      { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
       "post-listing":   { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
-      "manage-listing": { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] }
+      "manage-listing": { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
+      "find-a-place-distance": { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] }
     };
     // Which element's value biases each box's Nominatim query (see
     // handleAddressSearch). All three boxes now have their own picker —
@@ -1393,6 +1469,19 @@
         manageListingState.location = { lat: s.lat, lon: s.lon, city: nearest.city, displayName: s.displayName };
         document.getElementById('manage-listing-location-confirm').textContent =
           `✓ ${s.displayName} (${nearest.city.charAt(0).toUpperCase() + nearest.city.slice(1)})`;
+        return;
+      }
+
+      // Find a Place's distance filter — unlike the two branches above,
+      // this doesn't need findNearestNeighbourhood/city matching at all:
+      // haversineKm (inside applyListingsFilters) works directly off the
+      // searched point's raw lat/lon against each listing's own
+      // coordinates, no "closest known neighbourhood" concept involved.
+      if (searchId === 'find-a-place-distance') {
+        listingsState.distanceFilter = { lat: s.lat, lon: s.lon };
+        document.getElementById('listings-distance-filter-confirm').innerHTML =
+          `✓ ${s.displayName} <button type="button" onclick="clearListingsDistanceFilter()" class="text-red-500 hover:underline ml-1">Clear</button>`;
+        applyListingsFilters();
         return;
       }
 
@@ -4773,7 +4862,18 @@ let finalScore = computeFinalScore({
     // locateMe/selectAddressSuggestion/Follow mode already use for a real
     // coordinate, fetched once per listing and cached the same 10 minutes
     // fetchAreaData's own cache already provides everywhere else.
-    let listingsState = { initialized: false, listings: [], cityFilter: "", activeTags: new Set() };
+    let listingsState = { initialized: false, listings: [], cityFilter: "", activeTags: new Set(), distanceFilter: null };
+
+    // Find a Place's OWN Leaflet instance — deliberately separate from
+    // the main Map view's mapState/#map-container (see this file's only
+    // other L.map() call, ensureLeafletMap). There is no precedent
+    // anywhere in this app for two concurrent Leaflet instances, and
+    // mapState's fields (markers, view, currentCity, gridRect, ...) are
+    // singletons a second, differently-shaped map would corrupt if it
+    // shared them. markers is keyed by listing.id -> {marker}, populated
+    // fresh each time refreshListingsMap() runs for a given city.
+    let listingsMapState = { leafletMap: null, markers: {}, previewListingId: null };
+    let listingsViewMode = "list";
 
     let listingsData = null;
     async function getListingsData() {
@@ -4949,8 +5049,11 @@ let finalScore = computeFinalScore({
         .map(f => `data-${f.key}="${listing[f.key] || "not_specified"}"`).join(" ");
       return `
         <div class="listing-card bg-white rounded-2xl p-5 border border-gray-100 ${isFilled ? "opacity-60" : ""}"
+          data-listing-id="${listing.id}"
           data-city="${listing.city}"
           data-price="${listing.price}"
+          data-lat="${listing.lat}"
+          data-lon="${listing.lon}"
           data-tags="${[...(listing.backgroundTags || []), ...(listing.lifestyleTags || [])].join("|")}"
           ${householdDataAttrs}>
           ${thumbnailHtml}
@@ -5048,6 +5151,24 @@ let finalScore = computeFinalScore({
       applyListingsFilters();
     }
 
+    // Iterates listingsState.listings (the one source of truth for what a
+    // listing IS) rather than reading back out of the DOM — this is what
+    // lets list view and map view share the exact same filtered set:
+    // each listing's visible/hidden boolean is computed exactly ONCE
+    // here, then applied to both its list card (hidden-class toggle) and
+    // its map marker (added/removed from the Leaflet instance, when map
+    // view is active) in the same pass. There is no second, independent
+    // filter computation anywhere for the map — if this function has a
+    // bug, list and map are wrong the SAME way, never differently.
+    //
+    // Previously this read city/price/tags/household straight off each
+    // rendered card's data-* attributes instead of the listings array —
+    // functionally equivalent for those four (the data-* attributes were
+    // always just a serialization of these same listing properties), but
+    // reading the array directly is what makes adding a fifth filter
+    // (distance) — which needs listing.lat/lon, not previously exposed
+    // as data-* at all — a plain extra clause instead of a second
+    // data-attribute round-trip.
     function applyListingsFilters() {
       listingsState.cityFilter = document.getElementById("listings-city-filter").value;
 
@@ -5057,11 +5178,11 @@ let finalScore = computeFinalScore({
           (active ? "border-green-600 bg-green-600 text-white" : "border-gray-200 text-gray-600 bg-white hover:bg-gray-50");
       });
 
-      // Seed listings never set these fields at all, so their cards
-      // carry data-* = "not_specified" (see buildListingCardShell) — an
-      // active household filter (anything but "Any") correctly excludes
-      // them, same as it would exclude any real listing that also left
-      // that field unspecified.
+      // Seed listings never set these fields at all — HOUSEHOLD_FIELDS'
+      // own "not_specified" fallback (identical to buildListingCardShell's
+      // householdDataAttrs) means an active household filter (anything
+      // but "Any") correctly excludes them, same as it would exclude any
+      // real listing that also left that field unspecified.
       const householdFilterValues = HOUSEHOLD_FIELDS.map(f => ({
         key: f.key, value: document.getElementById(`listings-filter-${f.key}`).value
       }));
@@ -5072,23 +5193,185 @@ let finalScore = computeFinalScore({
       // invented just for price.
       const minPrice = parseInt(document.getElementById("listings-filter-min-price").value, 10);
       const maxPrice = parseInt(document.getElementById("listings-filter-max-price").value, 10);
+      const radiusKm = parseInt(document.getElementById("listings-filter-distance-radius").value, 10);
 
-      document.querySelectorAll(".listing-card").forEach(card => {
-        const matchesCity = !listingsState.cityFilter || card.dataset.city === listingsState.cityFilter;
-        const cardPrice = parseInt(card.dataset.price, 10);
-        const matchesPrice = (isNaN(minPrice) || cardPrice >= minPrice) && (isNaN(maxPrice) || cardPrice <= maxPrice);
-        const cardTags = card.dataset.tags.split("|");
+      listingsState.listings.forEach(listing => {
+        const matchesCity = !listingsState.cityFilter || listing.city === listingsState.cityFilter;
+        const matchesPrice = (isNaN(minPrice) || listing.price >= minPrice) && (isNaN(maxPrice) || listing.price <= maxPrice);
+        const listingTags = [...(listing.backgroundTags || []), ...(listing.lifestyleTags || [])];
         const matchesTags = listingsState.activeTags.size === 0 ||
-          [...listingsState.activeTags].every(t => cardTags.includes(t));
+          [...listingsState.activeTags].every(t => listingTags.includes(t));
         const matchesHousehold = householdFilterValues.every(f =>
-          !f.value || card.dataset[f.key] === f.value);
+          !f.value || (listing[f.key] || "not_specified") === f.value);
+        // haversineKm — the exact same helper findNearestNeighbourhood
+        // already uses, no new geometry. !listingsState.distanceFilter
+        // short-circuits before ever calling it when no address has
+        // been picked.
+        const matchesDistance = !listingsState.distanceFilter ||
+          haversineKm(listingsState.distanceFilter.lat, listingsState.distanceFilter.lon, listing.lat, listing.lon) <= radiusKm;
+
         // Every active filter must hold at once — city, price range, ALL
         // selected tags (.every above, not .some — genuinely AND, not
-        // OR), and every household filter — a single false anywhere in
-        // this chain hides the card, there is no OR shortcut anywhere in
-        // this expression.
-        card.classList.toggle("hidden", !(matchesCity && matchesPrice && matchesTags && matchesHousehold));
+        // OR), every household filter, and distance — a single false
+        // anywhere in this chain hides the listing, there is no OR
+        // shortcut anywhere in this expression.
+        const visible = matchesCity && matchesPrice && matchesTags && matchesHousehold && matchesDistance;
+
+        const card = document.querySelector(`.listing-card[data-listing-id="${listing.id}"]`);
+        if (card) card.classList.toggle("hidden", !visible);
+
+        syncListingMapMarkerVisibility(listing.id, visible);
       });
+    }
+
+    function onListingsCityFilterChange() {
+      applyListingsFilters();
+      // Changing city means the WHOLE marker set needs rebuilding for
+      // the new city — applyListingsFilters alone only shows/hides
+      // markers that already exist, it can't create new ones.
+      if (listingsViewMode === "map") refreshListingsMap();
+    }
+
+    function setListingsViewMode(mode) {
+      listingsViewMode = mode;
+      document.getElementById("btn-listings-view-list").className =
+        mode === "list" ? SUB_BTN_ACTIVE : SUB_BTN_INACTIVE;
+      document.getElementById("btn-listings-view-map").className =
+        mode === "map" ? SUB_BTN_ACTIVE : SUB_BTN_INACTIVE;
+      document.getElementById("listings-grid").classList.toggle("hidden", mode !== "list");
+      document.getElementById("listings-map-view").classList.toggle("hidden", mode !== "map");
+      if (mode === "map") refreshListingsMap();
+    }
+
+    function ensureListingsMap() {
+      if (listingsMapState.leafletMap) return;
+      listingsMapState.leafletMap = L.map("listings-map-container");
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+        maxZoom: 18
+      }).addTo(listingsMapState.leafletMap);
+    }
+
+    // Scoped to ONE city at a time, reusing the existing city filter
+    // dropdown rather than adding a second city selector — showing every
+    // city's listings on one map at once would mean starting zoomed out
+    // across all of India, which isn't a useful view of anything. With
+    // no city chosen ("All cities"), a placeholder asks for one instead
+    // of rendering a confusing near-empty map.
+    function refreshListingsMap() {
+      const city = listingsState.cityFilter;
+      const promptEl = document.getElementById("listings-map-city-prompt");
+      const wrapEl = document.getElementById("listings-map-wrap");
+
+      if (!city) {
+        promptEl.classList.remove("hidden");
+        wrapEl.classList.add("hidden");
+        return;
+      }
+      promptEl.classList.add("hidden");
+      wrapEl.classList.remove("hidden");
+
+      ensureListingsMap();
+      document.getElementById("listings-map-preview").classList.add("hidden");
+      listingsMapState.previewListingId = null;
+
+      // Clear old markers before rebuilding for the (possibly new) city
+      // — mirrors clearMapLayers' own reasoning for the main map view,
+      // just scoped to this map's own marker set instead of mapState's.
+      Object.values(listingsMapState.markers).forEach(entry => listingsMapState.leafletMap.removeLayer(entry.marker));
+      listingsMapState.markers = {};
+
+      const center = getCityCenter(city);
+      if (center) listingsMapState.leafletMap.setView(center, 12);
+      // Leaflet mis-measures its container if it was hidden (display:none)
+      // at construction time — same fix ensureLeafletMap's own callers
+      // (loadCityMap/showCountryMap) already rely on.
+      setTimeout(() => listingsMapState.leafletMap.invalidateSize(), 0);
+
+      // Built for every listing in the city regardless of other active
+      // filters (price/tags/household/distance) — applyListingsFilters,
+      // called at the end here, is what actually shows/hides them, same
+      // as it does for list cards. This keeps marker creation and
+      // filtering as two separate concerns, exactly like the list view
+      // already separates "render the card" (buildListingCardShell) from
+      // "decide if it's visible" (applyListingsFilters).
+      const cityListings = listingsState.listings.filter(l => l.city === city);
+      cityListings.forEach(listing => {
+        // .listing-pin + a house glyph — see its own CSS comment for why
+        // this can never be mistaken for a neighbourhood-score pin
+        // elsewhere in the app (different shape, color, and icon
+        // presence from .aqi-pin/.city-pin/.user-location-pin).
+        const icon = L.divIcon({ className: "", html: '<div class="listing-pin"><i class="ti ti-home-2"></i></div>', iconSize: [30, 30] });
+        const marker = L.marker([listing.lat, listing.lon], { icon });
+        marker.on("click", () => toggleListingMapPreview(listing.id));
+        listingsMapState.markers[listing.id] = { marker };
+      });
+
+      applyListingsFilters();
+    }
+
+    function syncListingMapMarkerVisibility(listingId, visible) {
+      const entry = listingsMapState.markers[listingId];
+      if (!entry || !listingsMapState.leafletMap) return;
+      const onMap = listingsMapState.leafletMap.hasLayer(entry.marker);
+      if (visible && !onMap) entry.marker.addTo(listingsMapState.leafletMap);
+      else if (!visible && onMap) listingsMapState.leafletMap.removeLayer(entry.marker);
+    }
+
+    // Tap-to-preview — same hidden-class-toggle idiom as
+    // toggleListingImagesStrip/openNearbyModal, not a Leaflet popup
+    // bubble. Clicking the same pin again closes it; clicking a
+    // different pin switches straight to its preview.
+    function toggleListingMapPreview(listingId) {
+      const panel = document.getElementById("listings-map-preview");
+      if (listingsMapState.previewListingId === listingId && !panel.classList.contains("hidden")) {
+        panel.classList.add("hidden");
+        listingsMapState.previewListingId = null;
+        return;
+      }
+      listingsMapState.previewListingId = listingId;
+      showListingMapPreview(listingId);
+    }
+
+    // Same findNearestNeighbourhood -> fetchExactAreaData ->
+    // buildListingScoreBar chain loadListingScore already uses for list
+    // cards — not a second scoring path, just a different DOM target.
+    async function showListingMapPreview(listingId) {
+      const listing = listingsState.listings.find(l => l.id === listingId);
+      if (!listing) return;
+      const panel = document.getElementById("listings-map-preview");
+      panel.classList.remove("hidden");
+      panel.innerHTML = `
+        <div class="flex justify-between items-start gap-2 mb-2">
+          <div class="font-semibold text-gray-800 min-w-0">${listing.title}</div>
+          <div class="text-sm font-medium text-gray-700 shrink-0">₹${listing.price.toLocaleString("en-IN")}/mo</div>
+        </div>
+        <div id="listings-map-preview-score" class="text-xs text-gray-400">Loading real Green Score…</div>`;
+
+      const nearest = findNearestNeighbourhood(listing.lat, listing.lon);
+      const scoreEl = document.getElementById("listings-map-preview-score");
+      if (!nearest || nearest.distanceKm > LOCATE_ME_MAX_DISTANCE_KM) {
+        scoreEl.innerHTML = `<div class="text-xs text-gray-400">No closely-matched neighbourhood found for this listing.</div>`;
+        return;
+      }
+      try {
+        const { d } = await fetchExactAreaData(nearest.entry, nearest.city, listing.lat, listing.lon);
+        // Guard against a stale response landing after the preview
+        // switched to a different listing in the meantime.
+        if (listingsMapState.previewListingId === listingId) {
+          scoreEl.outerHTML = buildListingScoreBar(d, nearest.distanceKm);
+        }
+      } catch (err) {
+        scoreEl.innerHTML = `<div class="text-xs text-gray-400">Green Score unavailable right now.</div>`;
+        console.warn(`Find a Place map: score lookup failed for ${listingId}.`, err.message);
+      }
+    }
+
+    function clearListingsDistanceFilter() {
+      listingsState.distanceFilter = null;
+      document.getElementById("address-search-input-find-a-place-distance").value = "";
+      document.getElementById("listings-distance-filter-confirm").innerHTML = "";
+      applyListingsFilters();
     }
 
     // --- HOUSEHOLD LOGISTICS (shared by post form, manage form, cards, filters) ---
