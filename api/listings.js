@@ -361,7 +361,10 @@ async function handleContactGet(req, res, supabase, ip_hash) {
 
     // Logged AFTER a successful fetch, not before — a request for a
     // listing that doesn't exist shouldn't count against the cap.
-    const { error: logError } = await supabase.from("listing_contact_reveals").insert({ ip_hash });
+    // listing_id here is what listing_interest_counts (see
+    // supabase/listing-interest-counts.sql) aggregates over — this is
+    // the only place that column is ever written.
+    const { error: logError } = await supabase.from("listing_contact_reveals").insert({ ip_hash, listing_id: listingId });
     if (logError) console.error("Failed to log contact reveal (non-fatal):", logError);
 
     return res.status(200).json(contact);

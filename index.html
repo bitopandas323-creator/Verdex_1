@@ -4888,6 +4888,29 @@ let finalScore = computeFinalScore({
       return listingsData;
     }
 
+    // A separate small query, not folded into getRealListings' own
+    // request — listing_interest_counts is a VIEW (see
+    // supabase/listing-interest-counts.sql), not a plain FK'd table like
+    // listing_images, so PostgREST's automatic embedding (which relies
+    // on detecting a real foreign-key relationship) isn't something to
+    // depend on here. Returns {listing_id: interest_count}, merged into
+    // real listings by loadListingsSection below.
+    async function getListingInterestCounts() {
+      try {
+        const res = await fetch(SUPABASE_URL + "/rest/v1/listing_interest_counts?select=listing_id,interest_count", {
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY }
+        });
+        if (!res.ok) throw new Error("Supabase request failed: " + res.status);
+        const rows = await res.json();
+        const counts = {};
+        rows.forEach(r => { counts[r.listing_id] = r.interest_count; });
+        return counts;
+      } catch (e) {
+        console.warn("Failed to load listing interest counts.", e.message);
+        return {};
+      }
+    }
+
     // Seed listings have no created_at in their JSON at all (they're not
     // real, timestamped rows) — buildListingCardShell only calls this
     // when listing.createdAt is present, so there's no "Posted NaN ago"
@@ -4908,8 +4931,14 @@ let finalScore = computeFinalScore({
       statusEl.textContent = "Loading listings…";
 
       // Fetched independently and in parallel — a Supabase read failure
-      // shouldn't take the seed listings down with it, or vice versa.
-      const [seedListings, realListings] = await Promise.all([getListingsData(), getRealListings()]);
+      // in any one of these shouldn't take the other two down with it.
+      const [seedListings, realListings, interestCounts] = await Promise.all([
+        getListingsData(), getRealListings(), getListingInterestCounts()
+      ]);
+      // Seed listings never get an interestCount at all (stays
+      // undefined) — buildListingCardShell already treats that as "omit
+      // the line," same as it does for every other real-only field.
+      realListings.forEach(l => { l.interestCount = interestCounts[l.dbId] || 0; });
       const listings = [...realListings, ...seedListings];
       // Array.prototype.sort is spec-guaranteed stable (ES2019+), so this
       // only moves filled listings below active ones — it doesn't disturb
@@ -5071,11 +5100,17 @@ let finalScore = computeFinalScore({
           <div id="listing-score-${listing.id}" class="mb-3 mt-3">
             <div class="text-xs text-gray-400">Loading real Green Score…</div>
           </div>
+          ${listing.interestCount > 0 ? `<div class="text-xs text-gray-500 mb-3">${listing.interestCount} ${listing.interestCount === 1 ? "person" : "people"} interested</div>` : ""}
           <div class="flex flex-wrap gap-1.5">
             ${tagsHtml(listing.backgroundTags || [], "bg-blue-50 text-blue-700")}
             ${tagsHtml(listing.lifestyleTags || [], "bg-green-50 text-green-700")}
           </div>
           ${actionsHtml}
+          ${listing.isReal ? `
+            <button onclick="shareListingToWhatsApp('${listing.id}')"
+              class="mt-2 w-full text-xs text-green-600 hover:bg-green-50 px-3 py-2 rounded-lg font-medium border border-green-200 flex items-center justify-center gap-1.5">
+              <i class="ti ti-brand-whatsapp"></i> Share to WhatsApp
+            </button>` : ""}
         </div>`;
     }
 
@@ -5136,10 +5171,34 @@ let finalScore = computeFinalScore({
       try {
         const { d } = await fetchExactAreaData(nearest.entry, nearest.city, listing.lat, listing.lon);
         targetEl.innerHTML = buildListingScoreBar(d, nearest.distanceKm);
+        // Stashed for shareListingToWhatsApp to read at click time (same
+        // 0-100 display convention buildListingScoreBar itself uses) —
+        // avoids a second fetch/scrape of the DOM just to reuse a score
+        // this call already computed.
+        listing.greenScore = Math.round(d.finalScore * 10);
       } catch (err) {
         targetEl.innerHTML = `<div class="text-xs text-gray-400">Green Score unavailable right now.</div>`;
         console.warn(`Find a Place: score lookup failed for ${listing.id}.`, err.message);
       }
+    }
+
+    // wa.me with no phone number opens WhatsApp letting the sharer pick
+    // who to send to — this shares the LISTING outward to the sharer's
+    // own contacts/groups, deliberately not a direct message to the
+    // poster (whose contact stays behind "I'm interested" and isn't
+    // exposed here at all). Reads listing.greenScore rather than
+    // re-fetching — loadListingScore stashes it once its own real fetch
+    // resolves, so this is just reading already-computed data. Genuinely
+    // possible to click before that resolves (a real race, not
+    // hypothetical), so the score clause is only included when present —
+    // no "undefined" in a real, outbound message.
+    function shareListingToWhatsApp(id) {
+      const listing = listingsState.listings.find(l => l.id === id);
+      if (!listing) return;
+      const scoreClause = listing.greenScore ? `, Green Score: ${listing.greenScore}/100` : "";
+      const siteUrl = window.location.origin + window.location.pathname;
+      const message = `Check out this place I found on Verdex — ${listing.title}, ₹${listing.price.toLocaleString("en-IN")}/mo${scoreClause} — ${siteUrl}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
     }
 
     // Pure client-side show/hide over already-rendered cards — no
@@ -5812,13 +5871,48 @@ let finalScore = computeFinalScore({
           return;
         }
         const methodLabel = { email: "Email", phone: "Phone", whatsapp: "WhatsApp" }[data.contact_method] || data.contact_method;
-        targetEl.innerHTML = `<span class="text-gray-600 font-medium">${methodLabel}: ${data.contact_value}</span>`;
+        // listingsState.listings is already loaded in memory — this is
+        // purely for the title text in the suggested message, no fetch.
+        const listing = listingsState.listings.find(l => l.dbId === dbId);
+        const suggestedMessage = `Hi! I saw your listing "${listing ? listing.title : "this place"}" on Verdex and I'm interested — is it still available?`;
+        targetEl.innerHTML = `
+          <span class="text-gray-600 font-medium">${methodLabel}: ${data.contact_value}</span>
+          <div class="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-2">
+            <div class="text-gray-500 mb-1">Suggested message:</div>
+            <div id="listing-suggested-message-${dbId}" class="text-gray-700">${suggestedMessage}</div>
+            <button onclick="copyListingSuggestedMessage(${dbId}, this)"
+              class="mt-1.5 text-green-600 hover:underline font-medium">
+              Copy message
+            </button>
+          </div>`;
         buttonEl.remove();
       } catch (err) {
         targetEl.innerHTML = `<span class="text-red-500">Could not load contact info — try again.</span>`;
         buttonEl.disabled = false;
         buttonEl.textContent = "I'm interested";
         console.warn("revealListingContact failed.", err.message);
+      }
+    }
+
+    // Same clipboard-write-with-manual-fallback idiom as
+    // copyListingEditLink, adapted for a plain text <div> rather than an
+    // <input> — there's no .select() on a div, so the fallback uses the
+    // Range/Selection API to highlight the text for manual Ctrl/Cmd+C
+    // instead.
+    async function copyListingSuggestedMessage(dbId, btnEl) {
+      const textEl = document.getElementById(`listing-suggested-message-${dbId}`);
+      try {
+        await navigator.clipboard.writeText(textEl.textContent);
+        const original = btnEl.textContent;
+        btnEl.textContent = "Copied!";
+        setTimeout(() => { btnEl.textContent = original; }, 2000);
+      } catch (err) {
+        const range = document.createRange();
+        range.selectNodeContents(textEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        console.warn("Clipboard write failed, falling back to manual select.", err.message);
       }
     }
 
