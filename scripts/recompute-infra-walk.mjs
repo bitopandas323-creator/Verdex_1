@@ -1,12 +1,15 @@
 // Recomputes Infrastructure and Walkability from real Nearby Places data
 // (data/nearby-places.json) instead of the static per-neighbourhood
-// numbers currently hardcoded in index.html's cities object / synced into
+// numbers currently hardcoded in app.html's cities object / synced into
 // data/neighbourhoods.json. Reads existing data only — no new Overpass
 // calls, this is a computation change, not a data-fetching job.
 //
 // Comparison-only mode (this file, as run tonight): prints old-vs-new
 // side by side for review. Does NOT write to data/neighbourhoods.json or
-// index.html — that's a separate step once the formula is confirmed.
+// app.html — that's a separate step once the formula is confirmed.
+//
+// app.html was index.html until the landing-page restructuring — this
+// script's target file changed, its actual job didn't.
 //
 // See scripts/recompute-infra-walk-notes.md-equivalent reasoning in the
 // conversation this was designed in: thresholds are the empirical 10th/
@@ -21,7 +24,7 @@ import { computeInfraScore, computeWalkScore } from "./_lib/infra-walk-scoring.m
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const nearbyPlacesPath = join(__dirname, "..", "data", "nearby-places.json");
 const neighbourhoodsPath = join(__dirname, "..", "data", "neighbourhoods.json");
-const indexHtmlPath = join(__dirname, "..", "index.html");
+const indexHtmlPath = join(__dirname, "..", "app.html");
 const WRITE_MODE = process.argv.includes("--write");
 
 const nearbyPlaces = JSON.parse(readFileSync(nearbyPlacesPath, "utf8"));
@@ -89,7 +92,7 @@ if (WRITE_MODE) {
   writeFileSync(neighbourhoodsPath, JSON.stringify(neighbourhoods, null, 2) + "\n");
   console.log(`data/neighbourhoods.json: updated ${jsonUpdated}/${neighbourhoods.length} entries.`);
 
-  // 2. index.html's cities object — text-level replacement. Names are
+  // 2. app.html's cities object — text-level replacement. Names are
   // unique across all 80 neighbourhoods (verified separately before this
   // script was extended), so matching on `name: "X"` alone is safe — no
   // risk of touching the wrong city's entry with the same name.
@@ -116,8 +119,8 @@ if (WRITE_MODE) {
     htmlUpdated++;
   }
   writeFileSync(indexHtmlPath, html);
-  console.log(`index.html: updated ${htmlUpdated}/${results.filter(r => r.newInfra !== null && r.newWalk !== null).length} entries.`);
+  console.log(`app.html: updated ${htmlUpdated}/${results.filter(r => r.newInfra !== null && r.newWalk !== null).length} entries.`);
   if (notFound.length > 0) {
-    console.log(`NOT FOUND in index.html (skipped, needs manual check): ${notFound.join(", ")}`);
+    console.log(`NOT FOUND in app.html (skipped, needs manual check): ${notFound.join(", ")}`);
   }
 }

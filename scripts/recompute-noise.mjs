@@ -1,5 +1,5 @@
 // Recomputes Noise from real road/railway proximity data instead of the
-// static per-neighbourhood numbers currently hardcoded in index.html's
+// static per-neighbourhood numbers currently hardcoded in app.html's
 // cities object / synced into data/neighbourhoods.json. Reads existing
 // data only:
 //   - road proximity: data/nearby-places.json's "highway" category
@@ -18,8 +18,11 @@
 // inverted: floor at the near threshold, 10 at the far threshold.
 //
 // Comparison-only mode (default): prints old-vs-new side by side for
-// review. --write updates data/neighbourhoods.json and index.html's
+// review. --write updates data/neighbourhoods.json and app.html's
 // cities object, same as recompute-infra-walk.mjs's --write mode.
+//
+// app.html was index.html until the landing-page restructuring — this
+// script's target file changed, its actual job didn't.
 
 import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -31,7 +34,7 @@ const nearbyPlacesPath = join(__dirname, "..", "data", "nearby-places.json");
 const railwayProximityPath = join(__dirname, "..", "data", "railway-proximity.json");
 const roadProximityPrecisePath = join(__dirname, "..", "data", "road-proximity-precise.json");
 const neighbourhoodsPath = join(__dirname, "..", "data", "neighbourhoods.json");
-const indexHtmlPath = join(__dirname, "..", "index.html");
+const indexHtmlPath = join(__dirname, "..", "app.html");
 const WRITE_MODE = process.argv.includes("--write");
 
 const nearbyPlaces = JSON.parse(readFileSync(nearbyPlacesPath, "utf8"));
@@ -139,7 +142,7 @@ if (WRITE_MODE) {
   writeFileSync(neighbourhoodsPath, JSON.stringify(neighbourhoods, null, 2) + "\n");
   console.log(`data/neighbourhoods.json: updated ${jsonUpdated}/${neighbourhoods.length} entries (Prahlad Nagar held unchanged).`);
 
-  // 2. index.html's cities object - same text-level replacement approach
+  // 2. app.html's cities object - same text-level replacement approach
   // as recompute-infra-walk.mjs, matched on name (verified unique across
   // all 80 neighbourhoods before this script was written).
   let html = readFileSync(indexHtmlPath, "utf8");
@@ -163,8 +166,8 @@ if (WRITE_MODE) {
     htmlUpdated++;
   }
   writeFileSync(indexHtmlPath, html);
-  console.log(`index.html: updated ${htmlUpdated}/${results.filter(r => !r.isGap).length} entries.`);
+  console.log(`app.html: updated ${htmlUpdated}/${results.filter(r => !r.isGap).length} entries.`);
   if (notFound.length > 0) {
-    console.log(`NOT FOUND in index.html (skipped, needs manual check): ${notFound.join(", ")}`);
+    console.log(`NOT FOUND in app.html (skipped, needs manual check): ${notFound.join(", ")}`);
   }
 }

@@ -1,24 +1,28 @@
-// Regenerates data/neighbourhoods.json from index.html's `cities` object —
+// Regenerates data/neighbourhoods.json from app.html's `cities` object —
 // the source of truth. There's no shared-module system between the browser
 // page and the serverless functions/scripts that read neighbourhoods.json
 // (api/snapshot.js, scripts/fetch-nearby-places.mjs), so this file has to
 // be manually re-synced any time baseline values (including lat/lon) are
-// edited in index.html. Run after any such edit:
+// edited in app.html. Run after any such edit:
 //   node scripts/sync-neighbourhoods.mjs
+//
+// app.html was index.html until the landing-page restructuring — this
+// script's target file changed, its actual job (reading the `cities`
+// object) didn't.
 
 import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const indexPath = join(__dirname, "..", "index.html");
+const indexPath = join(__dirname, "..", "app.html");
 const outPath = join(__dirname, "..", "data", "neighbourhoods.json");
 
 const html = readFileSync(indexPath, "utf8");
 
 const startMarker = "const cities = {";
 const startIdx = html.indexOf(startMarker);
-if (startIdx === -1) throw new Error("Could not find `const cities = {` in index.html");
+if (startIdx === -1) throw new Error("Could not find `const cities = {` in app.html");
 
 // Brace-count from the opening `{` to find the matching close, since the
 // object contains nested arrays/objects (nearbyProjects).
