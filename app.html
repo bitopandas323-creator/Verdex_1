@@ -5036,20 +5036,27 @@ let finalScore = computeFinalScore({
       const filledBadge = isFilled
         ? `<span class="text-[10px] font-semibold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Filled</span>`
         : "";
-      // "I'm interested"/"Report" only make sense for a real listing —
-      // there's no real contact behind a sample, and nothing real to
-      // report. "I'm interested" is additionally hidden once filled;
-      // Report is not.
+      // Condensed action row: "I'm interested" stays the one dominant
+      // button (still hidden once filled, exactly as before). Report and
+      // Share fold into small icon-only buttons alongside it instead of
+      // a text link plus a separate full-width row below — same show/hide
+      // conditions as before (isReal gates the whole block, isFilled only
+      // ever hides "I'm interested"), only Report/Share's visual FORM
+      // changed, not when they appear.
       const actionsHtml = listing.isReal ? `
           <div class="flex gap-2 mt-3">
             ${!isFilled ? `
               <button onclick="revealListingContact(${listing.dbId}, this)"
-                class="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-xs font-medium">
+                class="flex-1 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 text-sm font-medium">
                 I'm interested
               </button>` : ""}
-            <button onclick="openReportListingModal(${listing.dbId})"
-              class="text-xs text-gray-400 hover:text-red-600 px-2">
-              Report
+            <button onclick="shareListingToWhatsApp('${listing.id}')" title="Share to WhatsApp"
+              class="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg border border-gray-200 text-green-600 hover:bg-green-50">
+              <i class="ti ti-brand-whatsapp text-lg"></i>
+            </button>
+            <button onclick="openReportListingModal(${listing.dbId})" title="Report this listing"
+              class="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:text-red-600 hover:bg-red-50">
+              <i class="ti ti-flag text-lg"></i>
             </button>
           </div>
           <div id="listing-contact-${listing.dbId}" class="mt-2 text-xs"></div>`
@@ -5076,6 +5083,22 @@ let finalScore = computeFinalScore({
       // at all, same fallback getRealListings' own rows use.
       const householdDataAttrs = HOUSEHOLD_FIELDS
         .map(f => `data-${f.key}="${listing[f.key] || "not_specified"}"`).join(" ");
+      // Regrouped tags: two small labeled rows (reusing the app's own
+      // "Background"/"Lifestyle" field names from the post/manage forms,
+      // not new copy) instead of one flat row mixing both — each row
+      // uses the exact same tagsHtml()/color pairing as before, and a
+      // category with zero tags omits its row entirely rather than
+      // showing an empty label with nothing under it.
+      const backgroundTagsHtml = (listing.backgroundTags && listing.backgroundTags.length > 0) ? `
+          <div class="mb-1.5">
+            <div class="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Background</div>
+            <div class="flex flex-wrap gap-1.5">${tagsHtml(listing.backgroundTags, "bg-blue-50 text-blue-700")}</div>
+          </div>` : "";
+      const lifestyleTagsHtml = (listing.lifestyleTags && listing.lifestyleTags.length > 0) ? `
+          <div class="mb-1.5">
+            <div class="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Lifestyle</div>
+            <div class="flex flex-wrap gap-1.5">${tagsHtml(listing.lifestyleTags, "bg-green-50 text-green-700")}</div>
+          </div>` : "";
       return `
         <div class="listing-card bg-white rounded-2xl p-5 border border-gray-100 ${isFilled ? "opacity-60" : ""}"
           data-listing-id="${listing.id}"
@@ -5086,9 +5109,15 @@ let finalScore = computeFinalScore({
           data-tags="${[...(listing.backgroundTags || []), ...(listing.lifestyleTags || [])].join("|")}"
           ${householdDataAttrs}>
           ${thumbnailHtml}
-          <div class="flex justify-between items-start gap-2 mb-1">
-            <div class="font-semibold text-gray-800 min-w-0">${listing.title}</div>
-            <div class="text-sm font-medium text-gray-700 shrink-0">₹${listing.price.toLocaleString("en-IN")}/mo</div>
+          <div class="font-semibold text-gray-800 mb-0.5">${listing.title}</div>
+          <div class="text-base font-bold text-gray-800 mb-3">₹${listing.price.toLocaleString("en-IN")}<span class="text-xs font-normal text-gray-400">/mo</span></div>
+          <!-- Score box moved up here and given a framed, shadowed
+               wrapper so it reads as the card's focal point — the id
+               (loadListingScore's target) and buildListingScoreBar
+               itself are both unchanged, only this outer framing and
+               its position in the card are new. -->
+          <div id="listing-score-${listing.id}" class="mb-3 rounded-xl bg-gray-50 p-1.5 shadow-sm">
+            <div class="text-xs text-gray-400 text-center py-2">Loading real Green Score…</div>
           </div>
           <div class="flex items-center gap-2 flex-wrap mb-1">
             <div class="text-xs text-gray-400">${listing.locationLabel}</div>
@@ -5097,20 +5126,10 @@ let finalScore = computeFinalScore({
           </div>
           ${listing.createdAt ? `<div class="text-[11px] text-gray-400 mb-2">${formatRelativeTime(listing.createdAt)}</div>` : `<div class="mb-2"></div>`}
           ${buildHouseholdFactsHtml(listing)}
-          <div id="listing-score-${listing.id}" class="mb-3 mt-3">
-            <div class="text-xs text-gray-400">Loading real Green Score…</div>
-          </div>
           ${listing.interestCount > 0 ? `<div class="text-xs text-gray-500 mb-3">${listing.interestCount} ${listing.interestCount === 1 ? "person" : "people"} interested</div>` : ""}
-          <div class="flex flex-wrap gap-1.5">
-            ${tagsHtml(listing.backgroundTags || [], "bg-blue-50 text-blue-700")}
-            ${tagsHtml(listing.lifestyleTags || [], "bg-green-50 text-green-700")}
-          </div>
+          ${backgroundTagsHtml}
+          ${lifestyleTagsHtml}
           ${actionsHtml}
-          ${listing.isReal ? `
-            <button onclick="shareListingToWhatsApp('${listing.id}')"
-              class="mt-2 w-full text-xs text-green-600 hover:bg-green-50 px-3 py-2 rounded-lg font-medium border border-green-200 flex items-center justify-center gap-1.5">
-              <i class="ti ti-brand-whatsapp"></i> Share to WhatsApp
-            </button>` : ""}
         </div>`;
     }
 
