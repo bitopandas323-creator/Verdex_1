@@ -3179,11 +3179,20 @@ let finalScore = computeFinalScore({
       return sentences;
     }
 
+    // Own small card in the bottom section now, not an inline sub-section
+    // of the hero — same white/bordered shell language as
+    // buildAskVerdexCard/buildClimateResilienceCard below, just lighter
+    // padding (p-5 vs their p-8/p-10) so it reads as genuinely smaller,
+    // plus one amber accent (just the icon, not the card background) so
+    // it's visually distinct rather than blending into its bordered-card
+    // neighbors. computeInsight/INSIGHT_RULES are untouched — this only
+    // changes where the sentences land and how the wrapper looks.
     function buildInsightLine(d) {
       const sentences = computeInsight(d);
       return `
-        <div class="mt-4 pt-4 border-t border-black/5 text-left">
-          <div class="flex items-center gap-1 mb-1">
+        <div class="bg-white rounded-2xl p-5 border border-gray-100 text-left">
+          <div class="flex items-center gap-2 mb-1.5">
+            <i class="ti ti-bulb text-amber-500 text-lg shrink-0"></i>
             <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Quick read</span>
             ${infoBtn('insight')}
           </div>
@@ -3315,7 +3324,6 @@ let finalScore = computeFinalScore({
             <div class="text-xs text-gray-400 mt-2">Better than ${benchmarkPct}% of neighbourhoods in ${cityName}</div>
             <div class="text-sm text-gray-600 mt-1" id="personalized-score-${chartId}">${personalizedScoreContent(d)}</div>
             ${d.infraWalkExactCity ? `<div class="text-xs text-gray-400 mt-1">Score reflects your exact location, which may differ slightly from ${d.name}'s general score.</div>` : ""}
-            ${buildInsightLine(d)}
           </div>
           <div class="${envLiveClass} mb-4">
             ${buildEnvironmentalCard(d, chartId, isAreaEstimate)}
@@ -3326,6 +3334,7 @@ let finalScore = computeFinalScore({
             ${REAL_ESTATE_ENABLED ? buildRealEstateSection(d.nearbyProjects) : ""}
             ${buildAskVerdexCard()}
             ${buildClimateResilienceCard(d)}
+            ${buildInsightLine(d)}
           </div>
           <div class="pt-4 text-center text-xs text-gray-400">
             AQI and weather are live. Green cover from ESA satellites. Infrastructure, transit & amenity access, and noise are computed from real OpenStreetMap distances, refreshed periodically. Water, traffic and safety are from researched baseline data. Nearby places from OpenStreetMap, refreshed periodically.
