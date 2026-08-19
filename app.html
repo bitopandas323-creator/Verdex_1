@@ -596,7 +596,12 @@
           class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
           Map
         </button>
+        <button id="btn-listings-view-compare" onclick="setListingsViewMode('compare')"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600">
+          Compare (0)
+        </button>
       </div>
+      <div id="listings-shortlist-count" class="text-xs text-gray-400 mb-4">0/4 shortlisted</div>
 
       <div id="listings-status" class="text-sm text-gray-400 text-center mb-2"></div>
       <div id="listings-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -614,6 +619,30 @@
         <div id="listings-map-wrap" class="hidden">
           <div id="listings-map-container" class="h-80 md:h-[450px] rounded-2xl overflow-hidden border border-gray-100 mb-3"></div>
           <div id="listings-map-preview" class="hidden bg-white rounded-2xl p-4 border border-gray-100"></div>
+        </div>
+      </div>
+
+      <!-- Comparison view — up to 4 shortlisted listings overlaid on one
+           radar chart (see renderShortlistComparison). Entirely populated
+           client-side from data already loaded by Find a Place (each
+           listing's own loadListingScore fetch, extended to also stash
+           listing.subScores) — no fetches of its own. -->
+      <div id="listings-compare-view" class="hidden">
+        <div id="listings-compare-empty" class="hidden text-sm text-gray-400 text-center py-12 bg-gray-50 rounded-2xl">
+          Shortlist a place using the heart icon on a listing card to compare it here — up to 4 at once.
+        </div>
+        <div id="listings-compare-wrap" class="hidden">
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 mb-4">
+            <div id="listings-compare-profile-selector"></div>
+            <div class="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Your priorities</div>
+            <div id="listings-compare-priorities" class="flex flex-wrap gap-1.5"></div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 mb-4">
+            <div style="position:relative;height:320px">
+              <canvas id="listings-compare-radar"></canvas>
+            </div>
+          </div>
+          <div id="listings-compare-legend" class="space-y-2"></div>
         </div>
       </div>
     </div>
@@ -887,6 +916,25 @@
     </div>
   </div>
 
+  <!-- Custom Ranking Modal — the drag-to-reorder UI behind the "View as"
+       selector's "Custom" option (see buildProfileSelector/
+       handleProfileSelectChange). Same modal chrome as the other modals
+       above (bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl). -->
+  <div id="ranking-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-start mb-1">
+        <h3 class="font-semibold text-gray-800">Rank what matters to you</h3>
+        <button onclick="closeRankingModal(false)" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+      </div>
+      <div class="text-xs text-gray-400 mb-4">Drag to reorder — top is most important. Weights are derived from your order.</div>
+      <div id="ranking-list" class="space-y-1.5"></div>
+      <button onclick="applyRanking()"
+        class="w-full mt-4 bg-green-600 text-white px-6 py-2.5 rounded-lg hover:bg-green-700 font-medium text-sm">
+        Apply ranking
+      </button>
+    </div>
+  </div>
+
   <script>
 
     // --- SUPABASE (read-only, client-side) ---
@@ -904,6 +952,10 @@
     // destroy the previous chart before the DOM node it was bound to gets
     // replaced (avoids leaking Chart.js instances over a session).
     const aqiTrendCharts = {};
+
+    // Single instance, same destroy-before-recreate idiom as aqiTrendCharts
+    // — only ever one shortlist comparison view on screen at a time.
+    let shortlistRadarChart = null;
 
     // Same registry pattern for the daily-history view, plus a separate
     // flag tracking whether it's been fetched yet for the current card
@@ -2280,6 +2332,64 @@
       }
     };
 
+    // Shared icon/label lookup for the 9 scored parameters — used by the
+    // custom-ranking drag modal and the shortlist comparison view's
+    // priority list, both new. Deliberately a SEPARATE source of truth
+    // from buildEnvironmentalCard/buildLiveabilityCard's own buildParamRow
+    // calls rather than a refactor of them — those are already shipped and
+    // tested, and duplicating a 9-line icon/label table costs far less
+    // than risking a regression there for two lookups that only ever
+    // needed icon+label, not the row-rendering logic itself.
+    // `field` matches computeProfileScore's own s.xScore keys exactly
+    // (same names listing.subScores is stashed under in loadListingScore)
+    // so the radar chart can pull a listing's value for a given short key
+    // with no separate mapping table.
+    const PARAM_META = {
+      aqi:     { icon: "ti-wind",              label: "Air Quality",      field: "aqiScore" },
+      ndvi:    { icon: "ti-tree",              label: "Green Cover",      field: "ndviScore" },
+      water:   { icon: "ti-droplet",           label: "Water Quality",    field: "waterScore" },
+      heat:    { icon: "ti-temperature",       label: "Feels Like",       field: "heatScore" },
+      noise:   { icon: "ti-volume",            label: "Noise",            field: "noiseScore" },
+      infra:   { icon: "ti-building-hospital", label: "Infrastructure",   field: "infraScore" },
+      walk:    { icon: "ti-bus",               label: "Transit & Amenity Access", field: "walkScore" },
+      safety:  { icon: "ti-shield",            label: "Safety",           field: "safetyScore" },
+      traffic: { icon: "ti-car",               label: "Traffic",          field: "trafficScore" }
+    };
+
+    // The 6 parameters charted on the shortlist radar (see
+    // renderShortlistComparison) — all 9 on one radar is unreadable, and
+    // these 3 Environmental + 3 Liveability params are the most
+    // differentiating between listings for a home-comparison decision.
+    // Water Quality, Feels Like, and Traffic are dropped from the CHART
+    // only — the ranking modal below still covers all 9.
+    const RADAR_PARAM_KEYS = ["aqi", "ndvi", "noise", "infra", "walk", "safety"];
+    const RADAR_COLORS = ["#16a34a", "#2563eb", "#d97706", "#9333ea"];
+
+    // Rank position -> weight multiplier for the custom drag-ranking
+    // (position 0 = dragged to the top = most important). Same 0.3-1.8
+    // range the hand-tuned SCORE_PROFILES above already use (e.g.
+    // family's safety x1.8, remote's traffic x0.3), just applied by
+    // relative rank instead of by hand per profile — linear between the
+    // two ends so a 9-item reorder always spans the full range.
+    function rankMultiplier(position, total) {
+      const MAX_MULT = 1.8, MIN_MULT = 0.3;
+      if (total <= 1) return 1;
+      return MAX_MULT - (position / (total - 1)) * (MAX_MULT - MIN_MULT);
+    }
+
+    // Same method as every SCORE_PROFILES entry: DEFAULT_WEIGHTS times a
+    // reasoned per-parameter multiplier, renormalized to sum to 1.000 —
+    // here the "reasoning" is the user's own drag order rather than a
+    // hand-picked number, but the derivation itself is identical.
+    function computeCustomWeights(order) {
+      const raw = {};
+      order.forEach((key, i) => { raw[key] = DEFAULT_WEIGHTS[key] * rankMultiplier(i, order.length); });
+      const sum = Object.values(raw).reduce((a, b) => a + b, 0);
+      const normalized = {};
+      Object.keys(raw).forEach(key => { normalized[key] = parseFloat((raw[key] / sum).toFixed(3)); });
+      return normalized;
+    }
+
     // Which profile is currently selected — one shared value, not per-
     // card, since Compare mode applies the same lens to both sides (a
     // family comparing two areas wants both scored the same way). Changed
@@ -2352,24 +2462,49 @@
     // `show`: false for the second side of a Compare pair, so the shared
     // selector appears once per view (near the first card), not once per
     // side — see the two checkCompare-family functions below.
+    // "custom" is excluded from SCORE_PROFILES' own entries here and
+    // always appended as its own option instead — SCORE_PROFILES.custom
+    // only exists once applyRanking() has run at least once (it's not a
+    // hand-authored preset), and its label needs to reflect that ("drag to
+    // rank" before, "your ranking" after) rather than showing a bare
+    // "Custom" the moment it's registered.
     function buildProfileSelector(chartId, show) {
       if (!show) return "";
-      const options = Object.entries(SCORE_PROFILES).map(([key, p]) =>
-        `<option value="${key}" ${activeProfile === key ? "selected" : ""}>${p.label}</option>`
-      ).join("");
+      const presetOptions = Object.entries(SCORE_PROFILES)
+        .filter(([key]) => key !== "custom")
+        .map(([key, p]) => `<option value="${key}" ${activeProfile === key ? "selected" : ""}>${p.label}</option>`)
+        .join("");
+      const customLabel = SCORE_PROFILES.custom ? "Custom (your ranking)" : "Custom (drag to rank)";
+      const customOption = `<option value="custom" ${activeProfile === "custom" ? "selected" : ""}>${customLabel}</option>`;
       return `
         <div class="flex items-center justify-center gap-2 mb-3">
           <label class="text-xs text-gray-400" for="profile-select-${chartId}">View as</label>
-          <select id="profile-select-${chartId}" onchange="setActiveProfile(this.value)"
+          <select id="profile-select-${chartId}" onchange="handleProfileSelectChange(this.value, '${chartId}')"
             class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white">
-            ${options}
+            ${presetOptions}${customOption}
           </select>
         </div>`;
+    }
+
+    // Selecting "custom" never applies anything by itself — it always
+    // opens the ranking modal (pre-seeded with the last order if one
+    // exists) so "Custom" in the dropdown never silently diverges from
+    // what's actually been ranked. Every other option behaves exactly as
+    // before.
+    function handleProfileSelectChange(value, chartId) {
+      if (value === "custom") {
+        openRankingModal(chartId);
+        return;
+      }
+      setActiveProfile(value);
     }
 
     // Updates every currently-rendered score card's personalized-score
     // line in place (see renderedScoreCards above) — a pure client-side
     // recombination of data already on each card's own d, no re-fetch.
+    // Also refreshes the shortlist comparison view (if it exists on this
+    // screen) so a profile change made from a score card doesn't leave it
+    // showing a stale ranking/radar next time it's opened.
     function setActiveProfile(profileKey) {
       activeProfile = profileKey;
       Object.entries(renderedScoreCards).forEach(([chartId, d]) => {
@@ -2378,6 +2513,118 @@
         const selectEl = document.getElementById(`profile-select-${chartId}`);
         if (selectEl) selectEl.value = profileKey;
       });
+      renderShortlistComparison();
+    }
+
+    // --- CUSTOM RANKING MODAL (drag-to-reorder) ---
+    // Pointer Events (not native HTML5 drag-and-drop) so this works with
+    // touch, mouse, and pen in one implementation — HTML5 DnD has no
+    // built-in touch support, and this app is tested down to 375px.
+    // dragKey tracks which parameter is currently being dragged; order is
+    // re-rendered (not just visually reordered) on every index change so
+    // the list, the numbering, and the final applied order can never drift
+    // apart.
+    let rankingState = { order: [], dragKey: null };
+    let rankingModalChartId = null;
+
+    function openRankingModal(chartId) {
+      rankingModalChartId = chartId;
+      // Re-seed from the last-applied custom order if there is one, so
+      // reopening to tweak a ranking doesn't throw away the previous one.
+      rankingState.order = SCORE_PROFILES.custom
+        ? SCORE_PROFILES.custom.order.slice()
+        : Object.keys(DEFAULT_WEIGHTS);
+      rankingState.dragKey = null;
+      renderRankingList();
+      document.getElementById("ranking-modal").classList.remove("hidden");
+    }
+
+    // applied=false means Cancel/×/backdrop — the <select> that opened this
+    // (still visually showing "Custom" from the native change event) needs
+    // to be put back to whatever profile was actually active, or it would
+    // silently claim "Custom" is selected when nothing was ever applied.
+    function closeRankingModal(applied) {
+      document.getElementById("ranking-modal").classList.add("hidden");
+      if (!applied && rankingModalChartId) {
+        const selectEl = document.getElementById(`profile-select-${rankingModalChartId}`);
+        if (selectEl) selectEl.value = activeProfile;
+      }
+      rankingModalChartId = null;
+    }
+
+    function renderRankingList() {
+      const listEl = document.getElementById("ranking-list");
+      if (!listEl) return;
+      listEl.innerHTML = rankingState.order.map((key, i) => {
+        const meta = PARAM_META[key];
+        const dragging = rankingState.dragKey === key;
+        return `
+          <div class="rank-row flex items-center gap-2 px-3 py-2.5 rounded-lg border ${dragging ? "border-green-400 bg-green-50" : "border-gray-100 bg-white"}"
+            data-key="${key}">
+            <span class="text-xs text-gray-400 font-semibold w-4 text-center shrink-0">${i + 1}</span>
+            <i class="ti ${meta.icon} text-gray-500 shrink-0"></i>
+            <span class="text-sm text-gray-700 flex-1">${meta.label}</span>
+            <i class="ti ti-grip-vertical text-gray-300 text-lg cursor-grab shrink-0" style="touch-action:none"
+              onpointerdown="startRankDrag(event, '${key}')"></i>
+          </div>`;
+      }).join("");
+    }
+
+    // Listens on document (not the grip element itself) so a mid-drag
+    // re-render — renderRankingList replaces the grip's own DOM node every
+    // time the order changes — never orphans the move/up handlers.
+    function startRankDrag(e, key) {
+      e.preventDefault();
+      rankingState.dragKey = key;
+      renderRankingList();
+      const move = (ev) => handleRankDragMove(ev);
+      const up = () => {
+        rankingState.dragKey = null;
+        renderRankingList();
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+      };
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+    }
+
+    // Snap-reorders past each row's vertical midpoint — simple and robust
+    // rather than a smooth continuous drag, same tradeoff most lightweight
+    // sortable lists make.
+    function handleRankDragMove(e) {
+      if (!rankingState.dragKey) return;
+      const rows = [...document.querySelectorAll("#ranking-list .rank-row")];
+      let targetIndex = rankingState.order.length - 1;
+      for (let i = 0; i < rows.length; i++) {
+        const rect = rows[i].getBoundingClientRect();
+        if (e.clientY < rect.top + rect.height / 2) { targetIndex = i; break; }
+      }
+      const currentIndex = rankingState.order.indexOf(rankingState.dragKey);
+      if (targetIndex !== currentIndex) {
+        rankingState.order.splice(currentIndex, 1);
+        rankingState.order.splice(targetIndex, 0, rankingState.dragKey);
+        renderRankingList();
+      }
+    }
+
+    // Registers/overwrites SCORE_PROFILES.custom at runtime, then reuses
+    // setActiveProfile exactly as every existing preset does — from this
+    // point on, "custom" is scored through the exact same
+    // computeProfileScore/computeFinalScore path as "family"/"remote"/etc.
+    function applyRanking() {
+      const weights = computeCustomWeights(rankingState.order);
+      // `order` is the user's own drag order, kept alongside the derived
+      // weights — DEFAULT_WEIGHTS' base values differ so much between
+      // parameters (0.22 for aqi down to 0.04 for traffic) that the
+      // renormalized weight order can legitimately differ from the drag
+      // order (e.g. safety dragged to #1 can still end up with a lower
+      // final weight than aqi, which started from a much bigger base).
+      // The "Your priorities" list must show what was actually dragged,
+      // not a re-sort of the blended result, or it would silently
+      // contradict what the person just did.
+      SCORE_PROFILES.custom = { label: "Custom", phrase: "Based on your custom ranking", weights, order: rankingState.order.slice() };
+      setActiveProfile("custom");
+      closeRankingModal(true);
     }
 
     function getScoreColor(score) {
@@ -4873,6 +5120,175 @@ let finalScore = computeFinalScore({
     // fetchAreaData's own cache already provides everywhere else.
     let listingsState = { initialized: false, listings: [], cityFilter: "", activeTags: new Set(), distanceFilter: null };
 
+    // --- SHORTLIST (client-side only, localStorage — no server/database
+    // involvement, matching the app's no-accounts design; see
+    // safetyRatingThrottleKey's own localStorage read/write a bit above
+    // for the same try/catch-for-unavailable idiom this reuses). Keyed by
+    // listing.id, which is already unique across real ("real-N") and seed
+    // listings, same id data-listing-id/toggleListingImagesStrip use.
+    const SHORTLIST_STORAGE_KEY = "verdex-shortlist";
+    const SHORTLIST_MAX = 4;
+
+    function loadShortlistIds() {
+      try {
+        const raw = localStorage.getItem(SHORTLIST_STORAGE_KEY);
+        return raw ? new Set(JSON.parse(raw)) : new Set();
+      } catch (e) { return new Set(); }
+    }
+
+    function saveShortlistIds(set) {
+      try { localStorage.setItem(SHORTLIST_STORAGE_KEY, JSON.stringify([...set])); }
+      catch (e) { /* localStorage unavailable (private browsing, quota) - shortlist just won't persist across reloads */ }
+    }
+
+    let shortlistIds = loadShortlistIds();
+    let shortlistLimitTimeout = null;
+
+    // Capped at SHORTLIST_MAX (4) rather than unlimited-hearts-then-
+    // pick-4-in-the-comparison-view — keeps "shortlist" and "compare" the
+    // same fixed-size list everywhere in the UI instead of two different
+    // concepts.
+    function toggleShortlist(id) {
+      if (shortlistIds.has(id)) {
+        shortlistIds.delete(id);
+      } else {
+        if (shortlistIds.size >= SHORTLIST_MAX) {
+          showShortlistLimitMessage();
+          return;
+        }
+        shortlistIds.add(id);
+      }
+      saveShortlistIds(shortlistIds);
+      updateShortlistIcon(id);
+      updateShortlistCount();
+      renderShortlistComparison();
+    }
+
+    function updateShortlistIcon(id) {
+      const btn = document.getElementById(`shortlist-btn-${id}`);
+      if (!btn) return;
+      const active = shortlistIds.has(id);
+      btn.innerHTML = `<i class="ti ${active ? "ti-heart-filled text-rose-500" : "ti-heart text-gray-400"} text-lg"></i>`;
+      btn.classList.toggle("border-rose-200", active);
+      btn.classList.toggle("bg-rose-50", active);
+    }
+
+    function updateShortlistCount() {
+      const countEl = document.getElementById("listings-shortlist-count");
+      if (countEl) countEl.textContent = `${shortlistIds.size}/${SHORTLIST_MAX} shortlisted`;
+      const compareBtn = document.getElementById("btn-listings-view-compare");
+      if (compareBtn) compareBtn.textContent = `Compare (${shortlistIds.size})`;
+    }
+
+    function showShortlistLimitMessage() {
+      const countEl = document.getElementById("listings-shortlist-count");
+      if (!countEl) return;
+      clearTimeout(shortlistLimitTimeout);
+      countEl.textContent = "Shortlist full — remove one to add another";
+      countEl.classList.add("text-rose-500");
+      shortlistLimitTimeout = setTimeout(() => {
+        countEl.classList.remove("text-rose-500");
+        updateShortlistCount();
+      }, 2200);
+    }
+
+    // --- SHORTLIST COMPARISON VIEW ---
+    // Called on: toggling a heart, switching to the Compare toggle,
+    // changing the "View as" profile/ranking, and each loadListingScore
+    // resolving (so a shortlisted listing whose score was still loading
+    // fills in live rather than needing a manual refresh). Always a full
+    // re-render from listingsState.listings + shortlistIds — cheap at
+    // <=4 listings, and simpler than trying to patch the chart/legend/
+    // priority list independently in sync with each other.
+    function renderShortlistComparison() {
+      const emptyEl = document.getElementById("listings-compare-empty");
+      const wrapEl  = document.getElementById("listings-compare-wrap");
+      if (!emptyEl || !wrapEl) return; // listings-mode markup not in the DOM yet
+
+      const shortlisted = listingsState.listings.filter(l => shortlistIds.has(l.id));
+      if (shortlisted.length === 0) {
+        emptyEl.classList.remove("hidden");
+        wrapEl.classList.add("hidden");
+        if (shortlistRadarChart) { shortlistRadarChart.destroy(); shortlistRadarChart = null; }
+        return;
+      }
+      emptyEl.classList.add("hidden");
+      wrapEl.classList.remove("hidden");
+
+      // Reuses the exact same "View as" control as every score card — the
+      // one personalized-scoring entry point, just rendered here too.
+      document.getElementById("listings-compare-profile-selector").innerHTML =
+        buildProfileSelector("shortlist-compare", true);
+
+      const weights = SCORE_PROFILES[activeProfile].weights;
+      // Custom shows the user's own drag order (see applyRanking) — the
+      // renormalized WEIGHT order can legitimately diverge from it when
+      // DEFAULT_WEIGHTS' bases differ a lot between parameters, and this
+      // list must reflect what was actually ranked, not a re-sort of the
+      // blended result. Presets have no drag order of their own, so
+      // sorting by weight is the only meaningful "priority order" there.
+      const rankedKeys = (activeProfile === "custom" && SCORE_PROFILES.custom.order)
+        ? SCORE_PROFILES.custom.order
+        : Object.keys(weights).sort((a, b) => weights[b] - weights[a]);
+      document.getElementById("listings-compare-priorities").innerHTML = rankedKeys.map((key, i) => `
+        <span class="inline-flex items-center gap-1 text-xs bg-gray-50 text-gray-600 px-2.5 py-1 rounded-full border border-gray-100">
+          <span class="text-gray-400 font-semibold">${i + 1}</span>
+          <i class="ti ${PARAM_META[key].icon}"></i>${PARAM_META[key].label}
+        </span>`).join("");
+
+      // Listings whose fetchExactAreaData call (kicked off by
+      // loadListingScore when the card first rendered) hasn't resolved yet
+      // have no subScores — chart those once it lands (loadListingScore
+      // calls this function again on resolve), and say so explicitly here
+      // rather than silently omitting them with no explanation.
+      const ready = shortlisted.filter(l => l.subScores);
+      const pending = shortlisted.filter(l => !l.subScores);
+      const charted = ready.slice(0, SHORTLIST_MAX);
+
+      const canvasEl = document.getElementById("listings-compare-radar");
+      if (shortlistRadarChart) { shortlistRadarChart.destroy(); shortlistRadarChart = null; }
+      if (charted.length > 0) {
+        shortlistRadarChart = new Chart(canvasEl, {
+          type: "radar",
+          data: {
+            labels: RADAR_PARAM_KEYS.map(k => PARAM_META[k].label),
+            datasets: charted.map((l, i) => ({
+              label: l.title,
+              data: RADAR_PARAM_KEYS.map(k => Math.round(l.subScores[PARAM_META[k].field] * 10)),
+              borderColor: RADAR_COLORS[i],
+              backgroundColor: RADAR_COLORS[i] + "26", // ~15% alpha fill
+              pointBackgroundColor: RADAR_COLORS[i],
+              borderWidth: 2
+            }))
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { r: { min: 0, max: 100, ticks: { stepSize: 25, font: { size: 9 } }, pointLabels: { font: { size: 11 } } } },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+
+      // Legend doubles as the per-listing summary: real personalized
+      // overall score via the exact same computeFinalScore every score
+      // card uses, just recombined here with listing.subScores instead of
+      // a live-searched d — same function, no new scoring logic.
+      const legendHtml = charted.map((l, i) => {
+        const personalizedScore = Math.round(computeFinalScore(l.subScores, weights) * 10);
+        return `
+          <div class="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 border border-gray-100">
+            <span class="w-3 h-3 rounded-full shrink-0" style="background:${RADAR_COLORS[i]}"></span>
+            <span class="text-sm text-gray-700 flex-1 min-w-0 truncate">${l.title}</span>
+            <span class="text-sm font-bold text-gray-800 shrink-0">${personalizedScore}</span>
+          </div>`;
+      }).join("") + pending.map(l => `
+          <div class="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5 border border-gray-100 text-xs text-gray-400">
+            ${l.title} — score still loading…
+          </div>`).join("");
+      document.getElementById("listings-compare-legend").innerHTML = legendHtml;
+    }
+
     // Find a Place's OWN Leaflet instance — deliberately separate from
     // the main Map view's mapState/#map-container (see this file's only
     // other L.map() call, ensureLeafletMap). There is no precedent
@@ -4979,6 +5395,7 @@ let finalScore = computeFinalScore({
       gridEl.innerHTML = listings.map(l => buildListingCardShell(l)).join("");
       listings.forEach(l => loadListingScore(l));
       applyListingsFilters();
+      updateShortlistCount();
     }
 
     // Direct client-side Supabase REST read on listings, same idiom
@@ -5118,7 +5535,13 @@ let finalScore = computeFinalScore({
           data-tags="${[...(listing.backgroundTags || []), ...(listing.lifestyleTags || [])].join("|")}"
           ${householdDataAttrs}>
           ${thumbnailHtml}
-          <div class="font-semibold text-gray-800 mb-0.5">${listing.title}</div>
+          <div class="flex items-start justify-between gap-2 mb-0.5">
+            <div class="font-semibold text-gray-800 min-w-0">${listing.title}</div>
+            <button id="shortlist-btn-${listing.id}" onclick="toggleShortlist('${listing.id}')" title="Shortlist this place"
+              class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border ${shortlistIds.has(listing.id) ? "border-rose-200 bg-rose-50" : "border-gray-200"} hover:bg-rose-50">
+              <i class="ti ${shortlistIds.has(listing.id) ? "ti-heart-filled text-rose-500" : "ti-heart text-gray-400"} text-lg"></i>
+            </button>
+          </div>
           <div class="text-base font-bold text-gray-800 mb-3">₹${listing.price.toLocaleString("en-IN")}<span class="text-xs font-normal text-gray-400">/mo</span></div>
           <!-- Score box moved up here and given a framed, shadowed
                wrapper so it reads as the card's focal point — the id
@@ -5204,6 +5627,17 @@ let finalScore = computeFinalScore({
         // avoids a second fetch/scrape of the DOM just to reuse a score
         // this call already computed.
         listing.greenScore = Math.round(d.finalScore * 10);
+        // Same idea, extended: the shortlist comparison view (radar chart
+        // + per-listing personalized score) needs all 9 real sub-scores,
+        // not just the rounded overall — `d` already has every one of
+        // them from this same fetch, so this is capturing more of an
+        // already-happening request, not a new one.
+        listing.subScores = {
+          aqiScore: d.aqiScore, ndviScore: d.ndviScore, waterScore: d.waterScore,
+          heatScore: d.heatScore, noiseScore: d.noiseScore, infraScore: d.infraScore,
+          walkScore: d.walkScore, safetyScore: d.safetyScore, trafficScore: d.trafficScore
+        };
+        renderShortlistComparison();
       } catch (err) {
         targetEl.innerHTML = `<div class="text-xs text-gray-400">Green Score unavailable right now.</div>`;
         console.warn(`Find a Place: score lookup failed for ${listing.id}.`, err.message);
@@ -5325,9 +5759,13 @@ let finalScore = computeFinalScore({
         mode === "list" ? SUB_BTN_ACTIVE : SUB_BTN_INACTIVE;
       document.getElementById("btn-listings-view-map").className =
         mode === "map" ? SUB_BTN_ACTIVE : SUB_BTN_INACTIVE;
+      document.getElementById("btn-listings-view-compare").className =
+        mode === "compare" ? SUB_BTN_ACTIVE : SUB_BTN_INACTIVE;
       document.getElementById("listings-grid").classList.toggle("hidden", mode !== "list");
       document.getElementById("listings-map-view").classList.toggle("hidden", mode !== "map");
+      document.getElementById("listings-compare-view").classList.toggle("hidden", mode !== "compare");
       if (mode === "map") refreshListingsMap();
+      if (mode === "compare") renderShortlistComparison();
     }
 
     function ensureListingsMap() {
