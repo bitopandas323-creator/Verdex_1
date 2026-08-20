@@ -651,6 +651,48 @@
 
   </div>
 
+  <!-- Onboarding Quiz — shown INSTEAD of the normal dashboard (#app-dashboard
+       hidden, not layered under this), same pattern as Manage Listing/Admin
+       Mode below, but gated on a localStorage flag rather than a URL param:
+       first plain visit only (see checkForOnboarding, which also exempts
+       ?edit=/?admin=1/?screen=listings — all three already carry their own
+       explicit intent and must never be interrupted by an unrelated quiz). -->
+  <div id="onboarding-mode" class="hidden max-w-md mx-auto mt-12 px-6 pb-16">
+    <div class="flex justify-center gap-2 mb-10">
+      <span id="onboarding-dot-1" class="w-2 h-2 rounded-full bg-green-600"></span>
+      <span id="onboarding-dot-2" class="w-2 h-2 rounded-full bg-gray-200"></span>
+    </div>
+
+    <div id="onboarding-step-1">
+      <h2 class="text-2xl font-bold text-gray-900 text-center mb-1">What are you looking for?</h2>
+      <p class="text-xs text-gray-400 text-center mb-8">Step 1 of 2</p>
+      <div class="space-y-3 mb-8">
+        <button onclick="selectOnboardingIntent('address')"
+          class="w-full flex items-center gap-4 bg-white border border-gray-200 rounded-2xl p-5 hover:border-green-400 hover:bg-green-50 text-left">
+          <i class="ti ti-search text-2xl text-green-600 shrink-0"></i>
+          <span class="font-medium text-gray-800">Check an area</span>
+        </button>
+        <button onclick="selectOnboardingIntent('listings')"
+          class="w-full flex items-center gap-4 bg-white border border-gray-200 rounded-2xl p-5 hover:border-green-400 hover:bg-green-50 text-left">
+          <i class="ti ti-home-2 text-2xl text-green-600 shrink-0"></i>
+          <span class="font-medium text-gray-800">Find a place to live</span>
+        </button>
+      </div>
+      <div class="text-center">
+        <button onclick="skipOnboarding()" class="text-sm text-gray-400 hover:text-gray-600">Skip for now</button>
+      </div>
+    </div>
+
+    <div id="onboarding-step-2" class="hidden">
+      <h2 class="text-2xl font-bold text-gray-900 text-center mb-1">Which best describes you?</h2>
+      <p class="text-xs text-gray-400 text-center mb-8">Step 2 of 2</p>
+      <div id="onboarding-profile-options" class="space-y-3 mb-8"></div>
+      <div class="text-center">
+        <button onclick="skipOnboarding()" class="text-sm text-gray-400 hover:text-gray-600">Skip for now</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Manage Listing Mode — shown INSTEAD of the normal dashboard
        (#app-dashboard is hidden, not layered under this) whenever a
        ?edit=<token> URL parameter is present on load. See
@@ -6801,6 +6843,115 @@ let finalScore = computeFinalScore({
       initAdminView();
     }
 
+    // --- ONBOARDING QUIZ (first plain visit only) ---
+    // Same try/catch-for-unavailable idiom as the shortlist/safety-rating
+    // localStorage reads elsewhere — if storage is blocked (private
+    // browsing, quota), treat onboarding as already done rather than
+    // trapping a visitor in a quiz they can never persistently dismiss.
+    const ONBOARDING_STORAGE_KEY = "verdex-onboarding-done";
+    let onboardingState = { step: 1, intent: null };
+
+    function hasCompletedOnboarding() {
+      try { return localStorage.getItem(ONBOARDING_STORAGE_KEY) === "1"; }
+      catch (e) { return true; }
+    }
+
+    function markOnboardingDone() {
+      try { localStorage.setItem(ONBOARDING_STORAGE_KEY, "1"); }
+      catch (e) { /* unavailable - onboarding just shows again next visit, not fatal */ }
+    }
+
+    // Reads SCORE_PROFILES directly (excluding "default" — not a real
+    // choice here — and "custom", which can't exist yet on a first visit
+    // anyway since it's only ever created by the drag-ranking modal) so
+    // this list can never drift from the actual personalized-scoring
+    // profiles every score card's "View as" selector already offers.
+    function buildOnboardingProfileOptions() {
+      return Object.entries(SCORE_PROFILES)
+        .filter(([key]) => key !== "default" && key !== "custom")
+        .map(([key, p]) => `
+          <button onclick="selectOnboardingProfile('${key}')"
+            class="w-full bg-white border border-gray-200 rounded-2xl p-5 hover:border-green-400 hover:bg-green-50 text-left font-medium text-gray-800">
+            ${p.label}
+          </button>`).join("");
+    }
+
+    function renderOnboardingStep() {
+      document.getElementById("onboarding-step-1").classList.toggle("hidden", onboardingState.step !== 1);
+      document.getElementById("onboarding-step-2").classList.toggle("hidden", onboardingState.step !== 2);
+      document.getElementById("onboarding-dot-1").className = `w-2 h-2 rounded-full ${onboardingState.step === 1 ? "bg-green-600" : "bg-gray-200"}`;
+      document.getElementById("onboarding-dot-2").className = `w-2 h-2 rounded-full ${onboardingState.step === 2 ? "bg-green-600" : "bg-gray-200"}`;
+    }
+
+    function selectOnboardingIntent(intent) {
+      onboardingState.intent = intent;
+      onboardingState.step = 2;
+      renderOnboardingStep();
+    }
+
+    // profileKey feeds straight into setActiveProfile — the exact same
+    // function every score card's "View as" dropdown already calls, so a
+    // profile chosen here is genuinely no different from one chosen later
+    // on a score card. Safe to call before any score card exists:
+    // renderedScoreCards is still empty (nothing to update) and
+    // renderShortlistComparison() is a no-op with no listings loaded yet —
+    // this just sets activeProfile, which every card rendered afterward
+    // reads live (see buildScoreCard's own personalized-score line).
+    function selectOnboardingProfile(profileKey) {
+      setActiveProfile(profileKey);
+      finishOnboarding(onboardingState.intent);
+    }
+
+    // Always routes to the plain default screen with no profile applied,
+    // regardless of which step it's pressed from — even if Step 1's
+    // intent was already answered before skipping at Step 2.
+    function skipOnboarding() {
+      finishOnboarding(null);
+    }
+
+    // #app-dashboard's own classes include `lg:grid` (for the sidebar/
+    // main-content layout at >=1024px) alongside `hidden` — Tailwind's CDN
+    // stylesheet places lg:grid's `display:grid` AFTER the base
+    // `.hidden{display:none}` rule, so at equal specificity lg:grid
+    // silently wins at desktop widths and classList.add("hidden") alone
+    // does NOT actually hide the dashboard there (confirmed live: computed
+    // display stayed "grid" at 1280px even with the class applied — the
+    // same latent issue affects checkForEditLink/checkForAdminView's own
+    // raw classList calls, out of scope to fix here but flagged
+    // separately). An inline style always wins regardless of cascade
+    // order; "" clears it back to letting the classes decide again.
+    function setDashboardHidden(hide) {
+      const dash = document.getElementById("app-dashboard");
+      dash.classList.toggle("hidden", hide);
+      dash.style.display = hide ? "none" : "";
+    }
+
+    function finishOnboarding(intent) {
+      markOnboardingDone();
+      document.getElementById("onboarding-mode").classList.add("hidden");
+      setDashboardHidden(false);
+      if (intent === "address" || intent === "listings") currentHead = intent;
+      applyNav();
+    }
+
+    // Runs alongside checkForEditLink/checkForAdminView, same "before
+    // applyNav() ever runs" timing — but only on a genuine plain visit. A
+    // shared ?edit= link, ?admin=1, or the landing page's ?screen=listings
+    // CTA all carry their own explicit intent already (the last one
+    // effectively already answers Step 1's question) and must never be
+    // interrupted by an unrelated first-visit quiz.
+    function checkForOnboarding() {
+      if (!document.getElementById("manage-listing-mode").classList.contains("hidden")) return;
+      if (!document.getElementById("admin-mode").classList.contains("hidden")) return;
+      if (new URLSearchParams(window.location.search).get("screen") === "listings") return;
+      if (hasCompletedOnboarding()) return;
+      setDashboardHidden(true);
+      document.getElementById("onboarding-mode").classList.remove("hidden");
+      document.getElementById("onboarding-profile-options").innerHTML = buildOnboardingProfileOptions();
+      onboardingState = { step: 1, intent: null };
+      renderOnboardingStep();
+    }
+
     // Lets the landing page's "Find a place" CTA (app.html?screen=listings)
     // open straight into Find a Place instead of the app's normal default
     // view — same query-param-driven entry-point pattern as
@@ -6820,6 +6971,7 @@ let finalScore = computeFinalScore({
 
     checkForEditLink();
     checkForAdminView();
+    checkForOnboarding();
     checkForLandingScreenParam();
     updateNeighbourhoods("browse-neighbourhood-select", "browse-city-select");
     updateNeighbourhoods("browse-neighbourhood-a", "browse-city-a");
