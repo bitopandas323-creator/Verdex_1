@@ -939,6 +939,13 @@
              one piece of a listing that's genuinely absent from the page
              until someone explicitly asks for it. -->
         <div id="post-listing-error" class="hidden text-red-600 text-xs"></div>
+        <!-- target="_blank" deliberately — this sits inside an open modal
+             mid-form-fill; a normal link would navigate the whole tab away
+             and lose everything typed so far. -->
+        <p class="text-xs text-gray-400 text-center">
+          By posting, you agree to our
+          <a href="privacy.html" target="_blank" rel="noopener" class="text-green-700 hover:underline">Terms and Privacy Policy</a>.
+        </p>
         <button id="post-listing-submit-btn" onclick="submitListing()"
           class="w-full bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 font-medium">
           Post listing
