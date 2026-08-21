@@ -5390,9 +5390,13 @@ let finalScore = computeFinalScore({
         const commuteHtml = (listingsState.workplace && typeof l.lat === "number" && typeof l.lon === "number")
           ? `<span class="inline-flex items-center gap-1"><i class="ti ti-briefcase"></i>${haversineKm(listingsState.workplace.lat, listingsState.workplace.lon, l.lat, l.lon).toFixed(1)}km away</span>`
           : "";
+        // Labeled with the exact same category names used everywhere else
+        // Nearby Places data appears (NEARBY_PLACE_META.bus_stop/
+        // metro_station) — a bare icon + number isn't self-explanatory on
+        // its own without already knowing this app's icon conventions.
         const transitHtml = `
-          <span class="inline-flex items-center gap-1"><i class="ti ti-bus"></i>${nearestBusKm !== null ? nearestBusKm.toFixed(1) + "km" : "none nearby"}</span>
-          <span class="inline-flex items-center gap-1"><i class="ti ti-train"></i>${nearestMetroKm !== null ? nearestMetroKm.toFixed(1) + "km" : "none nearby"}</span>`;
+          <span class="inline-flex items-center gap-1"><i class="ti ti-bus"></i>${NEARBY_PLACE_META.bus_stop.label}: ${nearestBusKm !== null ? nearestBusKm.toFixed(1) + "km" : "none nearby"}</span>
+          <span class="inline-flex items-center gap-1"><i class="ti ti-train"></i>${NEARBY_PLACE_META.metro_station.label}: ${nearestMetroKm !== null ? nearestMetroKm.toFixed(1) + "km" : "none nearby"}</span>`;
         return `
           <div class="bg-white rounded-xl px-4 py-2.5 border border-gray-100">
             <div class="flex items-center gap-2">
