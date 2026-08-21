@@ -632,6 +632,30 @@
           Shortlist a place using the heart icon on a listing card to compare it here — up to 4 at once.
         </div>
         <div id="listings-compare-wrap" class="hidden">
+          <!-- Reuses the exact same address-search/geocoding chain as every
+               other location field in the app (handleAddressSearch/
+               showAddressSuggestions/addressSearchState, keyed by searchId
+               "shortlist-workplace") — see selectAddressSuggestion's own
+               branch for how a pick here is captured as a raw lat/lon
+               rather than driving a score card, same idiom Find a Place's
+               own distance filter already uses. -->
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 mb-4">
+            <label class="block text-sm text-gray-500 mb-2">
+              Where do you work?
+              <span class="text-xs text-gray-400">(optional — adds straight-line distance to each listing below)</span>
+            </label>
+            <div class="relative">
+              <input id="address-search-input-shortlist-workplace" type="text" placeholder="Search any area, landmark or city"
+                oninput="handleAddressSearch('shortlist-workplace')" onkeydown="handleAddressKeydown(event, 'shortlist-workplace')"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-700">
+              <div id="address-search-spinner-shortlist-workplace" class="hidden absolute right-3 top-2.5">
+                <div style="width:14px;height:14px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+              </div>
+              <div id="address-suggestions-box-shortlist-workplace"
+                class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden max-h-48 overflow-y-auto"></div>
+            </div>
+            <div id="shortlist-workplace-confirm" class="text-xs text-gray-400 mt-1"></div>
+          </div>
           <div class="bg-white rounded-2xl p-5 border border-gray-100 mb-4">
             <div id="listings-compare-profile-selector"></div>
             <div class="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Your priorities</div>
@@ -1087,7 +1111,8 @@
       "compare-b":      { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
       "post-listing":   { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
       "manage-listing": { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
-      "find-a-place-distance": { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] }
+      "find-a-place-distance": { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] },
+      "shortlist-workplace": { timeout: null, requestId: 0, selectedIndex: -1, suggestions: [] }
     };
     // Which element's value biases each box's Nominatim query (see
     // handleAddressSearch). All three boxes now have their own picker —
@@ -1583,6 +1608,18 @@
         document.getElementById('listings-distance-filter-confirm').innerHTML =
           `✓ ${s.displayName} <button type="button" onclick="clearListingsDistanceFilter()" class="text-red-500 hover:underline ml-1">Clear</button>`;
         applyListingsFilters();
+        return;
+      }
+
+      // Shortlist Comparison's "Where do you work?" — same raw-lat/lon,
+      // no-neighbourhood-matching idiom as find-a-place-distance above.
+      // renderShortlistComparison reads listingsState.workplace directly
+      // and recomputes haversineKm per shortlisted listing; no fetch here.
+      if (searchId === 'shortlist-workplace') {
+        listingsState.workplace = { lat: s.lat, lon: s.lon, displayName: s.displayName };
+        document.getElementById('shortlist-workplace-confirm').innerHTML =
+          `✓ ${s.displayName} <button type="button" onclick="clearShortlistWorkplace()" class="text-red-500 hover:underline ml-1">Clear</button>`;
+        renderShortlistComparison();
         return;
       }
 
@@ -5167,7 +5204,13 @@ let finalScore = computeFinalScore({
     // locateMe/selectAddressSuggestion/Follow mode already use for a real
     // coordinate, fetched once per listing and cached the same 10 minutes
     // fetchAreaData's own cache already provides everywhere else.
-    let listingsState = { initialized: false, listings: [], cityFilter: "", activeTags: new Set(), distanceFilter: null };
+    // workplace: {lat, lon, displayName} | null — set via the "Where do you
+    // work?" field in the Shortlist Comparison view (see
+    // selectAddressSuggestion's shortlist-workplace branch). Separate from
+    // distanceFilter above: that one filters the whole listings grid,
+    // this one only adds a commute-distance line to already-shortlisted
+    // listings — different concept, different consumer.
+    let listingsState = { initialized: false, listings: [], cityFilter: "", activeTags: new Set(), distanceFilter: null, workplace: null };
 
     // --- SHORTLIST (client-side only, localStorage — no server/database
     // involvement, matching the app's no-accounts design; see
@@ -5239,6 +5282,19 @@ let finalScore = computeFinalScore({
         countEl.classList.remove("text-rose-500");
         updateShortlistCount();
       }, 2200);
+    }
+
+    // candidates within a Nearby Places category are sorted by prominence
+    // (chain-match tier, then Wikipedia notability tier, then distance —
+    // see buildNearbyPanel's own comment on the same array), NOT by
+    // distance — so candidates[0] is not reliably the nearest one. Scans
+    // the whole array for the genuine minimum distanceKm; returns null if
+    // the category has no candidates (or nearbyPlaces itself is null/
+    // still loading), which callers must render as "no data", not 0.
+    function nearestCandidateKm(nearbyPlaces, categoryKey) {
+      const candidates = (nearbyPlaces && nearbyPlaces.places && nearbyPlaces.places[categoryKey] && nearbyPlaces.places[categoryKey].candidates) || [];
+      if (candidates.length === 0) return null;
+      return Math.min(...candidates.map(c => c.distanceKm));
     }
 
     // --- SHORTLIST COMPARISON VIEW ---
@@ -5325,11 +5381,28 @@ let finalScore = computeFinalScore({
       // a live-searched d — same function, no new scoring logic.
       const legendHtml = charted.map((l, i) => {
         const personalizedScore = Math.round(computeFinalScore(l.subScores, weights) * 10);
+        const nearestBusKm = nearestCandidateKm(l.nearbyPlaces, "bus_stop");
+        const nearestMetroKm = nearestCandidateKm(l.nearbyPlaces, "metro_station");
+        // Distance only, never converted to a time estimate — real
+        // straight-line km via the same haversineKm every other distance
+        // feature in the app (locateMe, Find a Place's own distance
+        // filter) already uses. Only rendered once a workplace is set.
+        const commuteHtml = (listingsState.workplace && typeof l.lat === "number" && typeof l.lon === "number")
+          ? `<span class="inline-flex items-center gap-1"><i class="ti ti-briefcase"></i>${haversineKm(listingsState.workplace.lat, listingsState.workplace.lon, l.lat, l.lon).toFixed(1)}km away</span>`
+          : "";
+        const transitHtml = `
+          <span class="inline-flex items-center gap-1"><i class="ti ti-bus"></i>${nearestBusKm !== null ? nearestBusKm.toFixed(1) + "km" : "none nearby"}</span>
+          <span class="inline-flex items-center gap-1"><i class="ti ti-train"></i>${nearestMetroKm !== null ? nearestMetroKm.toFixed(1) + "km" : "none nearby"}</span>`;
         return `
-          <div class="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 border border-gray-100">
-            <span class="w-3 h-3 rounded-full shrink-0" style="background:${RADAR_COLORS[i]}"></span>
-            <span class="text-sm text-gray-700 flex-1 min-w-0 truncate">${l.title}</span>
-            <span class="text-sm font-bold text-gray-800 shrink-0">${personalizedScore}</span>
+          <div class="bg-white rounded-xl px-4 py-2.5 border border-gray-100">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full shrink-0" style="background:${RADAR_COLORS[i]}"></span>
+              <span class="text-sm text-gray-700 flex-1 min-w-0 truncate">${l.title}</span>
+              <span class="text-sm font-bold text-gray-800 shrink-0">${personalizedScore}</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 pl-5 text-xs text-gray-400">
+              ${commuteHtml}${transitHtml}
+            </div>
           </div>`;
       }).join("") + pending.map(l => `
           <div class="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5 border border-gray-100 text-xs text-gray-400">
@@ -5686,6 +5759,13 @@ let finalScore = computeFinalScore({
           heatScore: d.heatScore, noiseScore: d.noiseScore, infraScore: d.infraScore,
           walkScore: d.walkScore, safetyScore: d.safetyScore, trafficScore: d.trafficScore
         };
+        // Same again: d.nearbyPlaces (bus_stop/metro_station candidates,
+        // among others) is already sitting on this same fetch's result —
+        // stashed so the comparison view can surface real transit
+        // proximity per listing with no fetch of its own either. Can be
+        // null (see fetchAreaData's own nearbyPlaces lookup) — consumers
+        // must treat that as "no data", not throw.
+        listing.nearbyPlaces = d.nearbyPlaces;
         renderShortlistComparison();
       } catch (err) {
         targetEl.innerHTML = `<div class="text-xs text-gray-400">Green Score unavailable right now.</div>`;
@@ -5946,6 +6026,13 @@ let finalScore = computeFinalScore({
       document.getElementById("address-search-input-find-a-place-distance").value = "";
       document.getElementById("listings-distance-filter-confirm").innerHTML = "";
       applyListingsFilters();
+    }
+
+    function clearShortlistWorkplace() {
+      listingsState.workplace = null;
+      document.getElementById("address-search-input-shortlist-workplace").value = "";
+      document.getElementById("shortlist-workplace-confirm").innerHTML = "";
+      renderShortlistComparison();
     }
 
     // --- HOUSEHOLD LOGISTICS (shared by post form, manage form, cards, filters) ---
