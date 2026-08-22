@@ -5288,13 +5288,16 @@ let finalScore = computeFinalScore({
     // (chain-match tier, then Wikipedia notability tier, then distance —
     // see buildNearbyPanel's own comment on the same array), NOT by
     // distance — so candidates[0] is not reliably the nearest one. Scans
-    // the whole array for the genuine minimum distanceKm; returns null if
-    // the category has no candidates (or nearbyPlaces itself is null/
-    // still loading), which callers must render as "no data", not 0.
-    function nearestCandidateKm(nearbyPlaces, categoryKey) {
+    // the whole array for the candidate with the genuine minimum
+    // distanceKm and returns that FULL candidate (not just the number) —
+    // callers need its real name (candidate.name), not only its distance.
+    // Returns null if the category has no candidates (or nearbyPlaces
+    // itself is null/still loading), which callers must render as
+    // "no data", not a candidate with distance 0.
+    function nearestCandidate(nearbyPlaces, categoryKey) {
       const candidates = (nearbyPlaces && nearbyPlaces.places && nearbyPlaces.places[categoryKey] && nearbyPlaces.places[categoryKey].candidates) || [];
       if (candidates.length === 0) return null;
-      return Math.min(...candidates.map(c => c.distanceKm));
+      return candidates.reduce((nearest, c) => (c.distanceKm < nearest.distanceKm ? c : nearest), candidates[0]);
     }
 
     // --- SHORTLIST COMPARISON VIEW ---
@@ -5381,8 +5384,8 @@ let finalScore = computeFinalScore({
       // a live-searched d — same function, no new scoring logic.
       const legendHtml = charted.map((l, i) => {
         const personalizedScore = Math.round(computeFinalScore(l.subScores, weights) * 10);
-        const nearestBusKm = nearestCandidateKm(l.nearbyPlaces, "bus_stop");
-        const nearestMetroKm = nearestCandidateKm(l.nearbyPlaces, "metro_station");
+        const nearestBus = nearestCandidate(l.nearbyPlaces, "bus_stop");
+        const nearestMetro = nearestCandidate(l.nearbyPlaces, "metro_station");
         // Distance only, never converted to a time estimate — real
         // straight-line km via the same haversineKm every other distance
         // feature in the app (locateMe, Find a Place's own distance
@@ -5390,13 +5393,21 @@ let finalScore = computeFinalScore({
         const commuteHtml = (listingsState.workplace && typeof l.lat === "number" && typeof l.lon === "number")
           ? `<span class="inline-flex items-center gap-1"><i class="ti ti-briefcase"></i>${haversineKm(listingsState.workplace.lat, listingsState.workplace.lon, l.lat, l.lon).toFixed(1)}km away</span>`
           : "";
-        // Labeled with the exact same category names used everywhere else
-        // Nearby Places data appears (NEARBY_PLACE_META.bus_stop/
-        // metro_station) — a bare icon + number isn't self-explanatory on
-        // its own without already knowing this app's icon conventions.
+        // Real place name (formatNearbyPlace — same helper/fallback
+        // buildNearbyPanel's own rows already use for this exact "no name
+        // tagged" case) alongside real distance, e.g. "0.7km from
+        // Gachibowli Metro Station" — a specific place, not just a
+        // category. Falls back to the category label only when there's
+        // genuinely no candidate to name.
+        const busText = nearestBus
+          ? `${nearestBus.distanceKm.toFixed(1)}km from ${formatNearbyPlace(nearestBus, NEARBY_PLACE_META.bus_stop.label)}`
+          : `${NEARBY_PLACE_META.bus_stop.label}: none nearby`;
+        const metroText = nearestMetro
+          ? `${nearestMetro.distanceKm.toFixed(1)}km from ${formatNearbyPlace(nearestMetro, NEARBY_PLACE_META.metro_station.label)}`
+          : `${NEARBY_PLACE_META.metro_station.label}: none nearby`;
         const transitHtml = `
-          <span class="inline-flex items-center gap-1"><i class="ti ti-bus"></i>${NEARBY_PLACE_META.bus_stop.label}: ${nearestBusKm !== null ? nearestBusKm.toFixed(1) + "km" : "none nearby"}</span>
-          <span class="inline-flex items-center gap-1"><i class="ti ti-train"></i>${NEARBY_PLACE_META.metro_station.label}: ${nearestMetroKm !== null ? nearestMetroKm.toFixed(1) + "km" : "none nearby"}</span>`;
+          <span class="inline-flex items-center gap-1"><i class="ti ti-bus"></i>${busText}</span>
+          <span class="inline-flex items-center gap-1"><i class="ti ti-train"></i>${metroText}</span>`;
         return `
           <div class="bg-white rounded-xl px-4 py-2.5 border border-gray-100">
             <div class="flex items-center gap-2">
