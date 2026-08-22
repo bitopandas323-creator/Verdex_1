@@ -4875,6 +4875,36 @@ let finalScore = computeFinalScore({
       }
     }
 
+    // Silent sibling to loadExactLocationNdvi above — same /api/ndvi
+    // endpoint (already coordinate-agnostic, no backend change needed)
+    // and same calculateNDVIScore conversion, but no DOM write:
+    // loadListingScore calls this once per shortlisted listing, not once
+    // per visible "-status" element, so there's no single container id to
+    // report into. Scoped deliberately narrow — Find a Place's
+    // subScores.ndviScore only, not fetchExactAreaData itself — so AQI/
+    // Water/Feels Like (and every other caller of fetchExactAreaData:
+    // single-address search, Compare, Browse, Map) stay exactly as they
+    // are. Green Cover is the one parameter with an exact-point mechanism
+    // that already exists and works for any coordinate; AQI/Water genuinely
+    // can't go more precise without new infrastructure. Returns null on
+    // any failure — callers must fall back to the neighbourhood-level
+    // ndviScore already on d, the same honest-fallback contract every
+    // other live-vs-baseline value in this app already follows.
+    async function fetchExactListingNdviScore(lat, lon) {
+      try {
+        const res = await fetch("/api/ndvi?lat=" + lat + "&lon=" + lon);
+        const data = await res.json();
+        if (!res.ok || typeof data.ndvi !== "number") {
+          console.warn(`Exact-point NDVI unavailable for listing at ${lat},${lon} — using neighbourhood-level value instead. Reason: ${(data && (data.reason || data.error)) || "unknown"}`);
+          return null;
+        }
+        return calculateNDVIScore(data.ndvi);
+      } catch (err) {
+        console.warn(`Exact-point NDVI fetch threw for listing at ${lat},${lon} — using neighbourhood-level value instead.`, err.message);
+        return null;
+      }
+    }
+
     // Never sends the coordinate anywhere persistent — used only to compute
     // the nearest neighbourhood (client-side haversine) and, for the bonus
     // NDVI reading, one read-only call to /api/ndvi (which itself performs
@@ -5757,12 +5787,21 @@ let finalScore = computeFinalScore({
         return;
       }
       try {
-        const { d } = await fetchExactAreaData(nearest.entry, nearest.city, listing.lat, listing.lon);
+        // Run together, not sequentially — the exact-point NDVI lookup is
+        // a small, independent request and shouldn't add latency on top
+        // of the existing score fetch (same reasoning fetchExactAreaData
+        // itself already uses for its own grid-lookup call).
+        const [{ d }, exactNdviScore] = await Promise.all([
+          fetchExactAreaData(nearest.entry, nearest.city, listing.lat, listing.lon),
+          fetchExactListingNdviScore(listing.lat, listing.lon)
+        ]);
         targetEl.innerHTML = buildListingScoreBar(d, nearest.distanceKm);
         // Stashed for shareListingToWhatsApp to read at click time (same
         // 0-100 display convention buildListingScoreBar itself uses) —
         // avoids a second fetch/scrape of the DOM just to reuse a score
-        // this call already computed.
+        // this call already computed. Deliberately still d.finalScore
+        // (neighbourhood-level NDVI, unchanged) — this is the main card's
+        // own score bar, out of scope for the exact-point override below.
         listing.greenScore = Math.round(d.finalScore * 10);
         // Same idea, extended: the shortlist comparison view (radar chart
         // + per-listing personalized score) needs all 9 real sub-scores,
@@ -5770,7 +5809,14 @@ let finalScore = computeFinalScore({
         // them from this same fetch, so this is capturing more of an
         // already-happening request, not a new one.
         listing.subScores = {
-          aqiScore: d.aqiScore, ndviScore: d.ndviScore, waterScore: d.waterScore,
+          aqiScore: d.aqiScore,
+          // Exact-point override, Shortlist Comparison only — see
+          // fetchExactListingNdviScore's own comment. Falls back to
+          // d.ndviScore (the same shared neighbourhood-level value every
+          // other listing at this neighbourhood gets) if the exact-point
+          // fetch failed for any reason.
+          ndviScore: exactNdviScore !== null ? exactNdviScore : d.ndviScore,
+          waterScore: d.waterScore,
           heatScore: d.heatScore, noiseScore: d.noiseScore, infraScore: d.infraScore,
           walkScore: d.walkScore, safetyScore: d.safetyScore, trafficScore: d.trafficScore
         };
