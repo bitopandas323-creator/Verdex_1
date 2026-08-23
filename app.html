@@ -93,10 +93,28 @@
         <!-- Off by default, always — never auto-started, never remembered
              across page loads. toggleFollowMe is the only way to flip
              this; see its own comment for the full stop-following
-             conditions (this button, or leaving this view entirely). -->
-        <label class="mt-3 flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
-          <input type="checkbox" id="follow-me-toggle" onchange="toggleFollowMe()" class="accent-green-600">
-          Follow my location (live)
+             conditions (this button, or leaving this view entirely).
+             Restyled as a pill button (same active/inactive convention
+             the List/Map/Compare toggles elsewhere already use) — purely
+             visual: the real <input type="checkbox" id="follow-me-toggle">
+             that toggleFollowMe()/startFollowing()/stopFollowing() all
+             read via .checked is completely unchanged, same id, same
+             onchange, just visually hidden (sr-only). peer-checked: drives
+             the pill's on/off look from that same real checkbox state, no
+             new JS. Deliberately no for= attribute on this label — the
+             checkbox is already nested inside it, which is enough on its
+             own for a click to toggle it natively; adding for= ON TOP of
+             that nesting is a real, known double-association bug (some
+             browsers forward the click to the control twice — once via
+             for=, once via the nesting — netting out to a no-op on every
+             second click, confirmed live during this exact change before
+             it shipped). -->
+        <label class="mt-3 inline-block cursor-pointer select-none">
+          <input type="checkbox" id="follow-me-toggle" onchange="toggleFollowMe()" class="peer sr-only">
+          <span class="flex items-center gap-2 text-xs font-medium px-4 py-2 rounded-full border border-gray-200 text-gray-600 bg-white peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-600">
+            <i class="ti ti-navigation"></i>
+            Follow my location (live)
+          </span>
         </label>
         <div id="follow-me-status" class="mt-1 text-xs text-gray-400"></div>
       </div>
@@ -202,16 +220,27 @@
       <div class="lg:flex lg:gap-4 lg:items-end">
         <div class="mb-6 lg:mb-0 lg:flex-1 relative">
           <label class="block text-sm text-gray-500 mb-2">Search any area, landmark or city</label>
-          <input
-            id="address-search-input-single"
-            type="text"
-            placeholder="e.g. Road 12, Banjara Hills, Hyderabad"
-            oninput="handleAddressSearch('single')"
-            onkeydown="handleAddressKeydown(event, 'single')"
-            class="w-full border border-gray-200 rounded-full px-5 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
-          />
-          <div id="address-search-spinner-single" class="hidden absolute right-3 top-10">
-            <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+          <!-- Own tight `relative` wrapper around just icon+input+spinner
+               (not the outer div, which also contains the label above and
+               the suggestions box below) — top-1/2 -translate-y-1/2 then
+               centers against the input's own height exactly, not a
+               guessed pixel offset. The spinner moves in here too and
+               switches to the same centering approach — it was already
+               using a fixed top-10 tuned for the OLD outer-relative
+               context, which this restructure would otherwise break. -->
+          <div class="relative">
+            <i class="ti ti-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+            <input
+              id="address-search-input-single"
+              type="text"
+              placeholder="e.g. Road 12, Banjara Hills, Hyderabad"
+              oninput="handleAddressSearch('single')"
+              onkeydown="handleAddressKeydown(event, 'single')"
+              class="w-full border border-gray-200 rounded-full pl-11 pr-5 py-3 text-gray-700 bg-white focus:outline-none focus:border-green-400"
+            />
+            <div id="address-search-spinner-single" class="hidden absolute right-3 top-1/2 -translate-y-1/2">
+              <div style="width:16px;height:16px;border:2px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+            </div>
           </div>
           <div id="address-suggestions-box-single"
             class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
