@@ -3629,8 +3629,15 @@ let finalScore = computeFinalScore({
       // second parallel map, since it's cheap and travels with d for free.
       d.isAreaEstimate = isAreaEstimate;
       renderedScoreCards[chartId] = d;
-      let ringClass    = highlight ? "ring-2 ring-green-400 ring-offset-2" : "";
-      let badge        = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Better area</span>' : "";
+      // Border, not a ring — a ring sits outside the card with a gap
+      // (ring-offset), a border sits flush on the edge, which reads as
+      // the more literal "leading card" accent. Trailing side gets
+      // neither of these (ringClass/badge both stay "" when highlight is
+      // false) — no separate red/negative styling exists anywhere else in
+      // this function, so "no highlight" already IS the calm/neutral
+      // treatment, not something layered on top.
+      let ringClass    = highlight ? "border-2 border-green-500" : "";
+      let badge        = highlight ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Leading</span>' : "";
       let band         = getBandInfo(d.finalScore);
       let cityName     = d.city.charAt(0).toUpperCase() + d.city.slice(1);
       let benchmarkPct = computeBenchmarkPercentile(d);
