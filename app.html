@@ -862,6 +862,16 @@
     <h1 class="text-2xl font-bold text-green-700 mb-6">Admin — manage listings</h1>
     <div id="admin-status" class="text-sm text-gray-400 text-center py-8">Loading…</div>
     <div id="admin-listings" class="hidden space-y-3"></div>
+
+    <!-- Reports — privileged read (admin_reports action, same
+         ADMIN_SECRET gate as the delete button above), unlike the
+         listings list above which is public data. Delete here calls the
+         exact same adminDeleteListing used above, not a second delete
+         path — see its own comment for how it now also clears any other
+         report rows for the same listing once deleted. -->
+    <h2 class="text-xl font-bold text-green-700 mt-10 mb-6">Reports</h2>
+    <div id="admin-reports-status" class="text-sm text-gray-400 text-center py-8">Loading…</div>
+    <div id="admin-reports" class="hidden space-y-3"></div>
   </div>
 
   <!-- Info Modal -->
@@ -6990,7 +7000,10 @@ let finalScore = computeFinalScore({
         }
         sessionStorage.setItem(ADMIN_SECRET_STORAGE_KEY, secret);
       }
-      await loadAdminListings();
+      // Independent reads (listings is public data, reports is
+      // privileged) — run together, not sequentially, same reasoning
+      // every other independent-fetch pair in this app already uses.
+      await Promise.all([loadAdminListings(), loadAdminReports()]);
     }
 
     // Reuses getRealListings() as-is — that data is already public,
@@ -7023,9 +7036,71 @@ let finalScore = computeFinalScore({
             </div>`).join("");
     }
 
+    // Privileged (unlike loadAdminListings above) — admin_reports needs
+    // the real admin secret, same sessionStorage-cached value
+    // adminDeleteListing already sends, same 401-clears-and-reprompts
+    // handling as that function's own.
+    async function loadAdminReports() {
+      const statusEl = document.getElementById("admin-reports-status");
+      const listEl = document.getElementById("admin-reports");
+      statusEl.textContent = "Loading…";
+      statusEl.classList.remove("hidden");
+      listEl.classList.add("hidden");
+
+      const secret = sessionStorage.getItem(ADMIN_SECRET_STORAGE_KEY);
+      try {
+        const res = await fetch("/api/listings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "admin_reports", admin_secret: secret })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (res.status === 401) {
+            sessionStorage.removeItem(ADMIN_SECRET_STORAGE_KEY);
+            alert("Incorrect admin secret — you'll be asked again.");
+            await initAdminView();
+            return;
+          }
+          statusEl.textContent = data.error || "Could not load reports.";
+          return;
+        }
+
+        statusEl.classList.add("hidden");
+        listEl.classList.remove("hidden");
+        listEl.innerHTML = data.reports.length === 0
+          ? `<div class="text-sm text-gray-400 text-center py-8">No reports.</div>`
+          : data.reports.map(r => `
+              <div id="admin-report-${r.id}" data-listing-id="${r.listing_id}" class="flex items-center justify-between gap-3 bg-white rounded-xl border border-gray-100 p-4">
+                <div class="min-w-0">
+                  <div class="font-medium text-gray-800 truncate">${r.listing_title}</div>
+                  <div class="text-xs text-gray-400">
+                    ${(REPORT_REASONS.find(rr => rr.value === r.reason) || { label: r.reason }).label}
+                    · ${new Date(r.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                    · listing id ${r.listing_id}
+                  </div>
+                </div>
+                <button onclick="adminDeleteListing(${r.listing_id})"
+                  class="shrink-0 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-medium">
+                  Delete
+                </button>
+              </div>`).join("");
+      } catch (err) {
+        statusEl.textContent = "Could not load reports — check your connection and try again.";
+        console.warn("loadAdminReports failed.", err.message);
+      }
+    }
+
+    // Reports section note: deleting a listing here removes ALL of its
+    // report rows too (listing_reports.listing_id is `on delete cascade`,
+    // same table-level guarantee documented in api/listings.js's own
+    // handleDelete) — so every #admin-report-* row for this dbId is
+    // cleared below, not just the one whose button was clicked, matching
+    // what actually happened server-side.
     async function adminDeleteListing(dbId) {
       if (!confirm("Delete this listing? This cannot be undone.")) return;
       const rowEl = document.getElementById(`admin-listing-${dbId}`);
+      const reportRowEls = document.querySelectorAll(`#admin-reports [data-listing-id="${dbId}"]`);
       const secret = sessionStorage.getItem(ADMIN_SECRET_STORAGE_KEY);
       try {
         const res = await fetch("/api/listings", {
@@ -7045,6 +7120,11 @@ let finalScore = computeFinalScore({
           return;
         }
         if (rowEl) rowEl.remove();
+        reportRowEls.forEach(el => el.remove());
+        const reportsListEl = document.getElementById("admin-reports");
+        if (reportsListEl && reportsListEl.children.length === 0) {
+          reportsListEl.innerHTML = `<div class="text-sm text-gray-400 text-center py-8">No reports.</div>`;
+        }
       } catch (err) {
         alert("Could not delete listing — check your connection and try again.");
         console.warn("adminDeleteListing failed.", err.message);

@@ -96,9 +96,10 @@ create policy "listings_select_anon"
 -- reveal limit first — without that, anyone could script through every
 -- listing id and harvest every contact value one request at a time.
 --
--- listing_reports: also zero policies — reviewed directly in the
--- Supabase dashboard, never through the app's own UI (no in-app
--- moderation queue in v1).
+-- listing_reports: also zero policies — the only read path is
+-- api/listings.js's admin_reports action (service_role, bypasses RLS,
+-- gated by the same ADMIN_SECRET as admin-delete), surfaced in the
+-- app's ?admin=1 Reports section. Never anon-readable.
 --
 -- listing_contact_reveals: also zero policies — purely an internal
 -- counter for api/get-listing-contact.js's own rate limit, never read by

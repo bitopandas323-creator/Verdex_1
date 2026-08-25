@@ -103,11 +103,19 @@ export async function verifyEditToken(supabase, token, ip_hash) {
 //
 // Same anti-brute-force ordering as verifyEditToken: rate-limit check,
 // then log the attempt UNCONDITIONALLY, then compare — a guess is
-// charged against the cap whether it's right or wrong. Deliberately no
-// separate "just verify the secret" endpoint exists anywhere in this
-// app; the only way to spend an attempt is via a real delete request
-// naming a real listing_id, via handleDelete below.
-export async function verifyAdminSecret(supabase, providedSecret, listingId, ip_hash) {
+// charged against the cap whether it's right or wrong.
+//
+// The secret-check itself is factored out as verifyAdminSecretOnly below
+// (added for the admin Reports read action, which has no single
+// listing_id to resolve against) — this function layers the listing
+// lookup on top, unchanged, so the existing admin-delete path's contract
+// and every one of its callers stay byte-identical. Both consumers still
+// share the exact same rate limit (admin_verify_attempts, 10/day) and the
+// exact same timing-safe comparison — there is still no bare "just tell
+// me if this secret is right" response with no other cost attached: the
+// Reports path spends the same attempt budget and does a real privileged
+// read, not a free yes/no probe.
+export async function verifyAdminSecretOnly(supabase, providedSecret, ip_hash) {
   const ADMIN_SECRET = process.env.ADMIN_SECRET;
   if (!ADMIN_SECRET) {
     console.error("ADMIN_SECRET env var is not set.");
@@ -139,6 +147,13 @@ export async function verifyAdminSecret(supabase, providedSecret, listingId, ip_
   if (!timingSafeEqual(providedHash, realHash)) {
     return { error: "Invalid admin secret", status: 401 };
   }
+
+  return { ok: true };
+}
+
+export async function verifyAdminSecret(supabase, providedSecret, listingId, ip_hash) {
+  const secretResult = await verifyAdminSecretOnly(supabase, providedSecret, ip_hash);
+  if (secretResult.error) return secretResult;
 
   const listingIdNum = parseInt(listingId, 10);
   if (!Number.isInteger(listingIdNum) || listingIdNum <= 0) {

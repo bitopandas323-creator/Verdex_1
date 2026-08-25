@@ -15,6 +15,7 @@
 //   POST /api/listings  { action: "delete", token }               — was delete-listing.js
 //   POST /api/listings  { action: "delete", listing_id, admin_secret } — admin path, same handler
 //   POST /api/listings  { action: "report", listing_id, reason }  — was report-listing.js
+//   POST /api/listings  { action: "admin_reports", admin_secret } — admin Reports section (?admin=1)
 //   POST /api/listings  { action: "upload_image", token, image_base64 }
 //   POST /api/listings  { action: "delete_image", token, image_id }
 //   GET  /api/listings?action=edit&token=...                      — was edit-listing.js (GET)
@@ -35,7 +36,7 @@
 import { randomBytes } from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { validateListingFields } from "./_lib/listing-validation.js";
-import { hashIp, hashToken, getClientIp, verifyEditToken, verifyAdminSecret } from "./_lib/listing-auth.js";
+import { hashIp, hashToken, getClientIp, verifyEditToken, verifyAdminSecret, verifyAdminSecretOnly } from "./_lib/listing-auth.js";
 
 const SUBMIT_GLOBAL_CAP_PER_DAY = 3;
 const SUBMIT_GLOBAL_CAP_WINDOW_HOURS = 24;
@@ -70,7 +71,7 @@ export default async function handler(req, res) {
     }
   } else if (req.method === "POST") {
     action = (req.body || {}).action;
-    if (!["submit", "edit", "delete", "report", "upload_image", "delete_image"].includes(action)) {
+    if (!["submit", "edit", "delete", "report", "upload_image", "delete_image", "admin_reports"].includes(action)) {
       return res.status(400).json({ error: "Unknown or missing action" });
     }
   } else {
@@ -94,6 +95,7 @@ export default async function handler(req, res) {
   if (action === "edit" && req.method === "POST") return handleEditPost(req, res, supabase, ip_hash);
   if (action === "delete") return handleDelete(req, res, supabase, ip_hash);
   if (action === "report") return handleReport(req, res, supabase, ip_hash);
+  if (action === "admin_reports") return handleAdminReports(req, res, supabase, ip_hash);
   if (action === "contact") return handleContactGet(req, res, supabase, ip_hash);
   if (action === "upload_image") return handleUploadImage(req, res, supabase, ip_hash);
   if (action === "delete_image") return handleDeleteImage(req, res, supabase, ip_hash);
@@ -417,6 +419,47 @@ async function handleReport(req, res, supabase, ip_hash) {
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error("listings report threw:", err);
+    return res.status(500).json({ error: "Unexpected server error" });
+  }
+}
+
+// --- admin reports (?admin=1's Reports section) ---
+//
+// Read-only counterpart to the admin delete path above — same
+// verification (verifyAdminSecretOnly, see api/_lib/listing-auth.js:
+// same rate limit, same timing-safe compare, no new auth system), just
+// without a listing_id to resolve against since this lists every report,
+// not one. listings(title) is a PostgREST embed off listing_reports'
+// existing listing_id foreign key (listings.sql: not null references
+// listings(id) on delete cascade) — the same embed technique
+// getRealListings() already uses for listing_images, not a second query.
+// That FK also means a report row can never outlive its listing, so the
+// embed can't come back null in practice.
+async function handleAdminReports(req, res, supabase, ip_hash) {
+  const { admin_secret } = req.body || {};
+  try {
+    const { error, status } = await verifyAdminSecretOnly(supabase, admin_secret, ip_hash);
+    if (error) return res.status(status).json({ error });
+
+    const { data, error: fetchError } = await supabase.from("listing_reports")
+      .select("id, listing_id, reason, created_at, listings(title)")
+      .order("created_at", { ascending: false });
+    if (fetchError) {
+      console.error("Admin reports fetch failed:", fetchError);
+      return res.status(500).json({ error: "Could not load reports — try again." });
+    }
+
+    const reports = (data || []).map(r => ({
+      id: r.id,
+      listing_id: r.listing_id,
+      listing_title: r.listings ? r.listings.title : "(listing no longer exists)",
+      reason: r.reason,
+      created_at: r.created_at
+    }));
+
+    return res.status(200).json({ ok: true, reports });
+  } catch (err) {
+    console.error("listings admin_reports threw:", err);
     return res.status(500).json({ error: "Unexpected server error" });
   }
 }
