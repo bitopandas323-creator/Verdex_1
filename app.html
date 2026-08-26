@@ -2722,7 +2722,7 @@
         return `
           <div class="rank-row flex items-center gap-2 px-3 py-2.5 rounded-lg border ${dragging ? "border-green-400 bg-green-50" : "border-gray-100 bg-white"}"
             data-key="${key}">
-            <span class="text-xs text-gray-400 font-semibold w-4 text-center shrink-0">${i + 1}</span>
+            <span class="rank-row-number text-xs text-gray-400 font-semibold w-4 text-center shrink-0">${i + 1}</span>
             <i class="ti ${meta.icon} text-gray-500 shrink-0"></i>
             <span class="text-sm text-gray-700 flex-1">${meta.label}</span>
             <i class="ti ti-grip-vertical text-gray-300 text-lg cursor-grab shrink-0" style="touch-action:none"
@@ -2731,13 +2731,27 @@
       }).join("");
     }
 
-    // Listens on document (not the grip element itself) so a mid-drag
-    // re-render — renderRankingList replaces the grip's own DOM node every
-    // time the order changes — never orphans the move/up handlers.
+    // Root cause of a real bug (drag worked once, then silently stopped
+    // registering on a later attempt): this used to call
+    // renderRankingList() here, which replaces EVERY row's DOM node —
+    // including the exact grip that just received this pointerdown —
+    // while its gesture was still in progress. Confirmed directly
+    // (e.target.isConnected flips true -> false synchronously inside this
+    // handler): destroying an element mid-gesture is a well-known trigger
+    // for browsers to lose implicit pointer capture on it, silently
+    // dropping the rest of that drag's pointermove/pointerup. Fix: touch
+    // only the one row already in the DOM (classList, not innerHTML) —
+    // never rebuild anything while dragKey is set. handleRankDragMove
+    // below follows the same rule for the whole gesture; only up() (the
+    // gesture has ended) is safe to fully re-render again.
     function startRankDrag(e, key) {
       e.preventDefault();
       rankingState.dragKey = key;
-      renderRankingList();
+      const row = e.target.closest(".rank-row");
+      if (row) {
+        row.classList.remove("border-gray-100", "bg-white");
+        row.classList.add("border-green-400", "bg-green-50");
+      }
       const move = (ev) => handleRankDragMove(ev);
       const up = () => {
         rankingState.dragKey = null;
@@ -2751,21 +2765,38 @@
 
     // Snap-reorders past each row's vertical midpoint — simple and robust
     // rather than a smooth continuous drag, same tradeoff most lightweight
-    // sortable lists make.
+    // sortable lists make. Moves the ACTUAL existing row node via
+    // Element.before()/.after() instead of re-rendering — those relocate
+    // an already-connected node rather than destroying and recreating it,
+    // so the browser never loses pointer capture on it mid-drag (see
+    // startRankDrag's own comment for why that matters here). Row numbers
+    // are updated in place via textContent, same reasoning.
     function handleRankDragMove(e) {
       if (!rankingState.dragKey) return;
-      const rows = [...document.querySelectorAll("#ranking-list .rank-row")];
-      let targetIndex = rankingState.order.length - 1;
+      const listEl = document.getElementById("ranking-list");
+      const rows = [...listEl.querySelectorAll(".rank-row")];
+      const draggedRow = rows.find(r => r.dataset.key === rankingState.dragKey);
+      if (!draggedRow) return;
+
+      let targetIndex = rows.length - 1;
       for (let i = 0; i < rows.length; i++) {
         const rect = rows[i].getBoundingClientRect();
         if (e.clientY < rect.top + rect.height / 2) { targetIndex = i; break; }
       }
-      const currentIndex = rankingState.order.indexOf(rankingState.dragKey);
-      if (targetIndex !== currentIndex) {
-        rankingState.order.splice(currentIndex, 1);
-        rankingState.order.splice(targetIndex, 0, rankingState.dragKey);
-        renderRankingList();
-      }
+      const currentIndex = rows.indexOf(draggedRow);
+      if (targetIndex === currentIndex) return;
+
+      rankingState.order.splice(currentIndex, 1);
+      rankingState.order.splice(targetIndex, 0, rankingState.dragKey);
+
+      const referenceRow = rows[targetIndex];
+      if (targetIndex > currentIndex) referenceRow.after(draggedRow);
+      else referenceRow.before(draggedRow);
+
+      listEl.querySelectorAll(".rank-row").forEach((row, i) => {
+        const numEl = row.querySelector(".rank-row-number");
+        if (numEl) numEl.textContent = i + 1;
+      });
     }
 
     // Registers/overwrites SCORE_PROFILES.custom at runtime, then reuses
