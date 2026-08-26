@@ -2519,13 +2519,11 @@
       traffic: { icon: "ti-car",               label: "Traffic",          field: "trafficScore" }
     };
 
-    // The 6 parameters charted on the shortlist radar (see
-    // renderShortlistComparison) — all 9 on one radar is unreadable, and
-    // these 3 Environmental + 3 Liveability params are the most
-    // differentiating between listings for a home-comparison decision.
-    // Water Quality, Feels Like, and Traffic are dropped from the CHART
-    // only — the ranking modal below still covers all 9.
-    const RADAR_PARAM_KEYS = ["aqi", "ndvi", "noise", "infra", "walk", "safety"];
+    // The shortlist radar charts 6 of the 9 parameters (all 9 on one
+    // radar is unreadable) — WHICH 6 is dynamic, not fixed: see
+    // renderShortlistComparison's own radarKeys, the top 6 of whatever
+    // ranking (preset or custom drag order) is currently active. No
+    // separate hardcoded list here anymore.
     const RADAR_COLORS = ["#16a34a", "#2563eb", "#d97706", "#9333ea"];
 
     // Rank position -> weight multiplier for the custom drag-ranking
@@ -5458,6 +5456,14 @@ let finalScore = computeFinalScore({
           <i class="ti ${PARAM_META[key].icon}"></i>${PARAM_META[key].label}
         </span>`).join("");
 
+      // Radar axes are the top 6 of this SAME rankedKeys order — not a
+      // second, separately-computed ordering — so the chart always
+      // matches whatever "Your priorities" just rendered above. Whichever
+      // 3 rank lowest for the currently active ranking are the ones left
+      // off, and that set changes with the ranking, not fixed to one
+      // hardcoded trio.
+      const radarKeys = rankedKeys.slice(0, 6);
+
       // Listings whose fetchExactAreaData call (kicked off by
       // loadListingScore when the card first rendered) hasn't resolved yet
       // have no subScores — chart those once it lands (loadListingScore
@@ -5473,10 +5479,10 @@ let finalScore = computeFinalScore({
         shortlistRadarChart = new Chart(canvasEl, {
           type: "radar",
           data: {
-            labels: RADAR_PARAM_KEYS.map(k => PARAM_META[k].label),
+            labels: radarKeys.map(k => PARAM_META[k].label),
             datasets: charted.map((l, i) => ({
               label: l.title,
-              data: RADAR_PARAM_KEYS.map(k => Math.round(l.subScores[PARAM_META[k].field] * 10)),
+              data: radarKeys.map(k => Math.round(l.subScores[PARAM_META[k].field] * 10)),
               borderColor: RADAR_COLORS[i],
               backgroundColor: RADAR_COLORS[i] + "26", // ~15% alpha fill
               pointBackgroundColor: RADAR_COLORS[i],
