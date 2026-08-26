@@ -159,30 +159,30 @@
       <div id="head-tabs-bar" class="flex fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)] lg:flex lg:flex-col lg:flex-nowrap lg:gap-2 lg:mb-4 lg:static lg:bottom-auto lg:inset-x-auto lg:z-auto lg:bg-transparent lg:border-t-0 lg:pb-0">
         <button id="btn-head-address" onclick="selectHead('address')"
           class="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-green-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-green-600 lg:text-white">
-          <i class="ti ti-search text-2xl lg:hidden" aria-hidden="true"></i>
+          <span class="head-icon-pill rounded-full p-1.5 lg:hidden transition-colors duration-150 bg-green-100"><i class="ti ti-search text-2xl" aria-hidden="true"></i></span>
           <span class="text-base font-semibold leading-tight lg:hidden">Address</span>
           <span class="hidden lg:inline lg:text-sm">Address search</span>
         </button>
         <button id="btn-head-browse" onclick="selectHead('browse')"
           class="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
-          <i class="ti ti-list text-2xl lg:hidden" aria-hidden="true"></i>
+          <span class="head-icon-pill rounded-full p-1.5 lg:hidden transition-colors duration-150"><i class="ti ti-list text-2xl" aria-hidden="true"></i></span>
           <span class="text-base font-semibold leading-tight lg:hidden">Browse</span>
           <span class="hidden lg:inline lg:text-sm">Browse areas</span>
         </button>
         <button id="btn-head-map" onclick="selectHead('map')"
           class="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
-          <i class="ti ti-map text-2xl lg:hidden" aria-hidden="true"></i>
+          <span class="head-icon-pill rounded-full p-1.5 lg:hidden transition-colors duration-150"><i class="ti ti-map text-2xl" aria-hidden="true"></i></span>
           <span class="text-base font-semibold leading-tight lg:hidden">Map</span>
           <span class="hidden lg:inline lg:text-sm">Map view</span>
         </button>
         <button id="btn-head-assistant" onclick="selectHead('assistant')"
           class="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
-          <i class="ti ti-robot text-2xl lg:hidden" aria-hidden="true"></i>
+          <span class="head-icon-pill rounded-full p-1.5 lg:hidden transition-colors duration-150"><i class="ti ti-robot text-2xl" aria-hidden="true"></i></span>
           <span class="text-base font-semibold leading-tight lg:text-sm lg:font-medium lg:leading-normal">Assistant</span>
         </button>
         <button id="btn-head-listings" onclick="selectHead('listings')"
           class="flex flex-col items-center justify-center gap-1 flex-1 min-w-0 px-1 py-2.5 text-xs font-medium text-gray-600 lg:flex-none lg:block lg:w-full lg:text-left lg:px-5 lg:py-2 lg:rounded-lg lg:text-sm lg:bg-white lg:border lg:border-gray-200 lg:text-gray-600">
-          <i class="ti ti-home-2 text-2xl lg:hidden" aria-hidden="true"></i>
+          <span class="head-icon-pill rounded-full p-1.5 lg:hidden transition-colors duration-150"><i class="ti ti-home-2 text-2xl" aria-hidden="true"></i></span>
           <span class="text-base font-semibold leading-tight lg:hidden">Places</span>
           <span class="hidden lg:inline lg:text-sm">Find a place</span>
         </button>
@@ -2374,8 +2374,16 @@
       // loop above already computes.
       document.getElementById("single-search-block").classList.toggle("hidden", leaf !== "single");
 
+      // .head-icon-pill's bg-green-100 is the mobile bottom bar's "you are
+      // here" indicator — at lg:+ the sidebar version already has a much
+      // stronger active treatment (solid bg-green-600 fill, see
+      // HEAD_BTN_ACTIVE above) and hides this icon+pill entirely, so this
+      // toggle is harmless there, just invisible.
       ["address", "browse", "map", "assistant", "listings"].forEach(h => {
-        document.getElementById("btn-head-" + h).className = (h === currentHead) ? HEAD_BTN_ACTIVE : HEAD_BTN_INACTIVE;
+        const isActiveHead = h === currentHead;
+        const btnEl = document.getElementById("btn-head-" + h);
+        btnEl.className = isActiveHead ? HEAD_BTN_ACTIVE : HEAD_BTN_INACTIVE;
+        btnEl.querySelector(".head-icon-pill").classList.toggle("bg-green-100", isActiveHead);
       });
 
       document.getElementById("subtab-bar").classList.toggle("hidden", !isSubHead);
