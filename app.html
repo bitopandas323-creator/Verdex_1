@@ -2637,6 +2637,19 @@
         .join("");
       const customLabel = SCORE_PROFILES.custom ? "Custom (your ranking)" : "Custom (drag to rank)";
       const customOption = `<option value="custom" ${activeProfile === "custom" ? "selected" : ""}>${customLabel}</option>`;
+      // Dedicated trigger, independent of the select's own change event —
+      // a native <select> never fires "change" when the option chosen is
+      // already the selected one, so reselecting "Custom" while it's
+      // already active (the normal case for editing a ranking you already
+      // applied) silently did nothing. Only visible when Custom is
+      // already active — setActiveProfile below keeps this in sync
+      // (show/hide) on every later switch, same idiom "Rate this area →"
+      // elsewhere in the app already uses for a link-styled button.
+      const customizeBtn = `
+        <button type="button" id="customize-ranking-${chartId}" onclick="openRankingModal('${chartId}')"
+          class="text-xs text-green-700 hover:underline font-medium ${activeProfile === "custom" ? "" : "hidden"}">
+          Customize ranking →
+        </button>`;
       return `
         <div class="flex items-center justify-center gap-2 mb-3">
           <label class="text-xs text-gray-400" for="profile-select-${chartId}">View as</label>
@@ -2644,6 +2657,7 @@
             class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white">
             ${presetOptions}${customOption}
           </select>
+          ${customizeBtn}
         </div>`;
     }
 
@@ -2672,7 +2686,22 @@
         const el = document.getElementById(`personalized-score-${chartId}`);
         if (el) el.innerHTML = personalizedScoreContent(d);
         const selectEl = document.getElementById(`profile-select-${chartId}`);
-        if (selectEl) selectEl.value = profileKey;
+        if (selectEl) {
+          selectEl.value = profileKey;
+          // Score cards' own selector is never fully rebuilt on a profile
+          // switch (only touched here), so the "Custom" option's label —
+          // computed fresh inside buildProfileSelector, "your ranking"
+          // once SCORE_PROFILES.custom exists vs "drag to rank" before —
+          // needs its own targeted update too, or it stays stuck on
+          // whatever it said the first time this select was ever built.
+          const customOptionEl = selectEl.querySelector('option[value="custom"]');
+          if (customOptionEl) customOptionEl.textContent = SCORE_PROFILES.custom ? "Custom (your ranking)" : "Custom (drag to rank)";
+        }
+        // Same reasoning as the label above — "Customize ranking →" is
+        // static markup baked in at build time, so a later switch away
+        // from (or back to) "custom" has to toggle it explicitly here.
+        const customizeBtn = document.getElementById(`customize-ranking-${chartId}`);
+        if (customizeBtn) customizeBtn.classList.toggle("hidden", profileKey !== "custom");
       });
       renderShortlistComparison();
     }
