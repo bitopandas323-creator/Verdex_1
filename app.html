@@ -770,6 +770,9 @@
     <h1 class="text-2xl font-bold text-green-700 mb-6">Manage your listing</h1>
     <div id="manage-listing-status" class="text-sm text-gray-400 text-center py-8">Verifying your link…</div>
     <div id="manage-listing-body" class="hidden space-y-4 text-sm">
+      <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+        <i class="ti ti-clipboard-list text-sm"></i> Details
+      </div>
       <div>
         <label class="block text-gray-500 mb-1">Title</label>
         <input id="manage-listing-title" type="text" maxlength="120"
@@ -820,6 +823,9 @@
         <input id="manage-listing-contact-value" type="text"
           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
       </div>
+      <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mt-6 pt-4 border-t border-gray-100">
+        <i class="ti ti-photo text-sm"></i> Photos
+      </div>
       <div>
         <label class="block text-gray-500 mb-1">Photos (up to 4)</label>
         <div id="manage-listing-images-grid" class="flex gap-2 mb-2 flex-wrap"></div>
@@ -834,11 +840,25 @@
         Save changes
       </button>
 
+      <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mt-6 pt-4 border-t border-gray-100">
+        <i class="ti ti-toggle-left text-sm"></i> Status
+      </div>
       <!-- Rendered by renderManageListingStatusToggle — label and
            action flip based on manageListingState.status. -->
-      <div id="manage-listing-status-toggle" class="pt-2"></div>
+      <div id="manage-listing-status-toggle"></div>
 
-      <div class="pt-4 mt-4 border-t border-gray-100">
+      <!-- Danger zone — visual framing only, same delete confirmation
+           flow underneath (confirmDeleteManagedListing/
+           deleteManagedListing, both untouched): a real border/icon/
+           warning-text wrapper around the exact same #manage-listing-
+           delete-area container, still white background so the delete
+           button's own existing hover:bg-red-50 stays correct rather
+           than blending into a tinted parent. -->
+      <div class="mt-6 border-2 border-red-200 rounded-xl p-4">
+        <div class="flex items-center gap-1.5 text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">
+          <i class="ti ti-alert-triangle text-sm"></i> Danger zone
+        </div>
+        <div class="text-xs text-red-600 mb-3">Deleting a listing is permanent and cannot be undone.</div>
         <div id="manage-listing-delete-area">
           <button onclick="confirmDeleteManagedListing()" class="w-full text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-lg font-medium text-sm">
             Delete this listing
